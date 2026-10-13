@@ -1,8 +1,16 @@
 <div align="center">
 
 <p align="center">
-  <strong>🇺🇸 English</strong> · 🇰🇷 한국어 · 🇯🇵 日本語 · 🇨🇳 简体中文 · 🇪🇸 Español<br />
-  🇫🇷 Français · 🇩🇪 Deutsch · 🇷🇺 Русский · 🇧🇷 Português · 🇸🇦 العربية
+  <strong>🇺🇸 English</strong> ·
+  <a href="./README.ko.md">🇰🇷 한국어</a> ·
+  <a href="./README.ja.md">🇯🇵 日本語</a> ·
+  <a href="./README.zh.md">🇨🇳 简体中文</a> ·
+  <a href="./README.es.md">🇪🇸 Español</a><br />
+  <a href="./README.fr.md">🇫🇷 Français</a> ·
+  <a href="./README.de.md">🇩🇪 Deutsch</a> ·
+  <a href="./README.ru.md">🇷🇺 Русский</a> ·
+  <a href="./README.pt.md">🇧🇷 Português</a> ·
+  <a href="./README.ar.md">🇸🇦 العربية</a>
 </p>
 
 # 🛡️ nix-k8s-sentinel
