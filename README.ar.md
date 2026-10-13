@@ -19,7 +19,7 @@
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](./LICENSE)
 [![Go Report Card](https://goreportcard.com/badge/github.com/KRCUPRO/nix-k8s-sentinel)](https://goreportcard.com/report/github.com/KRCUPRO/nix-k8s-sentinel)
-[![Version](https://img.shields.io/badge/Release-v0.3.0-emerald.svg)](https://github.com/KRCUPRO/nix-k8s-sentinel/releases)
+[![Version](https://img.shields.io/badge/Release-v0.4.0-emerald.svg)](https://github.com/KRCUPRO/nix-k8s-sentinel/releases)
 [![Architecture](https://img.shields.io/badge/Architecture-Bare--Metal_NixOS_+_K8s-8b5cf6.svg)](#-architecture-overview)
 [![Security](https://img.shields.io/badge/Security-Declarative_Audit-38bdf8.svg)](./SECURITY.md)
 
@@ -38,6 +38,8 @@
 ## 🏛️ القدرات الأساسية
 
 - **🔍 تدقيق البنية التحتية التصريحية**: مطابقة الأنماط وتتبع التبعيات لمدخلات NixOS Flake ومخططات Kubernetes.
+- **🌐 أمن Kubernetes Ingress وسياسات CNI**: كشف تلقائي لحقن المقاطع البرمجية (Snippets)، وتجاوز المسارات URI، والتهيئة الضعيفة لـ CORS/SSL، وتسريب البيانات إلى 0.0.0.0/0.
+- **📊 توليد تلقائي للتقارير الأمنية الساعية**: تركيب تقارير Markdown تحتوي على مصفوفات مخاطر CVSS وقوائم تشغيل المعالجة في `intel/briefings/`.
 - **📡 استيعاب التهديدات المعياري**: معالجة مهيكلة لتقييمات CVSS v3.1، وتعيين المكونات، وتقديم إرشادات المعالجة القابلة للتطبيق.
 - **🛡️ التوليف النشط للسياسات الأمنية**: توليد تلقائي لقواعد Falco أثناء التشغيل وسياسات قيود OPA Gatekeeper بناءً على بصمات التهديدات المكتشفة.
 - **⚡ محرك Go بدون تخصيصات ذاكرة إضافية**: ملف تنفيذي مستقل عالي التزامن وبدون أي تبعيات تشغيلية خارجية.
@@ -62,9 +64,15 @@ go test ./...
 go run cmd/sentinel/main.go --feed=intel/cve-feed.json
 
 # تدقيق ملف NixOS flake.lock مقابل التحذيرات الأمنية المعروفة
+go run cmd/sentinel/main.go --flake=fixtures/flake.lock
 
-
+# تدقيق مخططات Kubernetes لرصد انتهاكات السياسات الأمنية
 go run cmd/sentinel/main.go --k8s=fixtures/k8s-ingress-vulnerable.yaml
+go run cmd/sentinel/main.go --k8s=fixtures/
+
+# توليد موجز استخبارات التهديدات الساعي تلقائياً
+go run cmd/sentinel/main.go --briefing
+go run cmd/sentinel/main.go --flake=fixtures/flake.lock --k8s=fixtures/k8s-ingress-vulnerable.yaml --briefing
 
 # التصفية حسب البنية التحتية المستهدفة
 go run cmd/sentinel/main.go --target=kubernetes

@@ -19,7 +19,7 @@
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](./LICENSE)
 [![Go Report Card](https://goreportcard.com/badge/github.com/KRCUPRO/nix-k8s-sentinel)](https://goreportcard.com/report/github.com/KRCUPRO/nix-k8s-sentinel)
-[![Version](https://img.shields.io/badge/Release-v0.3.0-emerald.svg)](https://github.com/KRCUPRO/nix-k8s-sentinel/releases)
+[![Version](https://img.shields.io/badge/Release-v0.4.0-emerald.svg)](https://github.com/KRCUPRO/nix-k8s-sentinel/releases)
 [![Architecture](https://img.shields.io/badge/Architecture-Bare--Metal_NixOS_+_K8s-8b5cf6.svg)](#-architecture-overview)
 [![Security](https://img.shields.io/badge/Security-Declarative_Audit-38bdf8.svg)](./SECURITY.md)
 
@@ -38,6 +38,8 @@ Im Gegensatz zu herkömmlichen Container-Scannern, die ephemere Schichten erst n
 ## 🏛️ Kernfunktionen
 
 - **🔍 Deklarative Infrastruktur-Audits**: Mustererkennung und Abhängigkeitsanalyse für NixOS Flake-Locks und Kubernetes-Manifeste.
+- **🌐 Kubernetes Ingress- und CNI-Sicherheitsprüfungen**: Erkennung von Snippet-Injektionen, URI-Pfadtraversierungen, CORS/SSL-Fehlkonfigurationen sowie 0.0.0.0/0-Egress-Datenlecks.
+- **📊 Automatisierte stündliche Sicherheitsberichte**: Erstellung strukturierter Markdown-Berichte mit CVSS-Risikomatrizen und Behebungs-Playbooks unter `intel/briefings/`.
 - **📡 Normalisierte Bedrohungsdaten-Erfassung**: Strukturierte Verarbeitung von CVSS v3.1-Bewertungen, Komponentenzuordnungen und praxisnahen Behebungshinweisen.
 - **🛡️ Aktive Richtliniensynthese**: Automatische Generierung von Falco-Laufzeiterkennungsregeln und OPA Gatekeeper-Zulassungsbeschränkungen anhand erkannter Bedrohungssignaturen.
 - **⚡ Zero-Allocation Go-Engine**: Hochgradig nebenläufige Standalone-Binärdatei ohne externe Laufzeitabhängigkeiten.
@@ -62,9 +64,15 @@ go test ./...
 go run cmd/sentinel/main.go --feed=intel/cve-feed.json
 
 # NixOS flake.lock gegen bekannte Sicherheitswarnungen auditieren
+go run cmd/sentinel/main.go --flake=fixtures/flake.lock
 
-
+# Kubernetes-Manifeste auf Richtlinienverstöße prüfen
 go run cmd/sentinel/main.go --k8s=fixtures/k8s-ingress-vulnerable.yaml
+go run cmd/sentinel/main.go --k8s=fixtures/
+
+# Stündlichen Bedrohungsanalysebericht generieren
+go run cmd/sentinel/main.go --briefing
+go run cmd/sentinel/main.go --flake=fixtures/flake.lock --k8s=fixtures/k8s-ingress-vulnerable.yaml --briefing
 
 # Nach Zielinfrastruktur filtern
 go run cmd/sentinel/main.go --target=kubernetes

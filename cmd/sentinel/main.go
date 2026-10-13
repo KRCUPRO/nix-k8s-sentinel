@@ -8,10 +8,11 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/intel"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/k8s"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nix"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/report"
 )
 
 var (
-	version = "0.3.0"
+	version = "0.4.0"
 )
 
 func main() {
@@ -20,6 +21,9 @@ func main() {
 	targetFilter := flag.String("target", "", "Filter feed by target ('nixos' or 'kubernetes')")
 	flakePath := flag.String("flake", "", "Path to NixOS flake.lock to audit for known CVEs")
 	k8sPath := flag.String("k8s", "", "Path to Kubernetes manifest file or directory to audit")
+	briefing := flag.Bool("briefing", false, "Generate automated Markdown threat intelligence briefing")
+	briefingDir := flag.String("briefing-dir", "intel/briefings", "Output directory for threat briefings")
+	briefingFile := flag.String("briefing-file", "", "Custom filename for threat briefing markdown")
 	flag.Parse()
 
 	if *showVersion {
@@ -44,6 +48,9 @@ func main() {
 
 	fmt.Printf("[+] Feed Loaded: %d intelligence advisories (Updated: %s)\n", len(feed.Items), feed.UpdatedAt.Format("2006-01-02 15:04:05 UTC"))
 
+	var flakeMatches []nix.FlakeVulnerabilityMatch
+	var k8sReport *k8s.ManifestAuditReport
+
 	// 1. Audit Nix Flake if --flake is provided
 	if *flakePath != "" {
 		fmt.Printf("[+] Auditing Nix Flake Lockfile: %s\n", *flakePath)
@@ -65,6 +72,7 @@ func main() {
 			fmt.Printf("[-] Error scanning flake against feed: %v\n", err)
 			os.Exit(1)
 		}
+		flakeMatches = matches
 
 		if len(matches) == 0 {
 			fmt.Println("[+] Zero matching CVEs detected in flake.lock inputs.")
@@ -76,7 +84,6 @@ func main() {
 				fmt.Printf("      Mitigation: %s\n", m.Mitigation)
 			}
 		}
-		return
 	}
 
 	// 2. Audit Kubernetes Manifests if --k8s is provided
@@ -90,11 +97,10 @@ func main() {
 			os.Exit(1)
 		}
 
-		var report *k8s.ManifestAuditReport
 		if fileInfo.IsDir() {
-			report, err = manifestScanner.ScanDirectory(*k8sPath)
+			k8sReport, err = manifestScanner.ScanDirectory(*k8sPath)
 		} else {
-			report, err = manifestScanner.ScanFile(*k8sPath)
+			k8sReport, err = manifestScanner.ScanFile(*k8sPath)
 		}
 
 		if err != nil {
@@ -102,12 +108,12 @@ func main() {
 			os.Exit(1)
 		}
 
-		fmt.Printf("[+] Scanned %d files across %d declarative resources.\n", report.TotalFiles, report.TotalResources)
-		if len(report.Violations) == 0 {
+		fmt.Printf("[+] Scanned %d files across %d declarative resources.\n", k8sReport.TotalFiles, k8sReport.TotalResources)
+		if len(k8sReport.Violations) == 0 {
 			fmt.Println("[+] Zero security violations detected in Kubernetes manifests.")
 		} else {
-			fmt.Printf("[-] WARNING: %d security violations identified!\n", len(report.Violations))
-			for i, v := range report.Violations {
+			fmt.Printf("[-] WARNING: %d security violations identified!\n", len(k8sReport.Violations))
+			for i, v := range k8sReport.Violations {
 				cveTag := ""
 				if v.MatchedCVE != "" {
 					cveTag = fmt.Sprintf(" [%s]", v.MatchedCVE)
@@ -118,21 +124,58 @@ func main() {
 				fmt.Printf("      Remediation: %s\n", v.Remediation)
 			}
 		}
+	}
+
+	// 3. Generate Threat Briefing if --briefing is requested
+	if *briefing {
+		fmt.Println("[+] Synthesizing Threat Intelligence Briefing...")
+		briefingOpts := report.BriefingOptions{
+			Version:        version,
+			Feed:           feed,
+			K8sReport:      k8sReport,
+			FlakeMatches:   flakeMatches,
+			OutputDir:      *briefingDir,
+			CustomFilename: *briefingFile,
+		}
+
+		rep, err := report.GenerateBriefing(briefingOpts)
+		if err != nil {
+			fmt.Printf("[-] Failed to generate threat briefing: %v\n", err)
+			os.Exit(1)
+		}
+
+		savedPath, err := report.WriteBriefingToFile(rep, *briefingDir, *briefingFile)
+		if err != nil {
+			fmt.Printf("[-] Failed to save briefing file: %v\n", err)
+			os.Exit(1)
+		}
+
+		fmt.Printf("[+] Threat Briefing written to: %s\n", savedPath)
+		fmt.Printf("    Telemetry: Total=%d | Critical=%d | High=%d | Medium=%d | Low=%d\n",
+			rep.Telemetry.TotalThreats,
+			rep.Telemetry.CriticalCount,
+			rep.Telemetry.HighCount,
+			rep.Telemetry.MediumCount,
+			rep.Telemetry.LowCount,
+		)
+		fmt.Printf("    Fleet Risk: Peak CVSS=%.1f | Avg CVSS=%.1f\n", rep.Telemetry.MaxCVSS, rep.Telemetry.AverageCVSS)
 		return
 	}
 
-	// 3. Default Feed Summary
-	items := feed.Items
-	if *targetFilter != "" {
-		items = feed.FilterByTarget(*targetFilter)
-		fmt.Printf("[+] Filtered by target '%s': %d matching threats\n", *targetFilter, len(items))
-	}
+	// 4. If neither flake nor k8s nor briefing was requested, show default feed summary
+	if *flakePath == "" && *k8sPath == "" {
+		items := feed.Items
+		if *targetFilter != "" {
+			items = feed.FilterByTarget(*targetFilter)
+			fmt.Printf("[+] Filtered by target '%s': %d matching threats\n", *targetFilter, len(items))
+		}
 
-	for i, item := range items {
-		fmt.Printf("  [%d] %s (%s) - %s [CVSS: %.1f]\n", i+1, item.ID, item.Severity, item.Title, item.CVSSScore)
-		fmt.Printf("      Target: %s | Component: %s\n", item.Target, item.Component)
-		fmt.Printf("      Mitigation: %s\n", item.Mitigation)
-	}
+		for i, item := range items {
+			fmt.Printf("  [%d] %s (%s) - %s [CVSS: %.1f]\n", i+1, item.ID, item.Severity, item.Title, item.CVSSScore)
+			fmt.Printf("      Target: %s | Component: %s\n", item.Target, item.Component)
+			fmt.Printf("      Mitigation: %s\n", item.Mitigation)
+		}
 
-	fmt.Println("[+] Scan complete. Zero unmitigated critical vulnerabilities.")
+		fmt.Println("[+] Scan complete. Zero unmitigated critical vulnerabilities.")
+	}
 }

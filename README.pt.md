@@ -19,7 +19,7 @@
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](./LICENSE)
 [![Go Report Card](https://goreportcard.com/badge/github.com/KRCUPRO/nix-k8s-sentinel)](https://goreportcard.com/report/github.com/KRCUPRO/nix-k8s-sentinel)
-[![Version](https://img.shields.io/badge/Release-v0.3.0-emerald.svg)](https://github.com/KRCUPRO/nix-k8s-sentinel/releases)
+[![Version](https://img.shields.io/badge/Release-v0.4.0-emerald.svg)](https://github.com/KRCUPRO/nix-k8s-sentinel/releases)
 [![Architecture](https://img.shields.io/badge/Architecture-Bare--Metal_NixOS_+_K8s-8b5cf6.svg)](#-architecture-overview)
 [![Security](https://img.shields.io/badge/Security-Declarative_Audit-38bdf8.svg)](./SECURITY.md)
 
@@ -38,6 +38,8 @@ Diferente dos scanners de contêineres convencionais que inspecionam camadas ef�
 ## 🏛️ Recursos principais
 
 - **🔍 Auditoria declarativa de infraestrutura**: Correspondência de padrões e rastreamento de dependências para entradas NixOS Flake e manifestos Kubernetes.
+- **🌐 Segurança de Kubernetes Ingress e Políticas CNI**: Detecção automatizada de injeções de snippets, desvios de diretório URI, falhas CORS/SSL e vazamentos de dados 0.0.0.0/0.
+- **📊 Relatórios horários automatizados de inteligência de ameaças**: Síntese de matrizes de risco CVSS e manuais de mitigação em Markdown sob `intel/briefings/`.
 - **📡 Ingestão normalizada de ameaças**: Ingestão estruturada de pontuações CVSS v3.1, mapeamento de componentes e recomendações práticas de remediação.
 - **🛡️ Síntese ativa de políticas de segurança**: Geração automatizada de regras em tempo de execução para Falco e políticas de admissão para OPA Gatekeeper a partir de assinaturas detectadas.
 - **⚡ Motor Go com zero alocações**: Binário autônomo de alta concorrência sem dependências externas de tempo de execução.
@@ -62,9 +64,15 @@ go test ./...
 go run cmd/sentinel/main.go --feed=intel/cve-feed.json
 
 # Auditar NixOS flake.lock em relação a avisos conhecidos de segurança
+go run cmd/sentinel/main.go --flake=fixtures/flake.lock
 
-
+# Auditar manifestos do Kubernetes
 go run cmd/sentinel/main.go --k8s=fixtures/k8s-ingress-vulnerable.yaml
+go run cmd/sentinel/main.go --k8s=fixtures/
+
+# Gerar relatório horário de inteligência de ameaças
+go run cmd/sentinel/main.go --briefing
+go run cmd/sentinel/main.go --flake=fixtures/flake.lock --k8s=fixtures/k8s-ingress-vulnerable.yaml --briefing
 
 # Filtrar por infraestrutura de destino
 go run cmd/sentinel/main.go --target=kubernetes
