@@ -6,16 +6,18 @@ import (
 	"os"
 
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/intel"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nix"
 )
 
 var (
-	version = "0.1.0"
+	version = "0.2.0"
 )
 
 func main() {
 	feedPath := flag.String("feed", "intel/cve-feed.json", "Path to threat intelligence feed JSON")
 	showVersion := flag.Bool("version", false, "Print version and exit")
 	targetFilter := flag.String("target", "", "Filter feed by target ('nixos' or 'kubernetes')")
+	flakePath := flag.String("flake", "", "Path to NixOS flake.lock to audit for known CVEs")
 	flag.Parse()
 
 	if *showVersion {
@@ -39,6 +41,41 @@ func main() {
 	}
 
 	fmt.Printf("[+] Feed Loaded: %d intelligence advisories (Updated: %s)\n", len(feed.Items), feed.UpdatedAt.Format("2006-01-02 15:04:05 UTC"))
+
+	// If --flake is provided, perform deep Nix Flake input lock audit
+	if *flakePath != "" {
+		fmt.Printf("[+] Auditing Nix Flake Lockfile: %s\n", *flakePath)
+		lock, err := nix.ParseFlakeLockFile(*flakePath)
+		if err != nil {
+			fmt.Printf("[-] Failed to parse flake.lock: %v\n", err)
+			os.Exit(1)
+		}
+
+		deps, err := lock.ResolveDependencies(lock.Root)
+		if err != nil {
+			fmt.Printf("[-] Failed to resolve flake dependencies: %v\n", err)
+			os.Exit(1)
+		}
+
+		fmt.Printf("[+] Resolved %d pinned flake dependencies.\n", len(deps))
+		matches, err := nix.ScanFlakeAgainstFeed(lock, feed)
+		if err != nil {
+			fmt.Printf("[-] Error scanning flake against feed: %v\n", err)
+			os.Exit(1)
+		}
+
+		if len(matches) == 0 {
+			fmt.Println("[+] Zero matching CVEs detected in flake.lock inputs.")
+		} else {
+			fmt.Printf("[-] WARNING: %d vulnerable flake inputs identified!\n", len(matches))
+			for i, m := range matches {
+				fmt.Printf("  [%d] %s (%s) - %s [CVSS: %.1f]\n", i+1, m.AdvisoryID, m.Severity, m.Title, m.CVSSScore)
+				fmt.Printf("      Input: %s (Node: %s) | Rev: %s\n", m.DependencyName, m.NodeKey, m.InstalledRev)
+				fmt.Printf("      Mitigation: %s\n", m.Mitigation)
+			}
+		}
+		return
+	}
 
 	items := feed.Items
 	if *targetFilter != "" {

@@ -30,7 +30,7 @@ Automated generation of defense-in-depth rules:
 - [x] 100% test coverage for core models and configuration pattern matching.
 
 ### Version 0.2.0 — Flake & Ingress Security Modules (In Progress)
-- [ ] Automated NixOS `flake.lock` recursive input analyzer.
+- [x] Automated NixOS `flake.lock` recursive input analyzer (`pkg/nix`).
 - [ ] Kubernetes Ingress snippet path traversal & CVE-2026-21801 heuristic detection.
 - [ ] Automated markdown security briefing generator for hourly audit trails.
 

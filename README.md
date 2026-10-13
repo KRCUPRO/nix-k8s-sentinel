@@ -11,7 +11,7 @@
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](./LICENSE)
 [![Go Report Card](https://goreportcard.com/badge/github.com/KRCUPRO/nix-k8s-sentinel)](https://goreportcard.com/report/github.com/KRCUPRO/nix-k8s-sentinel)
-[![Version](https://img.shields.io/badge/Release-v0.1.0-emerald.svg)](https://github.com/KRCUPRO/nix-k8s-sentinel/releases)
+[![Version](https://img.shields.io/badge/Release-v0.2.0-emerald.svg)](https://github.com/KRCUPRO/nix-k8s-sentinel/releases)
 [![Architecture](https://img.shields.io/badge/Architecture-Bare--Metal_NixOS_+_K8s-8b5cf6.svg)](#-architecture-overview)
 [![Security](https://img.shields.io/badge/Security-Declarative_Audit-38bdf8.svg)](./SECURITY.md)
 
@@ -52,6 +52,9 @@ go test ./...
 
 # Inspect live threat feed
 go run cmd/sentinel/main.go --feed=intel/cve-feed.json
+
+# Audit NixOS flake.lock against known security advisories
+go run cmd/sentinel/main.go --flake=fixtures/flake.lock
 
 # Filter by target infrastructure
 go run cmd/sentinel/main.go --target=kubernetes
