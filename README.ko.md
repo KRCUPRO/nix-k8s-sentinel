@@ -19,7 +19,7 @@
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](./LICENSE)
 [![Go Report Card](https://goreportcard.com/badge/github.com/KRCUPRO/nix-k8s-sentinel)](https://goreportcard.com/report/github.com/KRCUPRO/nix-k8s-sentinel)
-[![Version](https://img.shields.io/badge/Release-v0.2.0-emerald.svg)](https://github.com/KRCUPRO/nix-k8s-sentinel/releases)
+[![Version](https://img.shields.io/badge/Release-v0.3.0-emerald.svg)](https://github.com/KRCUPRO/nix-k8s-sentinel/releases)
 [![Architecture](https://img.shields.io/badge/Architecture-Bare--Metal_NixOS_+_K8s-8b5cf6.svg)](#-architecture-overview)
 [![Security](https://img.shields.io/badge/Security-Declarative_Audit-38bdf8.svg)](./SECURITY.md)
 
@@ -37,7 +37,9 @@
 
 ## 🏛️ 핵심 역량
 
-- **🔍 선언적 인프라 감사**: NixOS Flake 입력 락 및 Kubernetes 매니페스트 명세에 대한 패턴 매칭 및 의존성 추적.
+- **🔍 선언적 인프라 감사**: NixOS Flake 입력 락, Kubernetes 매니페스트 명세, CNI 네트워크 정책에 대한 패턴 매칭 및 의존성 추적.
+- **🌐 Kubernetes Ingress 보안 검증**: 커스텀 스니펫 인젝션(CVE-2023-5044 / CVE-2026-21801), URI rewrite 캡처 그룹 불일치, 경로 탐색(`../`), 평문 HTTP 비인가 허용, 와일드카드 CORS 자격증명 노출 자동 탐지.
+- **🔌 CNI 네트워크 정책 검증**: 표준 Kubernetes NetworkPolicy, Calico GlobalNetworkPolicy, CiliumNetworkPolicy 전수 감사. 기본 거부(Default-Deny) 제로 트러스트 격리, 0.0.0.0/0 무제한 외부 송신 데이터 유출, 민감 인프라 포트(etcd, kubelet) 노출, L7 와일드카드 우회 차단.
 - **📡 정규화된 위협 인텔리전스 수집**: CVSS v3.1 스코어링, 컴포넌트 매핑, 실행 가능한 보안 권고안의 구조화된 수집.
 - **🛡️ 능동적 보안 정책 합성**: 탐지된 위협 시그니처로부터 Falco 런타임 감지 룰 및 OPA Gatekeeper 제약 조건 정책 자동 생성.
 - **⚡ 제로 알로케이션 Go 엔진**: 외부 런타임 의존성 없는 고동시성 단일 바이너리.
@@ -63,6 +65,10 @@ go run cmd/sentinel/main.go --feed=intel/cve-feed.json
 
 # NixOS flake.lock 보안 권고안 대조 감사
 go run cmd/sentinel/main.go --flake=fixtures/flake.lock
+
+# Kubernetes 매니페스트 파일 및 디렉토리 보안 감사
+go run cmd/sentinel/main.go --k8s=fixtures/k8s-ingress-vulnerable.yaml
+go run cmd/sentinel/main.go --k8s=fixtures/
 
 # 대상 인프라별 필터링
 go run cmd/sentinel/main.go --target=kubernetes

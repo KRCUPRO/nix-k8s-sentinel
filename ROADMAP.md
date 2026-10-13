@@ -29,16 +29,24 @@ Automated generation of defense-in-depth rules:
 - [x] Command-line interface with target filtering and feed querying (`cmd/sentinel`).
 - [x] 100% test coverage for core models and configuration pattern matching.
 
-### Version 0.2.0 — Flake & Ingress Security Modules (In Progress)
+### Version 0.2.0 — Flake Dependency Security (Completed)
 - [x] Automated NixOS `flake.lock` recursive input analyzer (`pkg/nix`).
-- [ ] Kubernetes Ingress snippet path traversal & CVE-2026-21801 heuristic detection.
-- [ ] Automated markdown security briefing generator for hourly audit trails.
+- [x] Upstream CVE & advisory mapping across pinned git revisions.
+- [x] Cycle protection and 64-level traversal bounds limits.
 
-### Version 0.3.0 — Policy Synthesis & Defense Engines
+### Version 0.3.0 — Kubernetes Ingress & CNI Network Policy Defense Engine (Completed)
+- [x] Kubernetes Ingress snippet injection (CVE-2023-5044 / CVE-2026-21801) and path traversal analyzer (`pkg/k8s/ingress.go`).
+- [x] Calico, Cilium, and standard Kubernetes CNI network policy verification (`pkg/k8s/cni.go`).
+- [x] Default-deny posture audits, sensitive port exposure detection (etcd, kubelet), and 0.0.0.0/0 egress data leak prevention.
+- [x] Unified manifest file and directory scanner with feed correlation (`pkg/k8s/scanner.go`).
+
+### Version 0.4.0 — Threat Intelligence Briefing & Policy Synthesis (Planned)
+- [ ] Automated markdown security briefing generator for hourly audit trails.
 - [ ] Active synthesis of Falco runtime rules from threat mitigations.
 - [ ] Open Policy Agent (OPA) Gatekeeper ConstraintTemplate auto-generator.
 - [ ] SARIF v2.1.0 output formatting for GitHub Security Code Scanning integration.
 
-### Version 0.4.0 — Bare-Metal Telemetry & Storage Audits
+### Version 0.5.0 — Bare-Metal Telemetry & Storage Audits (Planned)
 - [ ] eBPF socket monitoring probes for multi-node bare-metal Kubernetes clusters.
 - [ ] Rook Ceph distributed storage OSD peering anomaly and BlueStore integrity rules.
+- [ ] WireGuard mesh network cryptographic key rotation and ephemeral peer posture.
