@@ -19,7 +19,7 @@
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](./LICENSE)
 [![Go Report Card](https://goreportcard.com/badge/github.com/KRCUPRO/nix-k8s-sentinel)](https://goreportcard.com/report/github.com/KRCUPRO/nix-k8s-sentinel)
-[![Version](https://img.shields.io/badge/Release-v0.3.0-emerald.svg)](https://github.com/KRCUPRO/nix-k8s-sentinel/releases)
+[![Version](https://img.shields.io/badge/Release-v0.4.0-emerald.svg)](https://github.com/KRCUPRO/nix-k8s-sentinel/releases)
 [![Architecture](https://img.shields.io/badge/Architecture-Bare--Metal_NixOS_+_K8s-8b5cf6.svg)](#-architecture-overview)
 [![Security](https://img.shields.io/badge/Security-Declarative_Audit-38bdf8.svg)](./SECURITY.md)
 
@@ -38,6 +38,8 @@
 ## 🏛️ 核心能力
 
 - **🔍 声明式基础设施审计**: 对 NixOS Flake 输入锁与 Kubernetes 清单规范进行模式匹配与依赖追踪。
+- **🌐 Kubernetes Ingress 与 CNI 策略安全审计**: 自动检测 Snippet 注入、URI 路径穿越、CORS/SSL 弱配置及 0.0.0.0/0 无限制外部出向数据泄露。
+- **📊 每小时自动化威胁情报简报生成**: 在 `intel/briefings/` 自动合成 Markdown 格式的 CVSS 风险遥测矩阵与修复操作清单。
 - **📡 标准化威胁情报摄取**: 结构化解析 CVSS v3.1 评分、组件映射及切实可行的修复建议。
 - **🛡️ 主动防御策略合成**: 根据检测到的威胁特征自动生成 Falco 运行时检测规则与 OPA Gatekeeper 准入控制策略。
 - **⚡ 零分配 Go 引擎**: 高并发单二进制文件，零外部运行时依赖。
@@ -62,9 +64,15 @@ go test ./...
 go run cmd/sentinel/main.go --feed=intel/cve-feed.json
 
 # 审计 NixOS flake.lock 依赖中的已知安全漏洞
+go run cmd/sentinel/main.go --flake=fixtures/flake.lock
 
-
+# 审计 Kubernetes 清单文件的安全策略违规
 go run cmd/sentinel/main.go --k8s=fixtures/k8s-ingress-vulnerable.yaml
+go run cmd/sentinel/main.go --k8s=fixtures/
+
+# 自动生成每小时威胁情报分析简报
+go run cmd/sentinel/main.go --briefing
+go run cmd/sentinel/main.go --flake=fixtures/flake.lock --k8s=fixtures/k8s-ingress-vulnerable.yaml --briefing
 
 # 按目标基础设施过滤
 go run cmd/sentinel/main.go --target=kubernetes

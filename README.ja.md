@@ -19,7 +19,7 @@
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](./LICENSE)
 [![Go Report Card](https://goreportcard.com/badge/github.com/KRCUPRO/nix-k8s-sentinel)](https://goreportcard.com/report/github.com/KRCUPRO/nix-k8s-sentinel)
-[![Version](https://img.shields.io/badge/Release-v0.3.0-emerald.svg)](https://github.com/KRCUPRO/nix-k8s-sentinel/releases)
+[![Version](https://img.shields.io/badge/Release-v0.4.0-emerald.svg)](https://github.com/KRCUPRO/nix-k8s-sentinel/releases)
 [![Architecture](https://img.shields.io/badge/Architecture-Bare--Metal_NixOS_+_K8s-8b5cf6.svg)](#-architecture-overview)
 [![Security](https://img.shields.io/badge/Security-Declarative_Audit-38bdf8.svg)](./SECURITY.md)
 
@@ -38,6 +38,8 @@
 ## 🏛️ 主要機能
 
 - **🔍 宣言型インフラストラクチャ監査**: NixOS Flake 入力ロックおよび Kubernetes マニフェスト仕様のパターンマッチングと依存関係追跡。
+- **🌐 Kubernetes Ingress & CNI セキュリティ検査**: スニペットインジェクション、URIパス走査、CORS/SSL設定不備、および0.0.0.0/0無制限送信・デフォルト拒否隔離の自動監査。
+- **📊 1時間ごとの脅威インテリジェンスブリーフィング自動生成**: CVSSリスクテレメトリマトリックスと対策プレイブックを含むMarkdownレポートを `intel/briefings/` に自動出力。
 - **📡 正規化された脅威インテリジェンスの収集**: CVSS v3.1 スコアリング、コンポーネントマッピング、実用的な修復アドバイザリの構造化収集。
 - **🛡️ アクティブポリシー合成**: 検出された脅威シグネチャからの Falco ランタイム検知ルールおよび OPA Gatekeeper 制約ポリシーの自動生成。
 - **⚡ ゼロアロケーション Go エンジン**: 外部ランタイム依存関係のない、高並行単一バイナリ。
@@ -62,9 +64,15 @@ go test ./...
 go run cmd/sentinel/main.go --feed=intel/cve-feed.json
 
 # NixOS flake.lock を既知のセキュリティアドバイザリと照合監査
+go run cmd/sentinel/main.go --flake=fixtures/flake.lock
 
-
+# Kubernetes マニフェストのセキュリティ監査
 go run cmd/sentinel/main.go --k8s=fixtures/k8s-ingress-vulnerable.yaml
+go run cmd/sentinel/main.go --k8s=fixtures/
+
+# 脅威インテリジェンスブリーフィングの自動生成
+go run cmd/sentinel/main.go --briefing
+go run cmd/sentinel/main.go --flake=fixtures/flake.lock --k8s=fixtures/k8s-ingress-vulnerable.yaml --briefing
 
 # 対象インフラストラクチャによるフィルタリング
 go run cmd/sentinel/main.go --target=kubernetes
