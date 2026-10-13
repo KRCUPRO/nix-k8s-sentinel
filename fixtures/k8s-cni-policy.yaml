@@ -1,0 +1,29 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: payment-backend-policy
+  namespace: production
+spec:
+  podSelector:
+    matchLabels:
+      app: payment-processor
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: checkout-frontend
+    ports:
+    - protocol: TCP
+      port: 8443
+    - protocol: TCP
+      port: 2379 # Misconfigured internal etcd access
+  egress:
+  - to:
+    - ipBlock:
+        cidr: 0.0.0.0/0 # Misconfigured wide-open egress
+    ports:
+    - protocol: TCP
+      port: 443
