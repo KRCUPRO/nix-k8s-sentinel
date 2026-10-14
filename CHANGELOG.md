@@ -5,6 +5,54 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.0] - 2026-10-14
+
+### Added
+- **Kube-Bench & CIS Kubernetes Benchmark Declarative Validator** (`pkg/bench/scanner.go`): High-performance declarative scanner inspecting NixOS systemd unit definitions (`services.kubernetes.*`, `services.etcd.*`) and Kubernetes component configuration files (such as `KubeletConfiguration` YAML) against the official CIS Kubernetes Benchmark (v1.8 / v1.9). Evaluates Section 1.2 (Kube-APIServer), Section 1.3 (Controller Manager), Section 1.4 (Scheduler), Section 2 (etcd), and Section 4.2 (Kubelet).
+- **Canonical CIS Kubernetes Benchmark Ruleset** (`pkg/bench/rules.go`): Canonical suite of 29 benchmark rules (`CIS-1.2.1` through `CIS-4.2.12`) with CVSS severity scoring, flag definitions, expected values, and technical rationales:
+  - `CIS-1.2.1`: Ensure that the `--anonymous-auth` argument is set to `false` (Critical, CVSS 9.1).
+  - `CIS-1.2.2`: Ensure that the `--token-auth-file` parameter is not set (High, CVSS 7.5).
+  - `CIS-1.2.3`: Ensure that the `--kubelet-https` argument is set to `true` (High, CVSS 7.2).
+  - `CIS-1.2.4`: Ensure that `--kubelet-client-certificate` and `--kubelet-client-key` are set (High, CVSS 7.5).
+  - `CIS-1.2.5`: Ensure that `--kubelet-certificate-authority` is set (High, CVSS 7.5).
+  - `CIS-1.2.6`: Ensure that `--authorization-mode` includes `Node,RBAC` and excludes `AlwaysAllow` (Critical, CVSS 8.9).
+  - `CIS-1.2.14`: Ensure that `--profiling` is set to `false` (Medium, CVSS 5.3).
+  - `CIS-1.2.15`: Ensure that `--audit-log-path` is set (Medium, CVSS 6.0).
+  - `CIS-1.2.25`: Ensure that `--etcd-cafile`, `--etcd-certfile`, and `--etcd-keyfile` are set (High, CVSS 8.1).
+  - `CIS-1.2.28`: Ensure that `--tls-cipher-suites` is set to strong ciphers (Medium, CVSS 6.2).
+  - `CIS-1.3.1`: Ensure that `--terminated-pod-gc-threshold` is set (Low, CVSS 4.0).
+  - `CIS-1.3.2`: Ensure that `--profiling` is set to `false` (Medium, CVSS 5.3).
+  - `CIS-1.3.3`: Ensure that `--use-service-account-credentials` is set to `true` (High, CVSS 7.2).
+  - `CIS-1.3.4`: Ensure that `--service-account-private-key-file` is set (High, CVSS 7.5).
+  - `CIS-1.3.5`: Ensure that `--root-ca-file` is set (High, CVSS 7.5).
+  - `CIS-1.3.7`: Ensure that `--bind-address` is set to `127.0.0.1` (Medium, CVSS 6.5).
+  - `CIS-1.4.1`: Ensure that `--profiling` is set to `false` on scheduler (Medium, CVSS 5.3).
+  - `CIS-1.4.2`: Ensure that `--bind-address` is set to `127.0.0.1` on scheduler (Medium, CVSS 6.5).
+  - `CIS-2.1`: Ensure that `--cert-file` and `--key-file` are set on etcd (High, CVSS 8.0).
+  - `CIS-2.2`: Ensure that `--client-cert-auth` is set to `true` on etcd (High, CVSS 8.2).
+  - `CIS-2.4`: Ensure that `--peer-cert-file` and `--peer-key-file` are set on etcd (High, CVSS 8.0).
+  - `CIS-2.7`: Ensure that `--auto-tls` is not set to `true` on etcd (High, CVSS 7.5).
+  - `CIS-4.2.1`: Ensure that `--anonymous-auth` is set to `false` on Kubelet (Critical, CVSS 9.8, mapped to CVE-2026-38102).
+  - `CIS-4.2.2`: Ensure that `--authorization-mode` is set to `Webhook` (Critical, CVSS 8.9, mapped to CVE-2026-38102).
+  - `CIS-4.2.3`: Ensure that `--client-ca-file` is set on Kubelet (High, CVSS 7.5).
+  - `CIS-4.2.4`: Ensure that `--read-only-port` is set to `0` on Kubelet (High, CVSS 7.5, mapped to CVE-2026-38102).
+  - `CIS-4.2.6`: Ensure that `--protect-kernel-defaults` is set to `true` (Medium, CVSS 6.0).
+  - `CIS-4.2.10`: Ensure that `--rotate-certificates` is set to `true` (Medium, CVSS 5.5).
+  - `CIS-4.2.12`: Ensure that `--tls-cipher-suites` is set to strong ciphers (Medium, CVSS 6.2).
+- **Automated Declarative Remediation Synthesizers** (`pkg/bench/remediation.go`): Synthesizes drop-in hardened NixOS modules (`nixos-cis-hardening.nix`) and hardened worker node Kubelet configurations (`kubelet-config-hardened.yaml`) directly from detected violations.
+- **Dedicated CLI CIS Runner & Architecture Modularization** (`cmd/sentinel/cis_runner.go`, `cmd/sentinel/storage_runner.go`, `cmd/sentinel/probe_runner.go`): Modular runner dispatch pattern keeping `cmd/sentinel/main.go` under 400 LOC. Adds `--cis=<path>`, `--bench=<path>`, `--kube-bench=<path>`, and `--remediation-out=<path>`.
+- **Threat Feed Expansion** (`intel/cve-feed.json`): Added `CVE-2026-38102` (Kubernetes Kubelet Unauthenticated Remote Execution & Anonymous Access, CVSS 9.8).
+- **Unified Exporter Integration**: CIS benchmark violations and compliance statistics seamlessly exported to OASIS SARIF v2.1.0, structured JSON audit telemetry, and hourly Markdown threat briefings.
+- **Production-Like Fixtures**: Added realistic declarative NixOS configuration (`fixtures/nixos-kubernetes.nix`) and Kubelet manifest (`fixtures/kubelet-config.yaml`) modeling compliant and unhardened control plane and worker options.
+- **Comprehensive Unit Test Suite** (`pkg/bench/bench_test.go`, `pkg/report/cis_report_test.go`): 100% test coverage for CIS rules, nested Nix parsing, KubeletConfiguration, remediation generation, and bounds checks.
+
+### Changed
+- Bumped engine release to `v0.10.0`.
+- Updated `SECURITY.md` establishing CIS Kubernetes Benchmark and control plane hardening invariants.
+- Updated `scripts/ARCHITECTURE_MAP.md` documenting new benchmark modules and sub-400 LOC modularity.
+
+---
+
 ## [0.9.0] - 2026-10-14
 
 ### Added

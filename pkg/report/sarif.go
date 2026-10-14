@@ -463,8 +463,69 @@ func BuildSARIFReport(opts ReportOptions) (*SARIFLog, error) {
 		}
 	}
 
-	// 6. Process Standalone Feed Advisories (if neither k8s nor flake nor probe nor storage nor wireguard was specified)
-	if (opts.K8sReport == nil || len(opts.K8sReport.Violations) == 0) && len(opts.FlakeMatches) == 0 && len(opts.ProbeEvents) == 0 && len(opts.StorageViolations) == 0 && len(opts.WireGuardViolations) == 0 && opts.Feed != nil {
+	// 6. Process CIS Kubernetes Benchmark Violations
+	if len(opts.CISViolations) > 0 {
+		for _, cv := range opts.CISViolations {
+			tags := []string{"security", "kubernetes", "cis-benchmark", string(cv.Component), cv.Section}
+			if cv.MatchedCVE != "" {
+				tags = append(tags, cv.MatchedCVE)
+			}
+			ruleIdx := getOrCreateRule(cv.RuleID, cv.Title, cv.Description, cv.Remediation, cv.Severity, cv.CVSSScore, tags)
+			level := SeverityToSARIFLevel(string(cv.Severity), cv.CVSSScore)
+
+			locURI := cv.FilePath
+			if locURI == "" {
+				locURI = opts.CISPath
+			}
+			if locURI == "" {
+				locURI = fmt.Sprintf("k8s/%s", cv.Component)
+			}
+			locURI = filepath.ToSlash(locURI)
+
+			line := cv.StartLine
+			if line <= 0 {
+				line = 1
+			}
+
+			cveTag := ""
+			if cv.MatchedCVE != "" {
+				cveTag = fmt.Sprintf(" [%s]", cv.MatchedCVE)
+			}
+			resMsg := fmt.Sprintf("[%s Section %s]%s %s: Flag '%s' is '%s' (expected '%s')",
+				cv.Component, cv.Section, cveTag, cv.Title, cv.FlagName, cv.ActualValue, cv.ExpectedValue)
+
+			results = append(results, SARIFResult{
+				RuleID:    cv.RuleID,
+				RuleIndex: ruleIdx,
+				Level:     level,
+				Message:   SARIFMessage{Text: resMsg},
+				Locations: []SARIFLocation{
+					{
+						PhysicalLocation: &PhysicalLocation{
+							ArtifactLocation: ArtifactLocation{
+								URI:       locURI,
+								URIBaseID: "%SRCROOT%",
+							},
+							Region: &Region{
+								StartLine:   line,
+								StartColumn: 1,
+							},
+						},
+						LogicalLocations: []LogicalLocation{
+							{
+								Name:               cv.RuleID,
+								Kind:               "CISBenchmarkRule",
+								FullyQualifiedName: fmt.Sprintf("cis/%s/%s", cv.Component, cv.RuleID),
+							},
+						},
+					},
+				},
+			})
+		}
+	}
+
+	// 7. Process Standalone Feed Advisories (if neither k8s nor flake nor probe nor storage nor wireguard nor cis was specified)
+	if (opts.K8sReport == nil || len(opts.K8sReport.Violations) == 0) && len(opts.FlakeMatches) == 0 && len(opts.ProbeEvents) == 0 && len(opts.StorageViolations) == 0 && len(opts.WireGuardViolations) == 0 && len(opts.CISViolations) == 0 && opts.Feed != nil {
 		feedItems := opts.Feed.Items
 		if opts.TargetFilter != "" {
 			feedItems = opts.Feed.FilterByTarget(opts.TargetFilter)

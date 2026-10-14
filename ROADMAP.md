@@ -70,20 +70,30 @@ Automated generation of defense-in-depth rules:
 - [x] Volume health auditor preventing unsafe ReadWriteMany (RWX) multi-attaches on Ceph RBD block storage (`pkg/storage/volume.go`).
 - [x] Full CLI integration (`--ceph`, `--storage`, `--ceph-telemetry`) and seamless export to SARIF v2.1.0, JSON, and Markdown briefings.
 
-### Version 0.9.0 — WireGuard Mesh Network Cryptographic Key Rotation Engine (Current)
+### Version 0.9.0 — WireGuard Mesh Network Cryptographic Key Rotation Engine (Completed)
 - [x] WireGuard mesh network cryptographic key rotation and ephemeral peer posture auditing (`pkg/wireguard`).
 - [x] Canonical rule catalog `WG-MESH-001` through `WG-MESH-012` detecting plaintext private keys in `/nix/store` (CVE-2026-31048), missing PSK for post-quantum defense, allowedIPs 0.0.0.0/0 route hijacking, and subnet collisions.
 - [x] Runtime mesh telemetry reconciler identifying configuration drift, unmanaged ephemeral peers, and stale/abandoned handshakes (> 24 hours).
 - [x] Zero-leak key masking and 60-day warning / 90-day hard expiration lifecycle enforcement with Curve25519 format validation.
 - [x] Integrated CLI flags (`--wg`, `--wireguard`, `--wg-telemetry`) with unified export to SARIF v2.1.0, JSON telemetry, and Markdown threat briefings.
 
-### Version 0.10.0 — Kube-Bench & CIS Benchmark Declarative Validator (Planned)
-- [ ] Audit NixOS systemd unit definitions and kubelet flags against CIS Kubernetes Benchmark (`pkg/bench/cis.go`).
-- [ ] Automated remediation recommendations for unhardened control plane components.
-- [ ] Kubernetes Gateway API & EnvoyFilter route threat radar (`pkg/gateway/radar.go`).
+### Version 0.10.0 — Kube-Bench & CIS Benchmark Declarative Validator (Completed)
+- [x] Declarative audit of NixOS systemd unit definitions and Kubernetes component manifests against CIS Kubernetes Benchmark (`pkg/bench/scanner.go`).
+- [x] Canonical CIS benchmark rule catalog `CIS-1.2.1` through `CIS-4.2.12` covering API Server, Controller Manager, Scheduler, etcd, and Kubelet (`pkg/bench/rules.go`).
+- [x] Automated remediation synthesis for unhardened control plane components, producing drop-in NixOS modules and hardened Kubelet configs (`pkg/bench/remediation.go`).
+- [x] Full CLI integration (`--cis`, `--bench`, `--kube-bench`, `--remediation-out`) with unified SARIF v2.1.0 code scanning, JSON audit telemetry, and Markdown briefing exports.
+- [x] Production sample fixtures (`fixtures/nixos-kubernetes.nix`, `fixtures/kubelet-config.yaml`) and threat feed correlation with `CVE-2026-38102`.
+
+### Version 0.11.0 — Kubernetes Gateway API & EnvoyFilter Route Threat Radar (Planned)
+- [ ] Implement declarative HTTPRoute, GRPCRoute, and TCPRoute path & header rewrite audit.
+- [ ] Detect unsafe EnvoyFilter Lua injections, filter chain order bypasses, and unauthenticated listener exposures.
+- [ ] Cross-namespace ReferenceGrant security enforcement validation.
+
+### Version 0.12.0 — Confidential Computing & Measured Boot Attestation Verifier (Planned)
+- [ ] Audit AMD SEV-SNP and Intel TDX measured boot artifacts against NixOS store path signatures.
+- [ ] Verify TPM 2.0 PCR quotations and remote attestation tokens for bare-metal cluster worker nodes.
 
 ### Version 1.0.0 — Supply Chain Attestation & Workload Identity (Planned)
-- [ ] Confidential Computing AMD SEV-SNP and Intel TDX measured boot attestation verifier.
 - [ ] Multi-cluster fleet synchronization and federated OIDC token radar.
 - [ ] SPIFFE/SPIRE workload attestation and cryptographic mTLS certificate monitoring.
 - [ ] Software Bill of Materials (SBOM) ingestion for SPDX v3.0 / CycloneDX v1.6 and In-Toto provenance validation.

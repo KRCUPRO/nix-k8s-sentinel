@@ -1,13 +1,12 @@
 package main
 
 import (
-	"context"
 	"flag"
 	"fmt"
 	"os"
-	"strings"
-	"time"
+	"path/filepath"
 
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/bench"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/intel"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/k8s"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nix"
@@ -19,7 +18,7 @@ import (
 )
 
 var (
-	version = "0.9.0"
+	version = "0.10.0"
 )
 
 func main() {
@@ -34,6 +33,10 @@ func main() {
 	wgPath := flag.String("wg", "", "Path to NixOS WireGuard manifest file or directory to audit")
 	wireguardLong := flag.String("wireguard", "", "Alias for --wg")
 	wgTelemetry := flag.String("wg-telemetry", "", "Path to runtime WireGuard peer telemetry JSON to inspect")
+	cisPath := flag.String("cis", "", "Path to NixOS module or Kubernetes YAML to audit against CIS Benchmark")
+	benchShort := flag.String("bench", "", "Alias for --cis")
+	kubeBenchLong := flag.String("kube-bench", "", "Alias for --cis")
+	remediationOut := flag.String("remediation-out", "", "Output path to write synthesized NixOS CIS hardening remediation module")
 	briefing := flag.Bool("briefing", false, "Generate automated Markdown threat intelligence briefing")
 	briefingDir := flag.String("briefing-dir", "intel/briefings", "Output directory for threat briefings")
 	briefingFile := flag.String("briefing-file", "", "Custom filename for threat briefing markdown")
@@ -54,6 +57,13 @@ func main() {
 
 	if *wgPath == "" && *wireguardLong != "" {
 		*wgPath = *wireguardLong
+	}
+
+	if *cisPath == "" && *benchShort != "" {
+		*cisPath = *benchShort
+	}
+	if *cisPath == "" && *kubeBenchLong != "" {
+		*cisPath = *kubeBenchLong
 	}
 
 	if *outFile == "" && *outShort != "" {
@@ -100,6 +110,8 @@ func main() {
 	var storageHealth *storage.CephHealthReport
 	var wireguardViolations []wireguard.WireGuardViolation
 	var wireguardReconciliation *wireguard.ReconciliationReport
+	var cisViolations []bench.CISViolation
+	var cisSummary *bench.CISSummary
 
 	// 1. Audit Nix Flake if --flake is provided
 	if *flakePath != "" {
@@ -209,139 +221,12 @@ func main() {
 
 	// 4. Run Bare-Metal eBPF Telemetry Probes if --probe is provided
 	if *probeFlag {
-		logInfo("[+] Initializing Bare-Metal eBPF Telemetry Engine...\n")
-		rawNodes := strings.Split(*probeNodes, ",")
-		var nodeList []string
-		for _, n := range rawNodes {
-			trimmed := strings.TrimSpace(n)
-			if trimmed != "" {
-				nodeList = append(nodeList, trimmed)
-			}
-		}
-
-		var rawEvents []probe.TelemetryEvent
-		if *probeFixture != "" {
-			if _, err := os.Stat(*probeFixture); err == nil {
-				loaded, err := probe.LoadEventsFromFile(*probeFixture)
-				if err != nil {
-					logErr("[-] Failed to load probe fixture (%s): %v\n", *probeFixture, err)
-					os.Exit(1)
-				}
-				rawEvents = loaded
-				logInfo("[+] Loaded %d telemetry records from fixture: %s\n", len(rawEvents), *probeFixture)
-			}
-		}
-
-		mgr, err := probe.SimulateMultiNodeCluster(nodeList, feed, rawEvents)
-		if err != nil {
-			logErr("[-] Failed to initialize multi-node cluster simulation: %v\n", err)
-			os.Exit(1)
-		}
-
-		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-		defer cancel()
-
-		if err := mgr.Start(ctx); err != nil {
-			logErr("[-] Failed to start eBPF manager: %v\n", err)
-			os.Exit(1)
-		}
-
-		time.Sleep(150 * time.Millisecond)
-
-		if err := mgr.Stop(); err != nil {
-			logErr("[-] Warning during eBPF probe shutdown: %v\n", err)
-		}
-
-		stats := mgr.Stats()
-		probeSnapshots = mgr.Snapshot()
-
-		logInfo("[+] Bare-Metal eBPF Probes Completed across %d nodes (Total Events: %d)\n", mgr.ActiveProbesCount(), stats.TotalEvents)
-		logInfo("    Severity: Critical=%d | High=%d | Medium=%d | Low=%d | Info=%d\n",
-			stats.CriticalCount, stats.HighCount, stats.MediumCount, stats.LowCount, stats.InfoCount)
-
-		for _, ev := range probeSnapshots {
-			if ev.RiskScore >= 7.0 || ev.Severity == "CRITICAL" || ev.Severity == "HIGH" {
-				logInfo("  [!] [%s] %s on node %s: %s [Risk: %.1f]\n", ev.Severity, ev.EventType, ev.NodeName, ev.Message, ev.RiskScore)
-				if len(ev.ThreatTags) > 0 {
-					logInfo("      Tags: %s\n", strings.Join(ev.ThreatTags, ", "))
-				}
-			}
-		}
+		probeSnapshots = runProbeTelemetry(*probeNodes, *probeFixture, feed, logInfo, logErr)
 	}
 
 	// 5. Audit Rook Ceph Storage Manifests & Telemetry
-	if *cephPath != "" {
-		logInfo("[+] Auditing Rook Ceph Storage Manifests: %s\n", *cephPath)
-		storageScanner := storage.NewStorageScanner(feed)
-		fileInfo, err := os.Stat(*cephPath)
-		if err != nil {
-			logErr("[-] Failed to inspect Ceph manifest path: %v\n", err)
-			os.Exit(1)
-		}
-
-		var findings []storage.StorageViolation
-		if fileInfo.IsDir() {
-			rep, err := storageScanner.ScanDirectory(*cephPath)
-			if err != nil {
-				logErr("[-] Failed to audit Ceph directory: %v\n", err)
-				os.Exit(1)
-			}
-			findings = rep.Violations
-			logInfo("[+] Scanned %d files for Rook Ceph storage configurations.\n", rep.TotalFiles)
-		} else {
-			findings, err = storageScanner.ScanFile(*cephPath)
-			if err != nil {
-				logErr("[-] Failed to audit Ceph file: %v\n", err)
-				os.Exit(1)
-			}
-		}
-
-		storageViolations = append(storageViolations, findings...)
-		if len(findings) == 0 {
-			logInfo("[+] Zero integrity or security violations detected in Rook Ceph manifests.\n")
-		} else {
-			logInfo("[-] WARNING: %d Rook Ceph storage violations identified!\n", len(findings))
-			for i, v := range findings {
-				cveTag := ""
-				if v.MatchedCVE != "" {
-					cveTag = fmt.Sprintf(" [%s]", v.MatchedCVE)
-				}
-				logInfo("  [%d] [%s] %s (%s)%s [CVSS: %.1f]\n", i+1, v.RuleID, v.Title, v.Severity, cveTag, v.CVSSScore)
-				logInfo("      Target: %s/%s\n", v.ResourceKind, v.ResourceName)
-				logInfo("      Details: %s\n", v.Description)
-				logInfo("      Remediation: %s\n", v.Remediation)
-			}
-		}
-	}
-
-	if *cephTelemetry != "" {
-		logInfo("[+] Ingesting Ceph Runtime Health Telemetry: %s\n", *cephTelemetry)
-		detector := storage.NewCephAnomalyDetector(feed)
-		health, anomalies, err := detector.AnalyzeHealthFile(*cephTelemetry)
-		if err != nil {
-			logErr("[-] Failed to analyze Ceph health telemetry: %v\n", err)
-			os.Exit(1)
-		}
-		storageHealth = health
-		storageViolations = append(storageViolations, anomalies...)
-
-		logInfo("[+] Ceph Cluster Status: %s (Monitors: %d | OSDs: %d Up/%d Total | PGs: %d ActiveClean/%d Total)\n",
-			health.Status, len(health.MonQuorum), health.OSDStats.Up, health.OSDStats.Total, health.PGStats.ActiveClean, health.PGStats.Total)
-
-		if len(anomalies) == 0 {
-			logInfo("[+] Zero storage runtime anomalies detected.\n")
-		} else {
-			logInfo("[-] WARNING: %d Ceph storage anomalies identified!\n", len(anomalies))
-			for i, a := range anomalies {
-				cveTag := ""
-				if a.MatchedCVE != "" {
-					cveTag = fmt.Sprintf(" [%s]", a.MatchedCVE)
-				}
-				logInfo("  [%d] [%s] %s (%s)%s [CVSS: %.1f]\n", i+1, a.RuleID, a.Title, a.Severity, cveTag, a.CVSSScore)
-				logInfo("      Details: %s\n", a.Description)
-				logInfo("      Remediation: %s\n", a.Remediation)
-			}
-		}
+	if *cephPath != "" || *cephTelemetry != "" {
+		storageViolations, storageHealth = runStorageAudit(*cephPath, *cephTelemetry, feed, logInfo, logErr)
 	}
 
 	// 6. Audit NixOS WireGuard Mesh Manifests & Telemetry
@@ -349,7 +234,23 @@ func main() {
 		wireguardViolations, wireguardReconciliation = runWireGuardAudit(*wgPath, *wgTelemetry, feed, logInfo, logErr)
 	}
 
-	// 7. Generate Threat Briefing if --briefing is requested
+	// 7. Audit CIS Kubernetes Benchmark if --cis is provided
+	if *cisPath != "" {
+		cisViolations, cisSummary = runCISAudit(*cisPath, feed, logInfo, logErr)
+		if *remediationOut != "" && len(cisViolations) > 0 {
+			nixPatch := bench.SynthesizeNixOSRemediation(cisViolations)
+			cleanOut := filepath.Clean(*remediationOut)
+			if err := os.MkdirAll(filepath.Dir(cleanOut), 0755); err != nil {
+				logErr("[-] Failed to create directory for remediation patch: %v\n", err)
+			} else if err := os.WriteFile(cleanOut, []byte(nixPatch), 0644); err != nil {
+				logErr("[-] Failed to write remediation patch to %s: %v\n", cleanOut, err)
+			} else {
+				logInfo("[+] Synthesized CIS NixOS hardening module written to: %s\n", cleanOut)
+			}
+		}
+	}
+
+	// 8. Generate Threat Briefing if --briefing is requested
 	if *briefing {
 		logInfo("[+] Synthesizing Threat Intelligence Briefing...\n")
 		briefingOpts := report.BriefingOptions{
@@ -362,6 +263,8 @@ func main() {
 			StorageHealth:           storageHealth,
 			WireGuardViolations:     wireguardViolations,
 			WireGuardReconciliation: wireguardReconciliation,
+			CISViolations:           cisViolations,
+			CISSummary:              cisSummary,
 			OutputDir:               *briefingDir,
 			CustomFilename:          *briefingFile,
 		}
@@ -390,7 +293,7 @@ func main() {
 		return
 	}
 
-	// 8. Handle Structured Formats (SARIF / JSON)
+	// 9. Handle Structured Formats (SARIF / JSON)
 	if *format == "sarif" || *format == "json" {
 		reportOpts := report.ReportOptions{
 			Version:                 version,
@@ -402,10 +305,13 @@ func main() {
 			StorageHealth:           storageHealth,
 			WireGuardViolations:     wireguardViolations,
 			WireGuardReconciliation: wireguardReconciliation,
+			CISViolations:           cisViolations,
+			CISSummary:              cisSummary,
 			FlakePath:               *flakePath,
 			K8sPath:                 *k8sPath,
 			StoragePath:             *cephPath,
 			WireGuardPath:           *wgPath,
+			CISPath:                 *cisPath,
 			TargetFilter:            *targetFilter,
 			Pretty:                  true,
 		}
@@ -459,8 +365,8 @@ func main() {
 		}
 	}
 
-	// 9. Default feed summary (when neither flake nor k8s nor policy nor probe nor storage nor wireguard was requested)
-	if *flakePath == "" && *k8sPath == "" && *policyOut == "" && !*probeFlag && *cephPath == "" && *cephTelemetry == "" && *wgPath == "" && *wgTelemetry == "" {
+	// 10. Default feed summary (when no specific audit target was requested)
+	if *flakePath == "" && *k8sPath == "" && *policyOut == "" && !*probeFlag && *cephPath == "" && *cephTelemetry == "" && *wgPath == "" && *wgTelemetry == "" && *cisPath == "" {
 		items := feed.Items
 		if *targetFilter != "" {
 			items = feed.FilterByTarget(*targetFilter)
