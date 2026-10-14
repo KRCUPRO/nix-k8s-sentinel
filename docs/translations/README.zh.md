@@ -1,7 +1,7 @@
 <div align="center">
 
 <p align="center">
-  <a href="./README.md">🇺🇸 English</a> ·
+  <a href="../../README.md">🇺🇸 English</a> ·
   <a href="./README.ko.md">🇰🇷 한국어</a> ·
   <a href="./README.ja.md">🇯🇵 日本語</a> ·
   <strong>🇨🇳 简体中文</strong> ·
@@ -17,11 +17,11 @@
 
 **面向 NixOS 与 Kubernetes 的声明式漏洞扫描器与实时威胁情报雷达**
 
-[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](./LICENSE)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](../../LICENSE)
 [![Go Report Card](https://goreportcard.com/badge/github.com/KRCUPRO/nix-k8s-sentinel)](https://goreportcard.com/report/github.com/KRCUPRO/nix-k8s-sentinel)
 [![Version](https://img.shields.io/badge/Release-v0.7.0-emerald.svg)](https://github.com/KRCUPRO/nix-k8s-sentinel/releases)
 [![Architecture](https://img.shields.io/badge/Architecture-Bare--Metal_NixOS_+_K8s-8b5cf6.svg)](#-architecture-overview)
-[![Security](https://img.shields.io/badge/Security-Declarative_Audit-38bdf8.svg)](./SECURITY.md)
+[![Security](https://img.shields.io/badge/Security-Declarative_Audit-38bdf8.svg)](../../SECURITY.md)
 
 </div>
 
@@ -83,10 +83,10 @@ go run cmd/sentinel/main.go --target=nixos
 
 ## 🗺️ 路线图与演进规划
 
-关于后续 Flake 输入解析器演进及 eBPF 裸金属探针规划，请参阅 [ROADMAP.md](./ROADMAP.md)。
+关于后续 Flake 输入解析器演进及 eBPF 裸金属探针规划，请参阅 [ROADMAP.md](../../ROADMAP.md)。
 
 ---
 
 ## 🔒 安全策略
 
-有关漏洞披露流程及安全守则，请查阅 [SECURITY.md](./SECURITY.md)。
+有关漏洞披露流程及安全守则，请查阅 [SECURITY.md](../../SECURITY.md)。

@@ -1,7 +1,7 @@
 <div align="center">
 
 <p align="center">
-  <a href="./README.md">🇺🇸 English</a> ·
+  <a href="../../README.md">🇺🇸 English</a> ·
   <a href="./README.ko.md">🇰🇷 한국어</a> ·
   <a href="./README.ja.md">🇯🇵 日本語</a> ·
   <a href="./README.zh.md">🇨🇳 简体中文</a> ·
@@ -17,11 +17,11 @@
 
 **Scanner déclaratif de vulnérabilités et radar de cybermenaces en temps réel pour NixOS & Kubernetes**
 
-[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](./LICENSE)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](../../LICENSE)
 [![Go Report Card](https://goreportcard.com/badge/github.com/KRCUPRO/nix-k8s-sentinel)](https://goreportcard.com/report/github.com/KRCUPRO/nix-k8s-sentinel)
 [![Version](https://img.shields.io/badge/Release-v0.7.0-emerald.svg)](https://github.com/KRCUPRO/nix-k8s-sentinel/releases)
 [![Architecture](https://img.shields.io/badge/Architecture-Bare--Metal_NixOS_+_K8s-8b5cf6.svg)](#-architecture-overview)
-[![Security](https://img.shields.io/badge/Security-Declarative_Audit-38bdf8.svg)](./SECURITY.md)
+[![Security](https://img.shields.io/badge/Security-Declarative_Audit-38bdf8.svg)](../../SECURITY.md)
 
 </div>
 
@@ -83,10 +83,10 @@ go run cmd/sentinel/main.go --target=nixos
 
 ## 🗺️ Feuille de route et évolution
 
-Consultez [ROADMAP.md](./ROADMAP.md) pour découvrir les évolutions prévues, les futurs analyseurs d'entrées Flake et les sondes eBPF pour bare-metal.
+Consultez [ROADMAP.md](../../ROADMAP.md) pour découvrir les évolutions prévues, les futurs analyseurs d'entrées Flake et les sondes eBPF pour bare-metal.
 
 ---
 
 ## 🔒 Politique de sécurité
 
-Pour les procédures de signalement des vulnérabilités et les règles de divulgation responsable, veuillez consulter [SECURITY.md](./SECURITY.md).
+Pour les procédures de signalement des vulnérabilités et les règles de divulgation responsable, veuillez consulter [SECURITY.md](../../SECURITY.md).
