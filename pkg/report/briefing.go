@@ -11,6 +11,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/intel"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/k8s"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nix"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/probe"
 )
 
 // BriefingOptions defines the parameters for generating an hourly threat briefing.
@@ -21,6 +22,7 @@ type BriefingOptions struct {
 	Feed           *intel.Feed
 	K8sReport      *k8s.ManifestAuditReport
 	FlakeMatches   []nix.FlakeVulnerabilityMatch
+	ProbeEvents    []probe.TelemetryEvent
 	OutputDir      string
 	CustomFilename string
 }
@@ -185,7 +187,24 @@ func GenerateBriefing(opts BriefingOptions) (*BriefingReport, error) {
 		buf.WriteString("\n---\n\n")
 	}
 
-	// 6. Action Items Checklist
+	// 6. Bare-Metal eBPF Kernel Telemetry Findings (if applicable)
+	if len(opts.ProbeEvents) > 0 {
+		buf.WriteString("## 🔬 Bare-Metal eBPF Kernel Telemetry Findings\n\n")
+		buf.WriteString(fmt.Sprintf("⚠️ **%d kernel-level runtime telemetry events captured:**\n\n", len(opts.ProbeEvents)))
+		buf.WriteString("| Event ID | Node | Type | Comm | Syscall / Action | Severity | Risk | Message |\n")
+		buf.WriteString("| :--- | :--- | :---: | :--- | :--- | :---: | :---: | :--- |\n")
+		for _, ev := range opts.ProbeEvents {
+			action := ev.EventType
+			if ev.Syscall != "" {
+				action = fmt.Sprintf("%s (`%s`)", ev.EventType, ev.Syscall)
+			}
+			buf.WriteString(fmt.Sprintf("| `%s` | `%s` | `%s` | `%s` | %s | **%s** | %.1f | %s |\n",
+				ev.ID, ev.NodeName, ev.ProbeType, ev.Comm, action, ev.Severity, ev.RiskScore, ev.Message))
+		}
+		buf.WriteString("\n---\n\n")
+	}
+
+	// 7. Action Items Checklist
 	buf.WriteString("## 📋 SecOps & SRE Operational Checklist\n\n")
 	buf.WriteString("- [ ] Review high and critical severity advisories against production deployment manifests.\n")
 	buf.WriteString("- [ ] Verify that ingress controllers enforce URI path normalization and snippet guards.\n")

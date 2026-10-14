@@ -10,6 +10,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/intel"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/k8s"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nix"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/probe"
 )
 
 // JSONAuditReport models the consolidated security audit report serialized to JSON.
@@ -23,6 +24,7 @@ type JSONAuditReport struct {
 	KubernetesReport     *k8s.ManifestAuditReport       `json:"kubernetes_report,omitempty"`
 	FlakeVulnerabilities []nix.FlakeVulnerabilityMatch `json:"flake_vulnerabilities,omitempty"`
 	ThreatAdvisories     []intel.ThreatItem             `json:"threat_advisories,omitempty"`
+	ProbeEvents          []probe.TelemetryEvent         `json:"probe_events,omitempty"`
 }
 
 // BuildJSONReport compiles the consolidated JSON audit report from provided audit data.
@@ -61,6 +63,7 @@ func BuildJSONReport(opts ReportOptions) (*JSONAuditReport, error) {
 		KubernetesReport:     opts.K8sReport,
 		FlakeVulnerabilities: opts.FlakeMatches,
 		ThreatAdvisories:     advisories,
+		ProbeEvents:          opts.ProbeEvents,
 	}
 
 	return rep, nil

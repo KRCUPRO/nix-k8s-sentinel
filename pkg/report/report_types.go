@@ -7,6 +7,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/intel"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/k8s"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nix"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/probe"
 )
 
 // ReportFormat designates the target serialization format for security audit findings.
@@ -27,6 +28,7 @@ type ReportOptions struct {
 	Feed         *intel.Feed
 	K8sReport    *k8s.ManifestAuditReport
 	FlakeMatches []nix.FlakeVulnerabilityMatch
+	ProbeEvents  []probe.TelemetryEvent
 	FlakePath    string
 	K8sPath      string
 	TargetFilter string

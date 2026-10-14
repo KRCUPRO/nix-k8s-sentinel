@@ -1,19 +1,23 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
+	"strings"
+	"time"
 
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/intel"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/k8s"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nix"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/policy"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/probe"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/report"
 )
 
 var (
-	version = "0.6.0"
+	version = "0.7.0"
 )
 
 func main() {
@@ -28,6 +32,9 @@ func main() {
 	policyOut := flag.String("policy-out", "", "Output directory to export synthesized Falco and OPA Gatekeeper security policies")
 	policyEngine := flag.String("policy-engine", "all", "Policy engines to synthesize ('all', 'falco', 'gatekeeper')")
 	enforceAction := flag.String("enforce-action", "deny", "OPA Gatekeeper enforcement action ('deny', 'dryrun', 'warn')")
+	probeFlag := flag.Bool("probe", false, "Execute bare-metal eBPF kernel telemetry probe analysis")
+	probeFixture := flag.String("probe-fixture", "fixtures/probe-telemetry.json", "Path to bare-metal probe events fixture JSON")
+	probeNodes := flag.String("probe-nodes", "nixos-control-01,nixos-worker-01,nixos-worker-02", "Comma-separated list of bare-metal cluster node names")
 	format := flag.String("format", "console", "Audit report output format ('console', 'json', 'sarif')")
 	outFile := flag.String("output", "", "Output destination file for formatted report (defaults to stdout)")
 	outShort := flag.String("o", "", "Shorthand for --output")
@@ -72,6 +79,7 @@ func main() {
 
 	var flakeMatches []nix.FlakeVulnerabilityMatch
 	var k8sReport *k8s.ManifestAuditReport
+	var probeSnapshots []probe.TelemetryEvent
 
 	// 1. Audit Nix Flake if --flake is provided
 	if *flakePath != "" {
@@ -179,7 +187,69 @@ func main() {
 		}
 	}
 
-	// 4. Generate Threat Briefing if --briefing is requested
+	// 4. Run Bare-Metal eBPF Telemetry Probes if --probe is provided
+	if *probeFlag {
+		logInfo("[+] Initializing Bare-Metal eBPF Telemetry Engine...\n")
+		rawNodes := strings.Split(*probeNodes, ",")
+		var nodeList []string
+		for _, n := range rawNodes {
+			trimmed := strings.TrimSpace(n)
+			if trimmed != "" {
+				nodeList = append(nodeList, trimmed)
+			}
+		}
+
+		var rawEvents []probe.TelemetryEvent
+		if *probeFixture != "" {
+			if _, err := os.Stat(*probeFixture); err == nil {
+				loaded, err := probe.LoadEventsFromFile(*probeFixture)
+				if err != nil {
+					logErr("[-] Failed to load probe fixture (%s): %v\n", *probeFixture, err)
+					os.Exit(1)
+				}
+				rawEvents = loaded
+				logInfo("[+] Loaded %d telemetry records from fixture: %s\n", len(rawEvents), *probeFixture)
+			}
+		}
+
+		mgr, err := probe.SimulateMultiNodeCluster(nodeList, feed, rawEvents)
+		if err != nil {
+			logErr("[-] Failed to initialize multi-node cluster simulation: %v\n", err)
+			os.Exit(1)
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		defer cancel()
+
+		if err := mgr.Start(ctx); err != nil {
+			logErr("[-] Failed to start eBPF manager: %v\n", err)
+			os.Exit(1)
+		}
+
+		time.Sleep(150 * time.Millisecond)
+
+		if err := mgr.Stop(); err != nil {
+			logErr("[-] Warning during eBPF probe shutdown: %v\n", err)
+		}
+
+		stats := mgr.Stats()
+		probeSnapshots = mgr.Snapshot()
+
+		logInfo("[+] Bare-Metal eBPF Probes Completed across %d nodes (Total Events: %d)\n", mgr.ActiveProbesCount(), stats.TotalEvents)
+		logInfo("    Severity: Critical=%d | High=%d | Medium=%d | Low=%d | Info=%d\n",
+			stats.CriticalCount, stats.HighCount, stats.MediumCount, stats.LowCount, stats.InfoCount)
+
+		for _, ev := range probeSnapshots {
+			if ev.RiskScore >= 7.0 || ev.Severity == "CRITICAL" || ev.Severity == "HIGH" {
+				logInfo("  [!] [%s] %s on node %s: %s [Risk: %.1f]\n", ev.Severity, ev.EventType, ev.NodeName, ev.Message, ev.RiskScore)
+				if len(ev.ThreatTags) > 0 {
+					logInfo("      Tags: %s\n", strings.Join(ev.ThreatTags, ", "))
+				}
+			}
+		}
+	}
+
+	// 5. Generate Threat Briefing if --briefing is requested
 	if *briefing {
 		logInfo("[+] Synthesizing Threat Intelligence Briefing...\n")
 		briefingOpts := report.BriefingOptions{
@@ -187,6 +257,7 @@ func main() {
 			Feed:           feed,
 			K8sReport:      k8sReport,
 			FlakeMatches:   flakeMatches,
+			ProbeEvents:    probeSnapshots,
 			OutputDir:      *briefingDir,
 			CustomFilename: *briefingFile,
 		}
@@ -215,13 +286,14 @@ func main() {
 		return
 	}
 
-	// 5. Handle Structured Formats (SARIF / JSON)
+	// 6. Handle Structured Formats (SARIF / JSON)
 	if *format == "sarif" || *format == "json" {
 		reportOpts := report.ReportOptions{
 			Version:      version,
 			Feed:         feed,
 			K8sReport:    k8sReport,
 			FlakeMatches: flakeMatches,
+			ProbeEvents:  probeSnapshots,
 			FlakePath:    *flakePath,
 			K8sPath:      *k8sPath,
 			TargetFilter: *targetFilter,
@@ -277,8 +349,8 @@ func main() {
 		}
 	}
 
-	// 6. Default feed summary (when neither flake nor k8s nor policy was requested)
-	if *flakePath == "" && *k8sPath == "" && *policyOut == "" {
+	// 7. Default feed summary (when neither flake nor k8s nor policy nor probe was requested)
+	if *flakePath == "" && *k8sPath == "" && *policyOut == "" && !*probeFlag {
 		items := feed.Items
 		if *targetFilter != "" {
 			items = feed.FilterByTarget(*targetFilter)

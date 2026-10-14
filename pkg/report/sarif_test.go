@@ -10,6 +10,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/intel"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/k8s"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nix"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/probe"
 )
 
 func TestBuildSARIFReport_EmptyFindings(t *testing.T) {
@@ -314,3 +315,63 @@ func TestFormatRuleName(t *testing.T) {
 		}
 	}
 }
+
+func TestBuildSARIFReport_ProbeTelemetry(t *testing.T) {
+	probeEvents := []probe.TelemetryEvent{
+		{
+			ID:         "EVT-01",
+			ProbeType:  probe.ProbeTypeSocket,
+			NodeName:   "nixos-worker-01",
+			Comm:       "sh",
+			EventType:  "SOCKET_CONNECT",
+			Severity:   "CRITICAL",
+			RiskScore:  9.2,
+			Message:    "Reverse shell outbound connection",
+			ThreatTags: []string{"REVERSE_SHELL_ATTEMPT"},
+		},
+		{
+			ID:         "EVT-02",
+			ProbeType:  probe.ProbeTypeStorage,
+			NodeName:   "nixos-control-01",
+			Comm:       "mod-tool",
+			EventType:  "STORE_TAMPER_ATTEMPT",
+			Severity:   "HIGH",
+			RiskScore:  8.8,
+			Message:    "Unauthorized write to /nix/store",
+			ThreatTags: []string{"IMMUTABLE_STORE_TAMPERING"},
+		},
+		{
+			ID:        "EVT-03",
+			ProbeType: probe.ProbeTypeSocket,
+			NodeName:  "nixos-control-01",
+			Comm:      "kubelet",
+			EventType: "SOCKET_CONNECT",
+			Severity:  "INFO",
+			RiskScore: 1.0,
+			Message:   "Normal health check",
+		},
+	}
+
+	opts := ReportOptions{
+		Version:     "0.7.0",
+		ProbeEvents: probeEvents,
+	}
+
+	log, err := BuildSARIFReport(opts)
+	if err != nil {
+		t.Fatalf("failed to build SARIF with probe events: %v", err)
+	}
+
+	run := log.Runs[0]
+	// Low risk/info event EVT-03 (score 1.0) is filtered out; 2 high/critical events remain
+	if len(run.Results) != 2 {
+		t.Fatalf("expected 2 high/critical SARIF results, got %d", len(run.Results))
+	}
+	if run.Results[0].RuleID != "REVERSE_SHELL_ATTEMPT" {
+		t.Errorf("expected first rule ID REVERSE_SHELL_ATTEMPT, got %s", run.Results[0].RuleID)
+	}
+	if run.Results[0].Level != "error" {
+		t.Errorf("expected error level for critical probe event, got %s", run.Results[0].Level)
+	}
+}
+
