@@ -2,15 +2,15 @@
 
 <p align="center">
   <strong>🇺🇸 English</strong> ·
-  <a href="./README.ko.md">🇰🇷 한국어</a> ·
-  <a href="./README.ja.md">🇯🇵 日本語</a> ·
-  <a href="./README.zh.md">🇨🇳 简体中文</a> ·
-  <a href="./README.es.md">🇪🇸 Español</a><br />
-  <a href="./README.fr.md">🇫🇷 Français</a> ·
-  <a href="./README.de.md">🇩🇪 Deutsch</a> ·
-  <a href="./README.ru.md">🇷🇺 Русский</a> ·
-  <a href="./README.pt.md">🇧🇷 Português</a> ·
-  <a href="./README.ar.md">🇸🇦 العربية</a>
+  <a href="./docs/translations/README.ko.md">🇰🇷 한국어</a> ·
+  <a href="./docs/translations/README.ja.md">🇯🇵 日本語</a> ·
+  <a href="./docs/translations/README.zh.md">🇨🇳 简体中文</a> ·
+  <a href="./docs/translations/README.es.md">🇪🇸 Español</a><br />
+  <a href="./docs/translations/README.fr.md">🇫🇷 Français</a> ·
+  <a href="./docs/translations/README.de.md">🇩🇪 Deutsch</a> ·
+  <a href="./docs/translations/README.ru.md">🇷🇺 Русский</a> ·
+  <a href="./docs/translations/README.pt.md">🇧🇷 Português</a> ·
+  <a href="./docs/translations/README.ar.md">🇸🇦 العربية</a>
 </p>
 
 # 🛡️ nix-k8s-sentinel

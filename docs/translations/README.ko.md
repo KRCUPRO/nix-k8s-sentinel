@@ -1,7 +1,7 @@
 <div align="center">
 
 <p align="center">
-  <a href="./README.md">🇺🇸 English</a> ·
+  <a href="../../README.md">🇺🇸 English</a> ·
   <strong>🇰🇷 한국어</strong> ·
   <a href="./README.ja.md">🇯🇵 日本語</a> ·
   <a href="./README.zh.md">🇨🇳 简体中文</a> ·
@@ -17,11 +17,11 @@
 
 **NixOS 및 Kubernetes를 위한 선언적 취약점 스캐너 & 실시간 위협 인텔리전스 레이더**
 
-[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](./LICENSE)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](../../LICENSE)
 [![Go Report Card](https://goreportcard.com/badge/github.com/KRCUPRO/nix-k8s-sentinel)](https://goreportcard.com/report/github.com/KRCUPRO/nix-k8s-sentinel)
 [![Version](https://img.shields.io/badge/Release-v0.7.0-emerald.svg)](https://github.com/KRCUPRO/nix-k8s-sentinel/releases)
 [![Architecture](https://img.shields.io/badge/Architecture-Bare--Metal_NixOS_+_K8s-8b5cf6.svg)](#-architecture-overview)
-[![Security](https://img.shields.io/badge/Security-Declarative_Audit-38bdf8.svg)](./SECURITY.md)
+[![Security](https://img.shields.io/badge/Security-Declarative_Audit-38bdf8.svg)](../../SECURITY.md)
 
 </div>
 
@@ -101,10 +101,10 @@ go run cmd/sentinel/main.go --target=nixos
 
 ## 🗺️ 로드맵 및 개발 계획
 
-향후 예정된 Flake 입력 파서 개선 및 eBPF 베어메탈 프로브 개발 일정은 [ROADMAP.md](./ROADMAP.md)를 참고해 주십시오.
+향후 예정된 Flake 입력 파서 개선 및 eBPF 베어메탈 프로브 개발 일정은 [ROADMAP.md](../../ROADMAP.md)를 참고해 주십시오.
 
 ---
 
 ## 🔒 보안 정책
 
-취약점 제보 절차 및 보안 관련 세부 원칙은 [SECURITY.md](./SECURITY.md)를 확인해 주시기 바랍니다.
+취약점 제보 절차 및 보안 관련 세부 원칙은 [SECURITY.md](../../SECURITY.md)를 확인해 주시기 바랍니다.
