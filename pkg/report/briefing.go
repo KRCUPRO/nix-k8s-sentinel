@@ -8,6 +8,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/bench"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/intel"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/k8s"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nix"
@@ -29,6 +30,8 @@ type BriefingOptions struct {
 	StorageHealth           *storage.CephHealthReport
 	WireGuardViolations     []wireguard.WireGuardViolation
 	WireGuardReconciliation *wireguard.ReconciliationReport
+	CISViolations           []bench.CISViolation
+	CISSummary              *bench.CISSummary
 	OutputDir               string
 	CustomFilename          string
 }
@@ -61,7 +64,7 @@ func GenerateBriefing(opts BriefingOptions) (*BriefingReport, error) {
 		version = "0.4.0"
 	}
 
-	telemetry := ComputeTelemetryFull(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations)
+	telemetry := ComputeTelemetryOmni(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations)
 
 	var buf bytes.Buffer
 
@@ -265,7 +268,34 @@ func GenerateBriefing(opts BriefingOptions) (*BriefingReport, error) {
 		buf.WriteString("---\n\n")
 	}
 
-	// 9. Action Items Checklist
+	// 9. CIS Kubernetes Benchmark Posture (if applicable)
+	if len(opts.CISViolations) > 0 || opts.CISSummary != nil {
+		buf.WriteString("## 🛡️ CIS Kubernetes Benchmark Compliance Posture\n\n")
+		if opts.CISSummary != nil {
+			sum := opts.CISSummary
+			buf.WriteString(fmt.Sprintf("**Compliance Score:** `%.1f%%` | **Passed:** %d | **Failed:** %d | **Total Evaluated:** %d\n",
+				sum.ComplianceScore, sum.PassedChecks, sum.FailedChecks, sum.TotalChecks))
+			buf.WriteString(fmt.Sprintf("**Severity Breakdown:** %d Critical | %d High | %d Medium | %d Low\n\n",
+				sum.CriticalCount, sum.HighCount, sum.MediumCount, sum.LowCount))
+		}
+		if len(opts.CISViolations) > 0 {
+			buf.WriteString(fmt.Sprintf("⚠️ **%d CIS benchmark configuration violations identified:**\n\n", len(opts.CISViolations)))
+			buf.WriteString("| Rule ID | Section | Component | Flag | Severity | CVSS | Current vs Expected | Remediation Action |\n")
+			buf.WriteString("| :--- | :---: | :--- | :--- | :---: | :---: | :--- | :--- |\n")
+			for _, cv := range opts.CISViolations {
+				cveTag := ""
+				if cv.MatchedCVE != "" {
+					cveTag = fmt.Sprintf(" (`%s`)", cv.MatchedCVE)
+				}
+				buf.WriteString(fmt.Sprintf("| `%s` | %s | `%s` | `%s` | **%s** | %.1f | `%s` (want: `%s`)%s | %s |\n",
+					cv.RuleID, cv.Section, cv.Component, cv.FlagName, cv.Severity, cv.CVSSScore, cv.ActualValue, cv.ExpectedValue, cveTag, cv.Remediation))
+			}
+			buf.WriteString("\n")
+		}
+		buf.WriteString("---\n\n")
+	}
+
+	// 10. Action Items Checklist
 	buf.WriteString("## 📋 SecOps & SRE Operational Checklist\n\n")
 	buf.WriteString("- [ ] Review high and critical severity advisories against production deployment manifests.\n")
 	buf.WriteString("- [ ] Verify that ingress controllers enforce URI path normalization and snippet guards.\n")
@@ -273,6 +303,7 @@ func GenerateBriefing(opts BriefingOptions) (*BriefingReport, error) {
 	buf.WriteString("- [ ] Ensure NixOS systems evaluate flakes in pure mode with explicitly pinned hashes.\n")
 	buf.WriteString("- [ ] Validate Ceph OSD peering, BlueStore integrity, and storage class volume protection policies.\n")
 	buf.WriteString("- [ ] Enforce WireGuard 90-day cryptographic key rotation and prune dormant peer routing slots.\n")
+	buf.WriteString("- [ ] Remediate unhardened CIS Kubernetes Benchmark control plane and Kubelet findings.\n")
 	buf.WriteString("- [ ] Archive this briefing record into security audit ledger.\n")
 
 	report := &BriefingReport{

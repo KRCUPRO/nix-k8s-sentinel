@@ -1,0 +1,25 @@
+# fixtures/kubelet-config.yaml
+# Production-like KubeletConfiguration manifest with unhardened flags
+
+apiVersion: kubelet.config.k8s.io/v1beta1
+kind: KubeletConfiguration
+authentication:
+  anonymous:
+    # VIOLATION: CIS-4.2.1: Anonymous authentication enabled (CVE-2026-38102)
+    enabled: true
+  webhook:
+    enabled: true
+  x509:
+    clientCAFile: /etc/kubernetes/pki/ca.crt
+authorization:
+  # VIOLATION: CIS-4.2.2: Authorization mode set to AlwaysAllow
+  mode: AlwaysAllow
+# VIOLATION: CIS-4.2.4: Read-only port 10255 exposed
+readOnlyPort: 10255
+# COMPLIANT: CIS-4.2.6: Kernel defaults protected
+protectKernelDefaults: true
+# COMPLIANT: CIS-4.2.10: Client certificates automatically rotated
+rotateCertificates: true
+tlsCipherSuites:
+  - TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
+  - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256

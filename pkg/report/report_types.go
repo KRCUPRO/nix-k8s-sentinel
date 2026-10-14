@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/bench"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/intel"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/k8s"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nix"
@@ -26,21 +27,24 @@ const (
 
 // ReportOptions encapsulates all scanned domains and parameters for report synthesis.
 type ReportOptions struct {
-	Version                string
-	Feed                   *intel.Feed
-	K8sReport              *k8s.ManifestAuditReport
-	FlakeMatches           []nix.FlakeVulnerabilityMatch
-	ProbeEvents            []probe.TelemetryEvent
-	StorageViolations      []storage.StorageViolation
-	StorageHealth          *storage.CephHealthReport
-	WireGuardViolations    []wireguard.WireGuardViolation
+	Version                 string
+	Feed                    *intel.Feed
+	K8sReport               *k8s.ManifestAuditReport
+	FlakeMatches            []nix.FlakeVulnerabilityMatch
+	ProbeEvents             []probe.TelemetryEvent
+	StorageViolations       []storage.StorageViolation
+	StorageHealth           *storage.CephHealthReport
+	WireGuardViolations     []wireguard.WireGuardViolation
 	WireGuardReconciliation *wireguard.ReconciliationReport
-	FlakePath              string
-	K8sPath                string
-	StoragePath            string
-	WireGuardPath          string
-	TargetFilter           string
-	Pretty                 bool
+	CISViolations           []bench.CISViolation
+	CISSummary              *bench.CISSummary
+	FlakePath               string
+	K8sPath                 string
+	StoragePath             string
+	WireGuardPath           string
+	CISPath                 string
+	TargetFilter            string
+	Pretty                  bool
 }
 
 // SeverityToSARIFLevel translates CVSS severity metrics into standard SARIF v2.1.0 result levels.
