@@ -118,7 +118,7 @@ type LogicalLocation struct {
 func BuildSARIFReport(opts ReportOptions) (*SARIFLog, error) {
 	ver := opts.Version
 	if ver == "" {
-		ver = "0.6.0"
+		ver = "0.8.0"
 	}
 
 	driver := SARIFDriver{
@@ -339,8 +339,68 @@ func BuildSARIFReport(opts ReportOptions) (*SARIFLog, error) {
 		}
 	}
 
-	// 4. Process Standalone Feed Advisories (if neither k8s nor flake nor probe was specified)
-	if (opts.K8sReport == nil || len(opts.K8sReport.Violations) == 0) && len(opts.FlakeMatches) == 0 && len(opts.ProbeEvents) == 0 && opts.Feed != nil {
+	// 4. Process Rook Ceph Storage Cluster Integrity Violations
+	if len(opts.StorageViolations) > 0 {
+		for _, sv := range opts.StorageViolations {
+			tags := []string{"security", "storage", "ceph", "rook", strings.ToLower(sv.ResourceKind)}
+			if sv.MatchedCVE != "" {
+				tags = append(tags, sv.MatchedCVE)
+			}
+			ruleIdx := getOrCreateRule(sv.RuleID, sv.Title, sv.Description, sv.Remediation, sv.Severity, sv.CVSSScore, tags)
+			level := SeverityToSARIFLevel(string(sv.Severity), sv.CVSSScore)
+
+			locURI := sv.FilePath
+			if locURI == "" {
+				locURI = opts.StoragePath
+			}
+			if locURI == "" {
+				locURI = fmt.Sprintf("storage/%s/%s", strings.ToLower(sv.ResourceKind), sv.ResourceName)
+			}
+			locURI = filepath.ToSlash(locURI)
+
+			line := sv.StartLine
+			if line <= 0 {
+				line = 1
+			}
+
+			cveTag := ""
+			if sv.MatchedCVE != "" {
+				cveTag = fmt.Sprintf(" [%s]", sv.MatchedCVE)
+			}
+			resMsg := fmt.Sprintf("[%s/%s]%s %s: %s (Remediation: %s)", sv.ResourceKind, sv.ResourceName, cveTag, sv.Title, sv.Description, sv.Remediation)
+
+			results = append(results, SARIFResult{
+				RuleID:    sv.RuleID,
+				RuleIndex: ruleIdx,
+				Level:     level,
+				Message:   SARIFMessage{Text: resMsg},
+				Locations: []SARIFLocation{
+					{
+						PhysicalLocation: &PhysicalLocation{
+							ArtifactLocation: ArtifactLocation{
+								URI:       locURI,
+								URIBaseID: "%SRCROOT%",
+							},
+							Region: &Region{
+								StartLine:   line,
+								StartColumn: 1,
+							},
+						},
+						LogicalLocations: []LogicalLocation{
+							{
+								Name:               sv.ResourceName,
+								Kind:               sv.ResourceKind,
+								FullyQualifiedName: fmt.Sprintf("%s/%s", sv.ResourceKind, sv.ResourceName),
+							},
+						},
+					},
+				},
+			})
+		}
+	}
+
+	// 5. Process Standalone Feed Advisories (if neither k8s nor flake nor probe nor storage was specified)
+	if (opts.K8sReport == nil || len(opts.K8sReport.Violations) == 0) && len(opts.FlakeMatches) == 0 && len(opts.ProbeEvents) == 0 && len(opts.StorageViolations) == 0 && opts.Feed != nil {
 		feedItems := opts.Feed.Items
 		if opts.TargetFilter != "" {
 			feedItems = opts.Feed.FilterByTarget(opts.TargetFilter)
