@@ -13,21 +13,24 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nix"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/probe"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/storage"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/wireguard"
 )
 
 // BriefingOptions defines the parameters for generating an hourly threat briefing.
 type BriefingOptions struct {
-	Title             string
-	Version           string
-	HourlyWindow      time.Time
-	Feed              *intel.Feed
-	K8sReport         *k8s.ManifestAuditReport
-	FlakeMatches      []nix.FlakeVulnerabilityMatch
-	ProbeEvents       []probe.TelemetryEvent
-	StorageViolations []storage.StorageViolation
-	StorageHealth     *storage.CephHealthReport
-	OutputDir         string
-	CustomFilename    string
+	Title                   string
+	Version                 string
+	HourlyWindow            time.Time
+	Feed                    *intel.Feed
+	K8sReport               *k8s.ManifestAuditReport
+	FlakeMatches            []nix.FlakeVulnerabilityMatch
+	ProbeEvents             []probe.TelemetryEvent
+	StorageViolations       []storage.StorageViolation
+	StorageHealth           *storage.CephHealthReport
+	WireGuardViolations     []wireguard.WireGuardViolation
+	WireGuardReconciliation *wireguard.ReconciliationReport
+	OutputDir               string
+	CustomFilename          string
 }
 
 // BriefingReport represents a generated Markdown briefing and its associated metadata.
@@ -58,7 +61,7 @@ func GenerateBriefing(opts BriefingOptions) (*BriefingReport, error) {
 		version = "0.4.0"
 	}
 
-	telemetry := ComputeTelemetryExtended(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations)
+	telemetry := ComputeTelemetryFull(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations)
 
 	var buf bytes.Buffer
 
@@ -231,13 +234,45 @@ func GenerateBriefing(opts BriefingOptions) (*BriefingReport, error) {
 		buf.WriteString("---\n\n")
 	}
 
-	// 8. Action Items Checklist
+	// 8. WireGuard Cryptographic Mesh & Peer Posture (if applicable)
+	if len(opts.WireGuardViolations) > 0 || opts.WireGuardReconciliation != nil {
+		buf.WriteString("## 🔐 WireGuard Cryptographic Mesh & Peer Posture\n\n")
+		if opts.WireGuardReconciliation != nil {
+			rec := opts.WireGuardReconciliation
+			buf.WriteString(fmt.Sprintf("**Mesh Interfaces:** %d | **Declared Peers:** %d | **Runtime Peers:** %d | **Unmanaged Peers:** %d | **Stale Handshakes:** %d\n",
+				rec.InterfaceCount, rec.DeclarativePeersCount, rec.RuntimePeersCount, rec.UnmanagedPeersCount, rec.StaleHandshakeCount))
+			buf.WriteString(fmt.Sprintf("**Key Rotation Posture:** %d Active / %d Needs Rotation / %d Expired (Oldest Key: %d days)\n\n",
+				rec.KeyRotation.ActiveKeys, rec.KeyRotation.NeedsRotationKeys, rec.KeyRotation.ExpiredKeys, rec.KeyRotation.OldestKeyAgeDays))
+		}
+		if len(opts.WireGuardViolations) > 0 {
+			buf.WriteString(fmt.Sprintf("⚠️ **%d WireGuard cryptographic mesh violations detected:**\n\n", len(opts.WireGuardViolations)))
+			buf.WriteString("| Rule ID | Interface / Target | Severity | CVSS | Finding & Threat Details | Remediation Playbook |\n")
+			buf.WriteString("| :--- | :--- | :---: | :---: | :--- | :--- |\n")
+			for _, wv := range opts.WireGuardViolations {
+				cveTag := ""
+				if wv.MatchedCVE != "" {
+					cveTag = fmt.Sprintf(" (`%s`)", wv.MatchedCVE)
+				}
+				target := wv.InterfaceName
+				if wv.PeerPublicKey != "" {
+					target = fmt.Sprintf("%s / `%s`", wv.InterfaceName, wv.PeerPublicKey)
+				}
+				buf.WriteString(fmt.Sprintf("| `%s` | %s | **%s** | %.1f | %s%s | %s |\n",
+					wv.RuleID, target, wv.Severity, wv.CVSSScore, wv.Description, cveTag, wv.Remediation))
+			}
+			buf.WriteString("\n")
+		}
+		buf.WriteString("---\n\n")
+	}
+
+	// 9. Action Items Checklist
 	buf.WriteString("## 📋 SecOps & SRE Operational Checklist\n\n")
 	buf.WriteString("- [ ] Review high and critical severity advisories against production deployment manifests.\n")
 	buf.WriteString("- [ ] Verify that ingress controllers enforce URI path normalization and snippet guards.\n")
 	buf.WriteString("- [ ] Confirm cluster namespaces enforce default-deny ingress/egress network policies.\n")
 	buf.WriteString("- [ ] Ensure NixOS systems evaluate flakes in pure mode with explicitly pinned hashes.\n")
 	buf.WriteString("- [ ] Validate Ceph OSD peering, BlueStore integrity, and storage class volume protection policies.\n")
+	buf.WriteString("- [ ] Enforce WireGuard 90-day cryptographic key rotation and prune dormant peer routing slots.\n")
 	buf.WriteString("- [ ] Archive this briefing record into security audit ledger.\n")
 
 	report := &BriefingReport{

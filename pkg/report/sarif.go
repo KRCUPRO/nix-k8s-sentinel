@@ -399,8 +399,72 @@ func BuildSARIFReport(opts ReportOptions) (*SARIFLog, error) {
 		}
 	}
 
-	// 5. Process Standalone Feed Advisories (if neither k8s nor flake nor probe nor storage was specified)
-	if (opts.K8sReport == nil || len(opts.K8sReport.Violations) == 0) && len(opts.FlakeMatches) == 0 && len(opts.ProbeEvents) == 0 && len(opts.StorageViolations) == 0 && opts.Feed != nil {
+	// 5. Process WireGuard Mesh Violations
+	if len(opts.WireGuardViolations) > 0 {
+		for _, wv := range opts.WireGuardViolations {
+			tags := []string{"security", "wireguard", "mesh", "crypto", strings.ToLower(wv.InterfaceName)}
+			if wv.MatchedCVE != "" {
+				tags = append(tags, wv.MatchedCVE)
+			}
+			ruleIdx := getOrCreateRule(wv.RuleID, wv.Title, wv.Description, wv.Remediation, wv.Severity, wv.CVSSScore, tags)
+			level := SeverityToSARIFLevel(string(wv.Severity), wv.CVSSScore)
+
+			locURI := wv.FilePath
+			if locURI == "" {
+				locURI = opts.WireGuardPath
+			}
+			if locURI == "" {
+				locURI = fmt.Sprintf("wireguard/%s", wv.InterfaceName)
+			}
+			locURI = filepath.ToSlash(locURI)
+
+			line := wv.StartLine
+			if line <= 0 {
+				line = 1
+			}
+
+			cveTag := ""
+			if wv.MatchedCVE != "" {
+				cveTag = fmt.Sprintf(" [%s]", wv.MatchedCVE)
+			}
+			peerTag := ""
+			if wv.PeerPublicKey != "" {
+				peerTag = fmt.Sprintf(" (Peer: %s)", wv.PeerPublicKey)
+			}
+			resMsg := fmt.Sprintf("[%s]%s%s %s: %s (Remediation: %s)", wv.InterfaceName, peerTag, cveTag, wv.Title, wv.Description, wv.Remediation)
+
+			results = append(results, SARIFResult{
+				RuleID:    wv.RuleID,
+				RuleIndex: ruleIdx,
+				Level:     level,
+				Message:   SARIFMessage{Text: resMsg},
+				Locations: []SARIFLocation{
+					{
+						PhysicalLocation: &PhysicalLocation{
+							ArtifactLocation: ArtifactLocation{
+								URI:       locURI,
+								URIBaseID: "%SRCROOT%",
+							},
+							Region: &Region{
+								StartLine:   line,
+								StartColumn: 1,
+							},
+						},
+						LogicalLocations: []LogicalLocation{
+							{
+								Name:               wv.InterfaceName,
+								Kind:               "WireGuardInterface",
+								FullyQualifiedName: fmt.Sprintf("wireguard/%s", wv.InterfaceName),
+							},
+						},
+					},
+				},
+			})
+		}
+	}
+
+	// 6. Process Standalone Feed Advisories (if neither k8s nor flake nor probe nor storage nor wireguard was specified)
+	if (opts.K8sReport == nil || len(opts.K8sReport.Violations) == 0) && len(opts.FlakeMatches) == 0 && len(opts.ProbeEvents) == 0 && len(opts.StorageViolations) == 0 && len(opts.WireGuardViolations) == 0 && opts.Feed != nil {
 		feedItems := opts.Feed.Items
 		if opts.TargetFilter != "" {
 			feedItems = opts.Feed.FilterByTarget(opts.TargetFilter)

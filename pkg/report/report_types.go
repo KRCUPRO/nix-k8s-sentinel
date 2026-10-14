@@ -9,6 +9,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nix"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/probe"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/storage"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/wireguard"
 )
 
 // ReportFormat designates the target serialization format for security audit findings.
@@ -25,18 +26,21 @@ const (
 
 // ReportOptions encapsulates all scanned domains and parameters for report synthesis.
 type ReportOptions struct {
-	Version           string
-	Feed              *intel.Feed
-	K8sReport         *k8s.ManifestAuditReport
-	FlakeMatches      []nix.FlakeVulnerabilityMatch
-	ProbeEvents       []probe.TelemetryEvent
-	StorageViolations []storage.StorageViolation
-	StorageHealth     *storage.CephHealthReport
-	FlakePath         string
-	K8sPath           string
-	StoragePath       string
-	TargetFilter      string
-	Pretty            bool
+	Version                string
+	Feed                   *intel.Feed
+	K8sReport              *k8s.ManifestAuditReport
+	FlakeMatches           []nix.FlakeVulnerabilityMatch
+	ProbeEvents            []probe.TelemetryEvent
+	StorageViolations      []storage.StorageViolation
+	StorageHealth          *storage.CephHealthReport
+	WireGuardViolations    []wireguard.WireGuardViolation
+	WireGuardReconciliation *wireguard.ReconciliationReport
+	FlakePath              string
+	K8sPath                string
+	StoragePath            string
+	WireGuardPath          string
+	TargetFilter           string
+	Pretty                 bool
 }
 
 // SeverityToSARIFLevel translates CVSS severity metrics into standard SARIF v2.1.0 result levels.

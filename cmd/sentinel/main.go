@@ -15,10 +15,11 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/probe"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/report"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/storage"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/wireguard"
 )
 
 var (
-	version = "0.8.0"
+	version = "0.9.0"
 )
 
 func main() {
@@ -30,6 +31,9 @@ func main() {
 	cephPath := flag.String("ceph", "", "Path to Rook Ceph manifest file or directory to audit")
 	storageShort := flag.String("storage", "", "Alias for --ceph")
 	cephTelemetry := flag.String("ceph-telemetry", "", "Path to Ceph runtime health telemetry JSON to inspect")
+	wgPath := flag.String("wg", "", "Path to NixOS WireGuard manifest file or directory to audit")
+	wireguardLong := flag.String("wireguard", "", "Alias for --wg")
+	wgTelemetry := flag.String("wg-telemetry", "", "Path to runtime WireGuard peer telemetry JSON to inspect")
 	briefing := flag.Bool("briefing", false, "Generate automated Markdown threat intelligence briefing")
 	briefingDir := flag.String("briefing-dir", "intel/briefings", "Output directory for threat briefings")
 	briefingFile := flag.String("briefing-file", "", "Custom filename for threat briefing markdown")
@@ -46,6 +50,10 @@ func main() {
 
 	if *cephPath == "" && *storageShort != "" {
 		*cephPath = *storageShort
+	}
+
+	if *wgPath == "" && *wireguardLong != "" {
+		*wgPath = *wireguardLong
 	}
 
 	if *outFile == "" && *outShort != "" {
@@ -90,6 +98,8 @@ func main() {
 	var probeSnapshots []probe.TelemetryEvent
 	var storageViolations []storage.StorageViolation
 	var storageHealth *storage.CephHealthReport
+	var wireguardViolations []wireguard.WireGuardViolation
+	var wireguardReconciliation *wireguard.ReconciliationReport
 
 	// 1. Audit Nix Flake if --flake is provided
 	if *flakePath != "" {
@@ -334,19 +344,26 @@ func main() {
 		}
 	}
 
-	// 6. Generate Threat Briefing if --briefing is requested
+	// 6. Audit NixOS WireGuard Mesh Manifests & Telemetry
+	if *wgPath != "" || *wgTelemetry != "" {
+		wireguardViolations, wireguardReconciliation = runWireGuardAudit(*wgPath, *wgTelemetry, feed, logInfo, logErr)
+	}
+
+	// 7. Generate Threat Briefing if --briefing is requested
 	if *briefing {
 		logInfo("[+] Synthesizing Threat Intelligence Briefing...\n")
 		briefingOpts := report.BriefingOptions{
-			Version:           version,
-			Feed:              feed,
-			K8sReport:         k8sReport,
-			FlakeMatches:      flakeMatches,
-			ProbeEvents:       probeSnapshots,
-			StorageViolations: storageViolations,
-			StorageHealth:     storageHealth,
-			OutputDir:         *briefingDir,
-			CustomFilename:    *briefingFile,
+			Version:                 version,
+			Feed:                    feed,
+			K8sReport:               k8sReport,
+			FlakeMatches:            flakeMatches,
+			ProbeEvents:             probeSnapshots,
+			StorageViolations:       storageViolations,
+			StorageHealth:           storageHealth,
+			WireGuardViolations:     wireguardViolations,
+			WireGuardReconciliation: wireguardReconciliation,
+			OutputDir:               *briefingDir,
+			CustomFilename:          *briefingFile,
 		}
 
 		rep, err := report.GenerateBriefing(briefingOpts)
@@ -373,21 +390,24 @@ func main() {
 		return
 	}
 
-	// 7. Handle Structured Formats (SARIF / JSON)
+	// 8. Handle Structured Formats (SARIF / JSON)
 	if *format == "sarif" || *format == "json" {
 		reportOpts := report.ReportOptions{
-			Version:           version,
-			Feed:              feed,
-			K8sReport:         k8sReport,
-			FlakeMatches:      flakeMatches,
-			ProbeEvents:       probeSnapshots,
-			StorageViolations: storageViolations,
-			StorageHealth:     storageHealth,
-			FlakePath:         *flakePath,
-			K8sPath:           *k8sPath,
-			StoragePath:       *cephPath,
-			TargetFilter:      *targetFilter,
-			Pretty:            true,
+			Version:                 version,
+			Feed:                    feed,
+			K8sReport:               k8sReport,
+			FlakeMatches:            flakeMatches,
+			ProbeEvents:             probeSnapshots,
+			StorageViolations:       storageViolations,
+			StorageHealth:           storageHealth,
+			WireGuardViolations:     wireguardViolations,
+			WireGuardReconciliation: wireguardReconciliation,
+			FlakePath:               *flakePath,
+			K8sPath:                 *k8sPath,
+			StoragePath:             *cephPath,
+			WireGuardPath:           *wgPath,
+			TargetFilter:            *targetFilter,
+			Pretty:                  true,
 		}
 
 		if *format == "sarif" {
@@ -439,8 +459,8 @@ func main() {
 		}
 	}
 
-	// 8. Default feed summary (when neither flake nor k8s nor policy nor probe nor storage was requested)
-	if *flakePath == "" && *k8sPath == "" && *policyOut == "" && !*probeFlag && *cephPath == "" && *cephTelemetry == "" {
+	// 9. Default feed summary (when neither flake nor k8s nor policy nor probe nor storage nor wireguard was requested)
+	if *flakePath == "" && *k8sPath == "" && *policyOut == "" && !*probeFlag && *cephPath == "" && *cephTelemetry == "" && *wgPath == "" && *wgTelemetry == "" {
 		items := feed.Items
 		if *targetFilter != "" {
 			items = feed.FilterByTarget(*targetFilter)
