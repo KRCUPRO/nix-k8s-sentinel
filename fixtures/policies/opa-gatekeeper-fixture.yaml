@@ -1,0 +1,44 @@
+# OPA Gatekeeper ConstraintTemplate & Constraint Schema Verification Fixture
+apiVersion: templates.gatekeeper.sh/v1beta1
+kind: ConstraintTemplate
+metadata:
+  name: k8sdenycustomsnippets
+  annotations:
+    description: Denies Ingress configurations using custom snippet annotations that permit code execution.
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sDenyCustomSnippets
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package k8sdenycustomsnippets
+
+        violation[{"msg": msg}] {
+          input.review.kind.kind == "Ingress"
+          annotations := object.get(input.review.object.metadata, "annotations", {})
+          forbidden := [
+            "nginx.ingress.kubernetes.io/configuration-snippet",
+            "nginx.ingress.kubernetes.io/server-snippet",
+            "nginx.ingress.kubernetes.io/auth-snippet",
+            "nginx.ingress.kubernetes.io/modsecurity-snippet"
+          ]
+          some key
+          annotations[key]
+          key == forbidden[_]
+          msg := sprintf("Ingress '%v' uses prohibited custom snippet annotation '%v' (CVE-2023-5044 / CVE-2026-21801 mitigation)", [input.review.object.metadata.name, key])
+        }
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: K8sDenyCustomSnippets
+metadata:
+  name: sentinel-enforce-deny-snippets
+spec:
+  enforcementAction: deny
+  match:
+    kinds:
+      - apiGroups:
+          - networking.k8s.io
+        kinds:
+          - Ingress

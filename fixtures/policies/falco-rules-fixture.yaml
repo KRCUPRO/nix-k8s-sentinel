@@ -1,0 +1,18 @@
+# CNCF Falco Runtime Rule Schema Verification Fixture
+- rule: K8S Ingress Controller Shell Spawn Defense
+  desc: Detects execution of shell or interpreter binaries inside Ingress-Nginx controller pods (mitigating CVE-2026-21801).
+  condition: >-
+    spawned_process and container.image.repository contains "ingress-nginx" and (proc.name in (shell_binaries) or proc.cmdline contains "lua")
+  output: Suspicious shell or script spawned in Ingress controller (cve=CVE-2026-21801 user=%user.name command=%proc.cmdline pod=%k8s.pod.name ns=%k8s.ns.name)
+  priority: ERROR
+  tags: ["cve-2026-21801", "ingress-nginx", "k8s", "mitre_execution", "sentinel", "threat-intel"]
+  source: syscall
+
+- rule: Containerd Cgroup Memory Subsystem Tampering
+  desc: Detects unprivileged process writes to /sys/fs/cgroup/memory during pod creation storms (mitigating CVE-2026-20914).
+  condition: >-
+    (evt.type in (open, openat, openat2) and evt.is_open_write=true and fd.name startswith "/sys/fs/cgroup/memory" and not proc.name in ("containerd", "systemd", "kubelet", "runc") and container.id != "host")
+  output: Anomalous cgroup memory write detected outside CRI daemon (cve=CVE-2026-20914 comm=%proc.name path=%fd.name container=%container.name)
+  priority: CRITICAL
+  tags: ["cgroup", "containerd", "cve-2026-20914", "k8s", "mitre_privilege_escalation", "sentinel", "threat-intel"]
+  source: syscall
