@@ -1,0 +1,95 @@
+package report
+
+import (
+	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
+	"time"
+
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/intel"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/k8s"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nix"
+)
+
+// JSONAuditReport models the consolidated security audit report serialized to JSON.
+type JSONAuditReport struct {
+	ToolName             string                         `json:"tool_name"`
+	ToolVersion          string                         `json:"tool_version"`
+	GeneratedAt          time.Time                      `json:"generated_at"`
+	TargetFilter         string                         `json:"target_filter,omitempty"`
+	ScannedPaths         []string                       `json:"scanned_paths,omitempty"`
+	Telemetry            TelemetrySummary               `json:"telemetry"`
+	KubernetesReport     *k8s.ManifestAuditReport       `json:"kubernetes_report,omitempty"`
+	FlakeVulnerabilities []nix.FlakeVulnerabilityMatch `json:"flake_vulnerabilities,omitempty"`
+	ThreatAdvisories     []intel.ThreatItem             `json:"threat_advisories,omitempty"`
+}
+
+// BuildJSONReport compiles the consolidated JSON audit report from provided audit data.
+func BuildJSONReport(opts ReportOptions) (*JSONAuditReport, error) {
+	ver := opts.Version
+	if ver == "" {
+		ver = "0.6.0"
+	}
+
+	scanned := make([]string, 0)
+	if opts.FlakePath != "" {
+		scanned = append(scanned, opts.FlakePath)
+	}
+	if opts.K8sPath != "" {
+		scanned = append(scanned, opts.K8sPath)
+	}
+
+	telemetry := ComputeTelemetry(opts.Feed, opts.K8sReport, opts.FlakeMatches)
+
+	var advisories []intel.ThreatItem
+	if opts.Feed != nil {
+		if opts.TargetFilter != "" {
+			advisories = opts.Feed.FilterByTarget(opts.TargetFilter)
+		} else {
+			advisories = opts.Feed.Items
+		}
+	}
+
+	rep := &JSONAuditReport{
+		ToolName:             "nix-k8s-sentinel",
+		ToolVersion:          ver,
+		GeneratedAt:          time.Now().UTC(),
+		TargetFilter:         opts.TargetFilter,
+		ScannedPaths:         scanned,
+		Telemetry:            telemetry,
+		KubernetesReport:     opts.K8sReport,
+		FlakeVulnerabilities: opts.FlakeMatches,
+		ThreatAdvisories:     advisories,
+	}
+
+	return rep, nil
+}
+
+// FormatJSON serializes a JSONAuditReport to raw bytes.
+func FormatJSON(report *JSONAuditReport, pretty bool) ([]byte, error) {
+	if pretty {
+		return json.MarshalIndent(report, "", "  ")
+	}
+	return json.Marshal(report)
+}
+
+// WriteJSONToFile atomically saves the JSON report to the designated path with path traversal defense.
+func WriteJSONToFile(report *JSONAuditReport, destPath string, pretty bool) error {
+	cleanPath := filepath.Clean(destPath)
+	dir := filepath.Dir(cleanPath)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return fmt.Errorf("failed to create directory for JSON report: %w", err)
+	}
+
+	data, err := FormatJSON(report, pretty)
+	if err != nil {
+		return fmt.Errorf("failed to serialize JSON audit report: %w", err)
+	}
+
+	if err := os.WriteFile(cleanPath, data, 0o644); err != nil {
+		return fmt.Errorf("failed to write JSON report to %s: %w", cleanPath, err)
+	}
+
+	return nil
+}

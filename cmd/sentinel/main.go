@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	version = "0.5.0"
+	version = "0.6.0"
 )
 
 func main() {
@@ -28,76 +28,94 @@ func main() {
 	policyOut := flag.String("policy-out", "", "Output directory to export synthesized Falco and OPA Gatekeeper security policies")
 	policyEngine := flag.String("policy-engine", "all", "Policy engines to synthesize ('all', 'falco', 'gatekeeper')")
 	enforceAction := flag.String("enforce-action", "deny", "OPA Gatekeeper enforcement action ('deny', 'dryrun', 'warn')")
+	format := flag.String("format", "console", "Audit report output format ('console', 'json', 'sarif')")
+	outFile := flag.String("output", "", "Output destination file for formatted report (defaults to stdout)")
+	outShort := flag.String("o", "", "Shorthand for --output")
 	flag.Parse()
+
+	if *outFile == "" && *outShort != "" {
+		*outFile = *outShort
+	}
 
 	if *showVersion {
 		fmt.Printf("nix-k8s-sentinel v%s (Cloud-Native Threat Radar & Policy Synthesizer)\n", version)
 		os.Exit(0)
 	}
 
-	fmt.Printf("[+] nix-k8s-sentinel v%s starting up...\n", version)
+	isStdoutFormatted := (*format == "json" || *format == "sarif") && *outFile == ""
+	logInfo := func(formatStr string, a ...any) {
+		if isStdoutFormatted {
+			return
+		}
+		fmt.Printf(formatStr, a...)
+	}
+	logErr := func(formatStr string, a ...any) {
+		fmt.Fprintf(os.Stderr, formatStr, a...)
+	}
+
+	logInfo("[+] nix-k8s-sentinel v%s starting up...\n", version)
 
 	data, err := os.ReadFile(*feedPath)
 	if err != nil {
-		fmt.Printf("[-] Warning: Failed to read feed file (%s): %v\n", *feedPath, err)
-		fmt.Println("[+] Initialized in dry-run monitoring mode.")
+		logInfo("[-] Warning: Failed to read feed file (%s): %v\n", *feedPath, err)
+		logInfo("[+] Initialized in dry-run monitoring mode.\n")
 		os.Exit(0)
 	}
 
 	feed, err := intel.ParseFeed(data)
 	if err != nil {
-		fmt.Printf("[-] Error parsing feed: %v\n", err)
+		logErr("[-] Error parsing feed: %v\n", err)
 		os.Exit(1)
 	}
 
-	fmt.Printf("[+] Feed Loaded: %d intelligence advisories (Updated: %s)\n", len(feed.Items), feed.UpdatedAt.Format("2006-01-02 15:04:05 UTC"))
+	logInfo("[+] Feed Loaded: %d intelligence advisories (Updated: %s)\n", len(feed.Items), feed.UpdatedAt.Format("2006-01-02 15:04:05 UTC"))
 
 	var flakeMatches []nix.FlakeVulnerabilityMatch
 	var k8sReport *k8s.ManifestAuditReport
 
 	// 1. Audit Nix Flake if --flake is provided
 	if *flakePath != "" {
-		fmt.Printf("[+] Auditing Nix Flake Lockfile: %s\n", *flakePath)
+		logInfo("[+] Auditing Nix Flake Lockfile: %s\n", *flakePath)
 		lock, err := nix.ParseFlakeLockFile(*flakePath)
 		if err != nil {
-			fmt.Printf("[-] Failed to parse flake.lock: %v\n", err)
+			logErr("[-] Failed to parse flake.lock: %v\n", err)
 			os.Exit(1)
 		}
 
 		deps, err := lock.ResolveDependencies(lock.Root)
 		if err != nil {
-			fmt.Printf("[-] Failed to resolve flake dependencies: %v\n", err)
+			logErr("[-] Failed to resolve flake dependencies: %v\n", err)
 			os.Exit(1)
 		}
 
-		fmt.Printf("[+] Resolved %d pinned flake dependencies.\n", len(deps))
+		logInfo("[+] Resolved %d pinned flake dependencies.\n", len(deps))
 		matches, err := nix.ScanFlakeAgainstFeed(lock, feed)
 		if err != nil {
-			fmt.Printf("[-] Error scanning flake against feed: %v\n", err)
+			logErr("[-] Error scanning flake against feed: %v\n", err)
 			os.Exit(1)
 		}
 		flakeMatches = matches
 
 		if len(matches) == 0 {
-			fmt.Println("[+] Zero matching CVEs detected in flake.lock inputs.")
+			logInfo("[+] Zero matching CVEs detected in flake.lock inputs.\n")
 		} else {
-			fmt.Printf("[-] WARNING: %d vulnerable flake inputs identified!\n", len(matches))
+			logInfo("[-] WARNING: %d vulnerable flake inputs identified!\n", len(matches))
 			for i, m := range matches {
-				fmt.Printf("  [%d] %s (%s) - %s [CVSS: %.1f]\n", i+1, m.AdvisoryID, m.Severity, m.Title, m.CVSSScore)
-				fmt.Printf("      Input: %s (Node: %s) | Rev: %s\n", m.DependencyName, m.NodeKey, m.InstalledRev)
-				fmt.Printf("      Mitigation: %s\n", m.Mitigation)
+				logInfo("  [%d] %s (%s) - %s [CVSS: %.1f]\n", i+1, m.AdvisoryID, m.Severity, m.Title, m.CVSSScore)
+				logInfo("      Input: %s (Node: %s) | Rev: %s\n", m.DependencyName, m.NodeKey, m.InstalledRev)
+				logInfo("      Mitigation: %s\n", m.Mitigation)
 			}
 		}
 	}
 
 	// 2. Audit Kubernetes Manifests if --k8s is provided
 	if *k8sPath != "" {
-		fmt.Printf("[+] Auditing Kubernetes Manifests: %s\n", *k8sPath)
+		logInfo("[+] Auditing Kubernetes Manifests: %s\n", *k8sPath)
 		manifestScanner := k8s.NewManifestScanner(feed)
 
 		fileInfo, err := os.Stat(*k8sPath)
 		if err != nil {
-			fmt.Printf("[-] Failed to inspect manifest path: %v\n", err)
+			logErr("[-] Failed to inspect manifest path: %v\n", err)
 			os.Exit(1)
 		}
 
@@ -108,31 +126,31 @@ func main() {
 		}
 
 		if err != nil {
-			fmt.Printf("[-] Failed to audit Kubernetes manifest: %v\n", err)
+			logErr("[-] Failed to audit Kubernetes manifest: %v\n", err)
 			os.Exit(1)
 		}
 
-		fmt.Printf("[+] Scanned %d files across %d declarative resources.\n", k8sReport.TotalFiles, k8sReport.TotalResources)
+		logInfo("[+] Scanned %d files across %d declarative resources.\n", k8sReport.TotalFiles, k8sReport.TotalResources)
 		if len(k8sReport.Violations) == 0 {
-			fmt.Println("[+] Zero security violations detected in Kubernetes manifests.")
+			logInfo("[+] Zero security violations detected in Kubernetes manifests.\n")
 		} else {
-			fmt.Printf("[-] WARNING: %d security violations identified!\n", len(k8sReport.Violations))
+			logInfo("[-] WARNING: %d security violations identified!\n", len(k8sReport.Violations))
 			for i, v := range k8sReport.Violations {
 				cveTag := ""
 				if v.MatchedCVE != "" {
 					cveTag = fmt.Sprintf(" [%s]", v.MatchedCVE)
 				}
-				fmt.Printf("  [%d] [%s] %s (%s)%s [CVSS: %.1f]\n", i+1, v.RuleID, v.Title, v.Severity, cveTag, v.CVSSScore)
-				fmt.Printf("      Target: %s/%s (Namespace: %s)\n", v.ResourceKind, v.ResourceName, v.Namespace)
-				fmt.Printf("      Details: %s\n", v.Description)
-				fmt.Printf("      Remediation: %s\n", v.Remediation)
+				logInfo("  [%d] [%s] %s (%s)%s [CVSS: %.1f]\n", i+1, v.RuleID, v.Title, v.Severity, cveTag, v.CVSSScore)
+				logInfo("      Target: %s/%s (Namespace: %s)\n", v.ResourceKind, v.ResourceName, v.Namespace)
+				logInfo("      Details: %s\n", v.Description)
+				logInfo("      Remediation: %s\n", v.Remediation)
 			}
 		}
 	}
 
 	// 3. Synthesize Security Policies if --policy-out is specified
 	if *policyOut != "" {
-		fmt.Printf("[+] Synthesizing Declarative Security Policies (Engine: %s, Action: %s)...\n", *policyEngine, *enforceAction)
+		logInfo("[+] Synthesizing Declarative Security Policies (Engine: %s, Action: %s)...\n", *policyEngine, *enforceAction)
 		var violations []k8s.Violation
 		if k8sReport != nil {
 			violations = k8sReport.Violations
@@ -144,26 +162,26 @@ func main() {
 
 		policySet, err := policy.SynthesizePolicies(feed, violations, policyOpts)
 		if err != nil {
-			fmt.Printf("[-] Failed to synthesize security policies: %v\n", err)
+			logErr("[-] Failed to synthesize security policies: %v\n", err)
 			os.Exit(1)
 		}
 
 		written, err := policy.WritePoliciesToDir(policySet, *policyOut)
 		if err != nil {
-			fmt.Printf("[-] Failed to write security policies: %v\n", err)
+			logErr("[-] Failed to write security policies: %v\n", err)
 			os.Exit(1)
 		}
 
-		fmt.Printf("[+] Policy Synthesis Complete (Total: %d Falco Rules, %d Gatekeeper Templates, %d Constraints)\n",
+		logInfo("[+] Policy Synthesis Complete (Total: %d Falco Rules, %d Gatekeeper Templates, %d Constraints)\n",
 			policySet.TotalFalcoRules, policySet.TotalOPAConstraintTemplates, policySet.TotalOPAConstraints)
 		for engine, p := range written {
-			fmt.Printf("    -> [%s] Policy Exported: %s\n", engine, p)
+			logInfo("    -> [%s] Policy Exported: %s\n", engine, p)
 		}
 	}
 
 	// 4. Generate Threat Briefing if --briefing is requested
 	if *briefing {
-		fmt.Println("[+] Synthesizing Threat Intelligence Briefing...")
+		logInfo("[+] Synthesizing Threat Intelligence Briefing...\n")
 		briefingOpts := report.BriefingOptions{
 			Version:        version,
 			Feed:           feed,
@@ -175,29 +193,91 @@ func main() {
 
 		rep, err := report.GenerateBriefing(briefingOpts)
 		if err != nil {
-			fmt.Printf("[-] Failed to generate threat briefing: %v\n", err)
+			logErr("[-] Failed to generate threat briefing: %v\n", err)
 			os.Exit(1)
 		}
 
 		savedPath, err := report.WriteBriefingToFile(rep, *briefingDir, *briefingFile)
 		if err != nil {
-			fmt.Printf("[-] Failed to save briefing file: %v\n", err)
+			logErr("[-] Failed to save briefing file: %v\n", err)
 			os.Exit(1)
 		}
 
-		fmt.Printf("[+] Threat Briefing written to: %s\n", savedPath)
-		fmt.Printf("    Telemetry: Total=%d | Critical=%d | High=%d | Medium=%d | Low=%d\n",
+		logInfo("[+] Threat Briefing written to: %s\n", savedPath)
+		logInfo("    Telemetry: Total=%d | Critical=%d | High=%d | Medium=%d | Low=%d\n",
 			rep.Telemetry.TotalThreats,
 			rep.Telemetry.CriticalCount,
 			rep.Telemetry.HighCount,
 			rep.Telemetry.MediumCount,
 			rep.Telemetry.LowCount,
 		)
-		fmt.Printf("    Fleet Risk: Peak CVSS=%.1f | Avg CVSS=%.1f\n", rep.Telemetry.MaxCVSS, rep.Telemetry.AverageCVSS)
+		logInfo("    Fleet Risk: Peak CVSS=%.1f | Avg CVSS=%.1f\n", rep.Telemetry.MaxCVSS, rep.Telemetry.AverageCVSS)
 		return
 	}
 
-	// 5. If neither flake nor k8s nor briefing nor policy-out was requested, show default feed summary
+	// 5. Handle Structured Formats (SARIF / JSON)
+	if *format == "sarif" || *format == "json" {
+		reportOpts := report.ReportOptions{
+			Version:      version,
+			Feed:         feed,
+			K8sReport:    k8sReport,
+			FlakeMatches: flakeMatches,
+			FlakePath:    *flakePath,
+			K8sPath:      *k8sPath,
+			TargetFilter: *targetFilter,
+			Pretty:       true,
+		}
+
+		if *format == "sarif" {
+			sarifLog, err := report.BuildSARIFReport(reportOpts)
+			if err != nil {
+				logErr("[-] Failed to build SARIF report: %v\n", err)
+				os.Exit(1)
+			}
+
+			if *outFile != "" {
+				if err := report.WriteSARIFToFile(sarifLog, *outFile, true); err != nil {
+					logErr("[-] Failed to write SARIF report to %s: %v\n", *outFile, err)
+					os.Exit(1)
+				}
+				fmt.Printf("[+] SARIF v2.1.0 security report written to: %s (Total Findings: %d)\n", *outFile, len(sarifLog.Runs[0].Results))
+			} else {
+				data, err := report.FormatSARIF(sarifLog, true)
+				if err != nil {
+					logErr("[-] Failed to format SARIF report: %v\n", err)
+					os.Exit(1)
+				}
+				fmt.Println(string(data))
+			}
+			return
+		}
+
+		if *format == "json" {
+			jsonReport, err := report.BuildJSONReport(reportOpts)
+			if err != nil {
+				logErr("[-] Failed to build JSON report: %v\n", err)
+				os.Exit(1)
+			}
+
+			if *outFile != "" {
+				if err := report.WriteJSONToFile(jsonReport, *outFile, true); err != nil {
+					logErr("[-] Failed to write JSON report to %s: %v\n", *outFile, err)
+					os.Exit(1)
+				}
+				fmt.Printf("[+] JSON security report written to: %s\n", *outFile)
+			} else {
+				data, err := report.FormatJSON(jsonReport, true)
+				if err != nil {
+					logErr("[-] Failed to format JSON report: %v\n", err)
+					os.Exit(1)
+				}
+				fmt.Println(string(data))
+			}
+			return
+		}
+	}
+
+	// 6. Default feed summary (when neither flake nor k8s nor policy was requested)
 	if *flakePath == "" && *k8sPath == "" && *policyOut == "" {
 		items := feed.Items
 		if *targetFilter != "" {
