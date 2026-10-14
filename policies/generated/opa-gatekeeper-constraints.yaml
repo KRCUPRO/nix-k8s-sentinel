@@ -1,0 +1,247 @@
+# ====================================================================
+# OPA Gatekeeper Admission Control ConstraintTemplates & Constraints
+# Generated automatically by nix-k8s-sentinel Policy Synthesis Engine
+# ====================================================================
+apiVersion: templates.gatekeeper.sh/v1beta1
+kind: ConstraintTemplate
+metadata:
+  name: k8sdenycustomsnippets
+  annotations:
+    description: Denies Ingress configurations using custom snippet annotations that permit code execution.
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sDenyCustomSnippets
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package k8sdenycustomsnippets
+
+        violation[{"msg": msg}] {
+          input.review.kind.kind == "Ingress"
+          annotations := object.get(input.review.object.metadata, "annotations", {})
+          forbidden := [
+            "nginx.ingress.kubernetes.io/configuration-snippet",
+            "nginx.ingress.kubernetes.io/server-snippet",
+            "nginx.ingress.kubernetes.io/auth-snippet",
+            "nginx.ingress.kubernetes.io/modsecurity-snippet"
+          ]
+          some key
+          annotations[key]
+          key == forbidden[_]
+          msg := sprintf("Ingress '%v' uses prohibited custom snippet annotation '%v' (CVE-2023-5044 / CVE-2026-21801 mitigation)", [input.review.object.metadata.name, key])
+        }
+---
+apiVersion: templates.gatekeeper.sh/v1beta1
+kind: ConstraintTemplate
+metadata:
+  name: k8sdenypathtraversal
+  annotations:
+    description: Denies Ingress paths containing directory traversal patterns or unanchored dot-dot sequences.
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sDenyPathTraversal
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package k8sdenypathtraversal
+
+        violation[{"msg": msg}] {
+          input.review.kind.kind == "Ingress"
+          rules := object.get(input.review.object.spec, "rules", [])
+          some r
+          http := object.get(rules[r], "http", {})
+          paths := object.get(http, "paths", [])
+          some p
+          pathVal := object.get(paths[p], "path", "")
+          contains(pathVal, "..")
+          msg := sprintf("Ingress '%v' specifies path traversal sequence '..' in path '%v' (CVE-2026-21801 mitigation)", [input.review.object.metadata.name, pathVal])
+        }
+---
+apiVersion: templates.gatekeeper.sh/v1beta1
+kind: ConstraintTemplate
+metadata:
+  name: k8sdenysensitivehostports
+  annotations:
+    description: Denies network policy rules exposing internal control plane and storage ports (2379, 2380, 10250, 6789).
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sDenySensitiveHostPorts
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package k8sdenysensitivehostports
+
+        violation[{"msg": msg}] {
+          input.review.kind.kind == "NetworkPolicy"
+          ingressRules := object.get(input.review.object.spec, "ingress", [])
+          sensitivePorts := [2379, 2380, 10250, 6789]
+          some i
+          ports := object.get(ingressRules[i], "ports", [])
+          some p
+          portVal := object.get(ports[p], "port", 0)
+          sensitivePorts[_] == portVal
+          msg := sprintf("NetworkPolicy '%v' exposes sensitive control plane port '%v' (etcd/kubelet/ceph)", [input.review.object.metadata.name, portVal])
+        }
+---
+apiVersion: templates.gatekeeper.sh/v1beta1
+kind: ConstraintTemplate
+metadata:
+  name: k8sdenywideopenegress
+  annotations:
+    description: Denies NetworkPolicy rules configuring wide-open egress to 0.0.0.0/0 without explicit exemption.
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sDenyWideOpenEgress
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package k8sdenywideopenegress
+
+        violation[{"msg": msg}] {
+          input.review.kind.kind == "NetworkPolicy"
+          egressRules := object.get(input.review.object.spec, "egress", [])
+          some e
+          toList := object.get(egressRules[e], "to", [])
+          some t
+          ipBlock := object.get(toList[t], "ipBlock", {})
+          cidr := object.get(ipBlock, "cidr", "")
+          cidr == "0.0.0.0/0"
+          msg := sprintf("NetworkPolicy '%v' contains unconstrained egress to 0.0.0.0/0 violating zero-trust egress policy", [input.review.object.metadata.name])
+        }
+---
+apiVersion: templates.gatekeeper.sh/v1beta1
+kind: ConstraintTemplate
+metadata:
+  name: k8senforcecgrouplimits
+  annotations:
+    description: Enforces memory resource limits on all Pod containers to mitigate cgroup attachment race conditions.
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sEnforceCgroupLimits
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package k8senforcecgrouplimits
+
+        violation[{"msg": msg}] {
+          input.review.kind.kind == "Pod"
+          containers := object.get(input.review.object.spec, "containers", [])
+          some c
+          container := containers[c]
+          resources := object.get(container, "resources", {})
+          limits := object.get(resources, "limits", {})
+          not limits.memory
+          msg := sprintf("Pod '%v' container '%v' lacks explicit memory limit, exposing node to cgroup attachment races (CVE-2026-20914 mitigation)", [input.review.object.metadata.name, container.name])
+        }
+---
+apiVersion: templates.gatekeeper.sh/v1beta1
+kind: ConstraintTemplate
+metadata:
+  name: k8srequiresslredirect
+  annotations:
+    description: Requires all Ingress resources to strictly enforce HTTPS redirection.
+spec:
+  crd:
+    spec:
+      names:
+        kind: K8sRequireSSLRedirect
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      rego: |
+        package k8srequiresslredirect
+
+        violation[{"msg": msg}] {
+          input.review.kind.kind == "Ingress"
+          annotations := object.get(input.review.object.metadata, "annotations", {})
+          val := object.get(annotations, "nginx.ingress.kubernetes.io/ssl-redirect", "false")
+          val != "true"
+          msg := sprintf("Ingress '%v' must explicitly enforce SSL redirect via 'nginx.ingress.kubernetes.io/ssl-redirect: \"true\"'", [input.review.object.metadata.name])
+        }
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: K8sEnforceCgroupLimits
+metadata:
+  name: sentinel-enforce-cgroup-limits
+spec:
+  enforcementAction: deny
+  match:
+    kinds:
+      - apiGroups:
+          - ""
+        kinds:
+          - Pod
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: K8sDenyPathTraversal
+metadata:
+  name: sentinel-enforce-deny-path-traversal
+spec:
+  enforcementAction: deny
+  match:
+    kinds:
+      - apiGroups:
+          - networking.k8s.io
+        kinds:
+          - Ingress
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: K8sDenySensitiveHostPorts
+metadata:
+  name: sentinel-enforce-deny-sensitive-ports
+spec:
+  enforcementAction: deny
+  match:
+    kinds:
+      - apiGroups:
+          - networking.k8s.io
+        kinds:
+          - NetworkPolicy
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: K8sDenyCustomSnippets
+metadata:
+  name: sentinel-enforce-deny-snippets
+spec:
+  enforcementAction: deny
+  match:
+    kinds:
+      - apiGroups:
+          - networking.k8s.io
+        kinds:
+          - Ingress
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: K8sDenyWideOpenEgress
+metadata:
+  name: sentinel-enforce-deny-wide-open-egress
+spec:
+  enforcementAction: deny
+  match:
+    kinds:
+      - apiGroups:
+          - networking.k8s.io
+        kinds:
+          - NetworkPolicy
+---
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: K8sRequireSSLRedirect
+metadata:
+  name: sentinel-enforce-ssl-redirect
+spec:
+  enforcementAction: deny
+  match:
+    kinds:
+      - apiGroups:
+          - networking.k8s.io
+        kinds:
+          - Ingress

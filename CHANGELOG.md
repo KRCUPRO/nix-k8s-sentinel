@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-10-14
+
+### Added
+- **CNCF Falco Runtime Policy Synthesis Engine** (`pkg/policy/falco.go`): Automated generation of active kernel syscall detection rules from normalized threat feeds (CVE-2026-21801, CVE-2026-20914, CVE-2026-19402, CVE-2026-15509) and Kubernetes manifest violations (`K8S-ING-001`, `K8S-ING-003`, `K8S-CNI-002`, `K8S-CNI-003`). Enforces deterministic rule naming, severity-to-priority translation, macro condition formatting, and tag deduplication.
+- **OPA Gatekeeper Declarative Admission Controller** (`pkg/policy/opa.go`): Autonomous compilation of Kubernetes `ConstraintTemplate` (CRD v1beta1) and `Constraint` resources with clean, verified Rego policy definitions. Implements zero-trust admission guards rejecting custom snippet injections, unanchored path traversals, plaintext HTTP access, unrestricted `0.0.0.0/0` egress CIDRs, sensitive control plane port exposures, and unconstrained container memory allocations.
+- **Multi-Engine Policy Synthesis Coordinator** (`pkg/policy/synthesizer.go`): Unified orchestration compiling policies across Falco and Gatekeeper targets with directory path sanitization (`filepath.Clean`), atomic file exports, and rule filtering options.
+- **CLI Policy Export Integration**: Added `--policy-out=<dir>`, `--policy-engine=<all|falco|gatekeeper>`, and `--enforce-action=<deny|dryrun|warn>` flags to `cmd/sentinel/main.go`.
+- **Policy Schema Verification Fixtures**: Added `fixtures/policies/falco-rules-fixture.yaml` and `fixtures/policies/opa-gatekeeper-fixture.yaml` for structural schema and format verification.
+- **Comprehensive Test Suite** (`pkg/policy/policy_test.go`): 100% test coverage across threat mapping, violation compilation, YAML serializations, Rego formatting, disk writes, and schema conformity.
+
+### Changed
+- Bumped engine release to `v0.5.0`.
+- Updated `SECURITY.md` with declarative policy synthesis integrity and schema conformance invariants.
+- Updated `scripts/ARCHITECTURE_MAP.md` documenting new policy modules with verified sub-500 LOC modularity.
+
 ---
 
 ## [0.4.0] - 2026-10-13

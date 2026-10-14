@@ -40,15 +40,18 @@ Automated generation of defense-in-depth rules:
 - [x] Default-deny posture audits, sensitive port exposure detection (etcd, kubelet), and 0.0.0.0/0 egress data leak prevention.
 - [x] Unified manifest file and directory scanner with feed correlation (`pkg/k8s/scanner.go`).
 
-### Version 0.4.0 — Threat Intelligence Briefing & Policy Synthesis (Active)
+### Version 0.4.0 — Threat Intelligence Briefing & Telemetry Matrix (Completed)
 - [x] Automated markdown security briefing generator for hourly audit trails (`pkg/report/briefing.go`).
 - [x] Multi-source telemetry aggregation with CVSS severity breakdown and risk exposure matrices (`pkg/report/telemetry.go`).
 - [x] Integrated CLI reporting (`--briefing`, `--briefing-dir`, `--briefing-file`) linking feed, flake, and k8s audits.
-- [ ] Active synthesis of Falco runtime rules from threat mitigations (`pkg/policy/falco.go`).
-- [ ] Open Policy Agent (OPA) Gatekeeper ConstraintTemplate auto-generator (`pkg/policy/opa.go`).
-- [ ] SARIF v2.1.0 output formatting for GitHub Security Code Scanning integration.
 
-### Version 0.5.0 — Bare-Metal Telemetry & Storage Audits (Planned)
+### Version 0.5.0 — Falco & OPA Gatekeeper Declarative Policy Synthesis (Completed)
+- [x] Active synthesis of Falco runtime rules from threat mitigations (`pkg/policy/falco.go`).
+- [x] Open Policy Agent (OPA) Gatekeeper ConstraintTemplate and Constraint auto-generator (`pkg/policy/opa.go`).
+- [x] Multi-engine policy orchestration with schema conformance validation and CLI integration (`--policy-out`, `--policy-engine`, `--enforce-action`) (`pkg/policy/synthesizer.go`).
+
+### Version 0.6.0 — SARIF Code Scanning & Bare-Metal Telemetry (Planned)
+- [ ] SARIF v2.1.0 output formatting for GitHub Security Code Scanning integration.
 - [ ] eBPF socket monitoring probes for multi-node bare-metal Kubernetes clusters.
 - [ ] Rook Ceph distributed storage OSD peering anomaly and BlueStore integrity rules.
 - [ ] WireGuard mesh network cryptographic key rotation and ephemeral peer posture.

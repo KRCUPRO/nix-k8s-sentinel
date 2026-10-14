@@ -8,11 +8,12 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/intel"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/k8s"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nix"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/policy"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/report"
 )
 
 var (
-	version = "0.4.0"
+	version = "0.5.0"
 )
 
 func main() {
@@ -24,10 +25,13 @@ func main() {
 	briefing := flag.Bool("briefing", false, "Generate automated Markdown threat intelligence briefing")
 	briefingDir := flag.String("briefing-dir", "intel/briefings", "Output directory for threat briefings")
 	briefingFile := flag.String("briefing-file", "", "Custom filename for threat briefing markdown")
+	policyOut := flag.String("policy-out", "", "Output directory to export synthesized Falco and OPA Gatekeeper security policies")
+	policyEngine := flag.String("policy-engine", "all", "Policy engines to synthesize ('all', 'falco', 'gatekeeper')")
+	enforceAction := flag.String("enforce-action", "deny", "OPA Gatekeeper enforcement action ('deny', 'dryrun', 'warn')")
 	flag.Parse()
 
 	if *showVersion {
-		fmt.Printf("nix-k8s-sentinel v%s (Cloud-Native Threat Radar)\n", version)
+		fmt.Printf("nix-k8s-sentinel v%s (Cloud-Native Threat Radar & Policy Synthesizer)\n", version)
 		os.Exit(0)
 	}
 
@@ -126,7 +130,38 @@ func main() {
 		}
 	}
 
-	// 3. Generate Threat Briefing if --briefing is requested
+	// 3. Synthesize Security Policies if --policy-out is specified
+	if *policyOut != "" {
+		fmt.Printf("[+] Synthesizing Declarative Security Policies (Engine: %s, Action: %s)...\n", *policyEngine, *enforceAction)
+		var violations []k8s.Violation
+		if k8sReport != nil {
+			violations = k8sReport.Violations
+		}
+
+		policyOpts := policy.DefaultSynthesisOptions()
+		policyOpts.EnforcementAction = *enforceAction
+		policyOpts.TargetEngines = []string{*policyEngine}
+
+		policySet, err := policy.SynthesizePolicies(feed, violations, policyOpts)
+		if err != nil {
+			fmt.Printf("[-] Failed to synthesize security policies: %v\n", err)
+			os.Exit(1)
+		}
+
+		written, err := policy.WritePoliciesToDir(policySet, *policyOut)
+		if err != nil {
+			fmt.Printf("[-] Failed to write security policies: %v\n", err)
+			os.Exit(1)
+		}
+
+		fmt.Printf("[+] Policy Synthesis Complete (Total: %d Falco Rules, %d Gatekeeper Templates, %d Constraints)\n",
+			policySet.TotalFalcoRules, policySet.TotalOPAConstraintTemplates, policySet.TotalOPAConstraints)
+		for engine, p := range written {
+			fmt.Printf("    -> [%s] Policy Exported: %s\n", engine, p)
+		}
+	}
+
+	// 4. Generate Threat Briefing if --briefing is requested
 	if *briefing {
 		fmt.Println("[+] Synthesizing Threat Intelligence Briefing...")
 		briefingOpts := report.BriefingOptions{
@@ -162,8 +197,8 @@ func main() {
 		return
 	}
 
-	// 4. If neither flake nor k8s nor briefing was requested, show default feed summary
-	if *flakePath == "" && *k8sPath == "" {
+	// 5. If neither flake nor k8s nor briefing nor policy-out was requested, show default feed summary
+	if *flakePath == "" && *k8sPath == "" && *policyOut == "" {
 		items := feed.Items
 		if *targetFilter != "" {
 			items = feed.FilterByTarget(*targetFilter)

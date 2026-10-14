@@ -1,0 +1,49 @@
+# ====================================================================
+# CNCF Falco Runtime Threat Mitigation Ruleset
+# Generated automatically by nix-k8s-sentinel Policy Synthesis Engine
+# ====================================================================
+
+- rule: Ceph OSD Storage Daemon Lethal Signal Termination
+  desc: Detects Ceph OSD storage daemon terminated unexpectedly by SIGKILL, SIGABRT, or SIGBUS under NVMe direct I/O flushes (mitigating CVE-2026-15509).
+  condition: >-
+    (evt.type = signal and sig.name in ("SIGKILL", "SIGABRT", "SIGBUS") and proc.name = "ceph-osd")
+  output: Ceph OSD daemon terminated by lethal signal (cve=CVE-2026-15509 sig=%sig.name comm=%proc.name pid=%proc.pid)
+  priority: WARNING
+  tags: ["ceph", "cve-2026-15509", "declarative-defense", "nixos", "sentinel", "storage", "threat-intel"]
+  source: syscall
+
+- rule: Containerd Cgroup Memory Subsystem Tampering
+  desc: Detects unprivileged process writes to /sys/fs/cgroup/memory during pod creation storms (mitigating CVE-2026-20914).
+  condition: >-
+    (evt.type in (open, openat, openat2) and evt.is_open_write=true and fd.name startswith "/sys/fs/cgroup/memory" and not proc.name in ("containerd", "systemd", "kubelet", "runc") and container.id != "host")
+  output: Anomalous cgroup memory write detected outside CRI daemon (cve=CVE-2026-20914 comm=%proc.name path=%fd.name container=%container.name)
+  priority: CRITICAL
+  tags: ["cgroup", "containerd", "cve-2026-20914", "declarative-defense", "kubernetes", "mitre_privilege_escalation", "sentinel", "threat-intel"]
+  source: syscall
+
+- rule: K8S Ingress Controller Shell Spawn Defense
+  desc: Detects execution of shell or interpreter binaries inside Ingress-Nginx controller pods (mitigating CVE-2026-21801).
+  condition: >-
+    spawned_process and container.image.repository contains "ingress-nginx" and (proc.name in (shell_binaries) or proc.cmdline contains "lua")
+  output: Suspicious shell or script spawned in Ingress controller (cve=CVE-2026-21801 user=%user.name command=%proc.cmdline pod=%k8s.pod.name ns=%k8s.ns.name)
+  priority: ERROR
+  tags: ["cve-2026-21801", "declarative-defense", "ingress-nginx", "kubernetes", "mitre_execution", "sentinel", "threat-intel"]
+  source: syscall
+
+- rule: K8S-ING-002 Ingress Snippet Injection Shield
+  desc: Detects arbitrary shell execution inside Ingress controller triggered by snippet directives (K8S-ING-002).
+  condition: >-
+    spawned_process and container.image.repository contains "ingress" and proc.name in (shell_binaries)
+  output: Ingress pod spawned untrusted shell process in violation of snippet policy (rule=K8S-ING-002 command=%proc.cmdline pod=%k8s.pod.name ns=%k8s.ns.name)
+  priority: ERROR
+  tags: ["declarative-defense", "ingress", "k8s-ing-002", "k8s-manifest", "sentinel", "snippet-injection"]
+  source: syscall
+
+- rule: Nix Daemon Unrestricted Evaluation Egress
+  desc: Detects Nix build daemon establishing unauthorized outbound network sockets during pure evaluation (mitigating CVE-2026-19402).
+  condition: >-
+    (evt.type = connect and proc.name in ("nix-daemon", "nix-build") and not fd.rip in ("127.0.0.1", "::1") and fd.typechar in (4, 6))
+  output: Nix evaluation daemon initiated remote network egress (cve=CVE-2026-19402 comm=%proc.name rip=%fd.rip rport=%fd.rport)
+  priority: WARNING
+  tags: ["cve-2026-19402", "declarative-defense", "nix", "nixos", "sentinel", "supply_chain", "threat-intel"]
+  source: syscall
