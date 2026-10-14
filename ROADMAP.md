@@ -50,10 +50,21 @@ Automated generation of defense-in-depth rules:
 - [x] Open Policy Agent (OPA) Gatekeeper ConstraintTemplate and Constraint auto-generator (`pkg/policy/opa.go`).
 - [x] Multi-engine policy orchestration with schema conformance validation and CLI integration (`--policy-out`, `--policy-engine`, `--enforce-action`) (`pkg/policy/synthesizer.go`).
 
-### Version 0.6.0 — SARIF Code Scanning & Bare-Metal Telemetry (Planned)
-- [ ] SARIF v2.1.0 output formatting for GitHub Security Code Scanning integration.
-- [ ] eBPF socket monitoring probes for multi-node bare-metal Kubernetes clusters.
-- [ ] Rook Ceph distributed storage OSD peering anomaly and BlueStore integrity rules.
-- [ ] WireGuard mesh network cryptographic key rotation and ephemeral peer posture.
-- [ ] Multi-cluster fleet synchronization and OIDC federated identity radar.
+### Version 0.6.0 — SARIF Code Scanning & Bare-Metal Telemetry (Current)
+- [x] Native OASIS SARIF v2.1.0 output formatting for GitHub Security Code Scanning integration (`pkg/report/sarif.go`).
+- [x] Structured JSON audit telemetry generator with severity distributions and multi-resource correlation (`pkg/report/json_report.go`).
+- [x] CLI output format selection (`--format=console|json|sarif`) with atomic file exports (`--output=<path>`).
+- [ ] eBPF socket monitoring probes for multi-node bare-metal Kubernetes clusters (`pkg/probe/ebpf.go`).
+- [ ] Rook Ceph distributed storage OSD peering anomaly and BlueStore integrity rules (`pkg/storage/ceph.go`).
+
+### Version 0.7.0 — Distributed Storage & Cryptographic Mesh Security (Planned)
+- [ ] WireGuard mesh network cryptographic key rotation and ephemeral peer posture auditing (`pkg/crypto/wireguard.go`).
+- [ ] Kube-Bench and CIS Kubernetes Benchmark declarative NixOS validator (`pkg/bench/cis.go`).
+- [ ] Kubernetes Gateway API and EnvoyFilter route threat radar (`pkg/gateway/radar.go`).
+
+### Version 0.8.0 — Supply Chain Attestation & Workload Identity (Planned)
+- [ ] Confidential Computing AMD SEV-SNP and Intel TDX measured boot attestation verifier.
+- [ ] Multi-cluster fleet synchronization and federated OIDC token radar.
 - [ ] SPIFFE/SPIRE workload attestation and cryptographic mTLS certificate monitoring.
+- [ ] Software Bill of Materials (SBOM) ingestion for SPDX v3.0 / CycloneDX v1.6 and In-Toto provenance validation.
+- [ ] Hardware Security Module (HSM) PKCS#11 envelope encryption and KMS v2 key health checks.

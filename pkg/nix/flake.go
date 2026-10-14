@@ -83,6 +83,8 @@ type FlakeVulnerabilityMatch struct {
 	CVSSScore      float64        `json:"cvss_score"`
 	Title          string         `json:"title"`
 	Mitigation     string         `json:"mitigation"`
+	FilePath       string         `json:"file_path,omitempty"`
+	StartLine      int            `json:"start_line,omitempty"`
 }
 
 // ParseFlakeLock parses raw bytes into a validated FlakeLock structure.

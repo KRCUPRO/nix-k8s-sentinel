@@ -27,6 +27,8 @@ type Violation struct {
 	Description  string         `json:"description"`
 	Remediation  string         `json:"remediation"`
 	MatchedCVE   string         `json:"matched_cve,omitempty"`
+	FilePath     string         `json:"file_path,omitempty"`
+	StartLine    int            `json:"start_line,omitempty"`
 }
 
 // RawResource encapsulates parsed declarative metadata and block contents.

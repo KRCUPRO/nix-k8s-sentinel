@@ -43,6 +43,7 @@
 - **📊 시간별 위협 인텔리전스 브리핑 자동 생성**: `intel/briefings/`에 실시간 CVSS 위험 텔레메트리 매트릭스와 상세 권고안 마크다운 리포트를 자동 합성하여 감사 추적 및 SecOps 대시보드 제공.
 - **📡 정규화된 위협 인텔리전스 수집**: CVSS v3.1 스코어링, 컴포넌트 매핑, 실행 가능한 보안 권고안의 구조화된 수집.
 - **🛡️ 능동적 보안 정책 합성**: 탐지된 위협 시그니처로부터 Falco 런타임 감지 룰 및 OPA Gatekeeper 제약 조건 정책 자동 생성.
+- **📑 SARIF v2.1.0 및 JSON 보안 감사 보고서**: GitHub Security Code Scanning 완벽 연동을 위한 OASIS SARIF v2.1.0 규격 네이티브 출력 및 엔터프라이즈 CI/CD 파이프라인용 구조화 JSON 텔레메트리 내보내기 지원.
 - **⚡ 제로 알로케이션 Go 엔진**: 외부 런타임 의존성 없는 고동시성 단일 바이너리.
 
 ---
@@ -70,6 +71,12 @@ go run cmd/sentinel/main.go --flake=fixtures/flake.lock
 # Kubernetes 매니페스트 파일 및 디렉토리 보안 감사
 go run cmd/sentinel/main.go --k8s=fixtures/k8s-ingress-vulnerable.yaml
 go run cmd/sentinel/main.go --k8s=fixtures/
+
+# GitHub Code Scanning 연동용 OASIS SARIF v2.1.0 리포트 내보내기
+go run cmd/sentinel/main.go --k8s=fixtures/ --format=sarif --output=results.sarif
+
+# 구조화된 고정밀 JSON 보안 텔레메트리 리포트 내보내기
+go run cmd/sentinel/main.go --flake=fixtures/flake.lock --k8s=fixtures/ --format=json
 
 # 시간별 위협 인텔리전스 브리핑 마크다운 자동 생성
 go run cmd/sentinel/main.go --briefing

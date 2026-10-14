@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-10-14
+
+### Added
+- **OASIS SARIF v2.1.0 Exporter for GitHub Code Scanning** (`pkg/report/sarif.go`): Native implementation of the Static Analysis Results Interchange Format (SARIF v2.1.0) with zero external dependencies. Seamlessly maps declarative Kubernetes manifest violations, Nix flake input advisories, and CVE threat feed items to GitHub Code Scanning alerts. Includes rule descriptors with full markdown remediation guidance, security-severity CVSS properties, precise physical file URIs (`%SRCROOT%`), line numbers, and hierarchical logical locations.
+- **High-Fidelity Structured JSON Audit Telemetry** (`pkg/report/json_report.go`): Consolidated JSON report exporter delivering complete audit telemetry, cross-domain CVSS distributions, monitored target architectures, and full lists of discovered violations with deterministic sorting.
+- **Unified Report Options & Format Abstractions** (`pkg/report/report_types.go`): Formatter abstraction supporting `console`, `json`, and `sarif` output targets, alongside severity level translation utilities (`SeverityToSARIFLevel`), single-decimal CVSS normalizers, and PascalCase rule name formatters.
+- **CLI Formatter & File Export Flags**: Integrated `--format=<console|json|sarif>`, `--output=<path>`, and `-o <path>` into `cmd/sentinel/main.go`. When `--output` is omitted, structured formats emit clean, pipe-friendly JSON directly to stdout while routing progress logs cleanly.
+- **Dedicated Exporter Test Suites**: Added `pkg/report/sarif_test.go` and `pkg/report/json_test.go` verifying schema conformity, rule indexing, CVSS severity translation, location formatting, empty findings handling, and disk persistence with path traversal defense.
+
+### Changed
+- Bumped engine version to `v0.6.0`.
+- Enriched `k8s.Violation` and `nix.FlakeVulnerabilityMatch` models with optional `file_path` and `start_line` tracking.
+- Updated `SECURITY.md` with SARIF and JSON security audit exporter integrity invariants.
+- Updated `scripts/ARCHITECTURE_MAP.md` documenting new reporting modules with sub-400 LOC modularity.
+
+---
+
 ## [0.5.0] - 2026-10-14
 
 ### Added

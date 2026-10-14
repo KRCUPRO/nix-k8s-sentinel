@@ -43,6 +43,7 @@ Unlike ephemeral container scanners, `nix-k8s-sentinel` audits declarative confi
 - **📊 Automated Hourly Threat Briefings**: Synthesizes comprehensive Markdown advisories and CVSS risk telemetry matrices under `intel/briefings/` for audit trails and SecOps dashboards.
 - **📡 Normalized Threat Ingestion**: Structured ingestion of CVSS v3.1 scoring, component mapping, and actionable remediation advisories.
 - **🛡️ Active Policy Synthesis**: Auto-generation of Falco runtime detection rules and OPA Gatekeeper constraint policies from detected threat signatures.
+- **📑 SARIF v2.1.0 & JSON Security Audits**: Native export to OASIS SARIF v2.1.0 for GitHub Security Code Scanning integration and structured JSON telemetry for enterprise CI/CD pipelines.
 - **⚡ Zero-Allocation Go Engine**: High-concurrency, standalone binary with zero external runtime dependencies.
 
 ---
@@ -70,6 +71,12 @@ go run cmd/sentinel/main.go --flake=fixtures/flake.lock
 # Audit Kubernetes manifests for Ingress and CNI policy violations
 go run cmd/sentinel/main.go --k8s=fixtures/k8s-ingress-vulnerable.yaml
 go run cmd/sentinel/main.go --k8s=fixtures/
+
+# Export audit findings to OASIS SARIF v2.1.0 for GitHub Code Scanning
+go run cmd/sentinel/main.go --k8s=fixtures/ --format=sarif --output=results.sarif
+
+# Export comprehensive JSON telemetry audit report
+go run cmd/sentinel/main.go --flake=fixtures/flake.lock --k8s=fixtures/ --format=json
 
 # Generate automated hourly threat intelligence briefing
 go run cmd/sentinel/main.go --briefing

@@ -7,7 +7,7 @@ Security updates are applied to the latest release series on the `main` branch.
 | Version | Supported          |
 | ------- | ------------------ |
 | Latest (`0.x`) | :white_check_mark: |
-| `< 0.4.0` | :x:                |
+| `< 0.5.0` | :x:                |
 
 ## Security & Integrity Invariants
 
@@ -18,6 +18,7 @@ Security updates are applied to the latest release series on the `main` branch.
 5. **Input Sanitization & Safe Deserialization**: All untrusted JSON and YAML feeds pass through strict schema validation with bounded streaming before evaluating threat signatures.
 6. **Briefing Sanitization & Path Traversal Guard**: Automated Markdown briefing generators sanitize output directories and file paths (`filepath.Clean` and `filepath.Base`), preventing directory traversal when persisting reports. Telemetry aggregations strictly enforce deterministic sorting and bounds checking.
 7. **Declarative Policy Synthesis Integrity & Schema Conformance**: Synthetic Falco runtime rules and OPA Gatekeeper ConstraintTemplates enforce sanitized YAML escaping, strict Rego syntax constraints, and schema conformance to prevent policy injection or admission bypass vulnerabilities.
+8. **SARIF & JSON Security Audit Exporter Integrity**: Exporters for OASIS SARIF v2.1.0 and structured JSON enforce strict schema validation, defend against directory traversal (`filepath.Clean`), guarantee deterministic rule index mapping, and prevent arbitrary field injection in CI/CD and GitHub Code Scanning pipelines.
 
 ## Reporting a Vulnerability
 

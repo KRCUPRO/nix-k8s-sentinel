@@ -60,6 +60,15 @@ func (s *ManifestScanner) ScanFile(path string) (*ManifestAuditReport, error) {
 	defaultDenyViolations := s.cniAnalyzer.AuditDefaultDenyPostures(resources)
 	report.Violations = append(report.Violations, defaultDenyViolations...)
 
+	for i := range report.Violations {
+		if report.Violations[i].FilePath == "" {
+			report.Violations[i].FilePath = path
+		}
+		if report.Violations[i].StartLine <= 0 {
+			report.Violations[i].StartLine = 1
+		}
+	}
+
 	s.correlateWithFeed(report)
 	return report, nil
 }
@@ -98,9 +107,19 @@ func (s *ManifestScanner) ScanDirectory(root string) (*ManifestAuditReport, erro
 		for _, res := range resources {
 			allResources = append(allResources, res)
 			if res.Kind == "Ingress" {
-				report.Violations = append(report.Violations, s.ingressAnalyzer.AuditIngress(res)...)
+				vList := s.ingressAnalyzer.AuditIngress(res)
+				for i := range vList {
+					vList[i].FilePath = path
+					vList[i].StartLine = 1
+				}
+				report.Violations = append(report.Violations, vList...)
 			} else if s.cniAnalyzer.IsNetworkPolicyResource(res.Kind) {
-				report.Violations = append(report.Violations, s.cniAnalyzer.AuditNetworkPolicy(res)...)
+				vList := s.cniAnalyzer.AuditNetworkPolicy(res)
+				for i := range vList {
+					vList[i].FilePath = path
+					vList[i].StartLine = 1
+				}
+				report.Violations = append(report.Violations, vList...)
 			}
 		}
 		return nil
@@ -111,7 +130,12 @@ func (s *ManifestScanner) ScanDirectory(root string) (*ManifestAuditReport, erro
 	}
 
 	// Cluster-level posture audits
-	report.Violations = append(report.Violations, s.cniAnalyzer.AuditDefaultDenyPostures(allResources)...)
+	postureViolations := s.cniAnalyzer.AuditDefaultDenyPostures(allResources)
+	for i := range postureViolations {
+		postureViolations[i].FilePath = root
+		postureViolations[i].StartLine = 1
+	}
+	report.Violations = append(report.Violations, postureViolations...)
 	s.correlateWithFeed(report)
 
 	return report, nil
