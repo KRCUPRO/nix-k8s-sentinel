@@ -10,6 +10,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/intel"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/k8s"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nix"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/probe"
 )
 
 func TestBuildJSONReport_Comprehensive(t *testing.T) {
@@ -159,3 +160,36 @@ func TestFormatJSON_And_WriteJSONToFile(t *testing.T) {
 		t.Error("written JSON file was empty")
 	}
 }
+
+func TestBuildJSONReport_WithProbeTelemetry(t *testing.T) {
+	events := []probe.TelemetryEvent{
+		{
+			ID:        "EVT-TEST-01",
+			NodeName:  "nixos-worker-01",
+			ProbeType: probe.ProbeTypeSocket,
+			Comm:      "sh",
+			EventType: "SOCKET_CONNECT",
+			Severity:  "CRITICAL",
+			RiskScore: 9.2,
+		},
+	}
+
+	opts := ReportOptions{
+		Version:     "0.7.0",
+		ProbeEvents: events,
+		Pretty:      true,
+	}
+
+	rep, err := BuildJSONReport(opts)
+	if err != nil {
+		t.Fatalf("failed to build JSON report: %v", err)
+	}
+
+	if len(rep.ProbeEvents) != 1 {
+		t.Fatalf("expected 1 probe event in JSON report, got %d", len(rep.ProbeEvents))
+	}
+	if rep.ProbeEvents[0].ID != "EVT-TEST-01" {
+		t.Errorf("expected EVT-TEST-01, got %s", rep.ProbeEvents[0].ID)
+	}
+}
+

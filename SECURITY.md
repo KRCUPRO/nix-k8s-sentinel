@@ -7,7 +7,7 @@ Security updates are applied to the latest release series on the `main` branch.
 | Version | Supported          |
 | ------- | ------------------ |
 | Latest (`0.x`) | :white_check_mark: |
-| `< 0.5.0` | :x:                |
+| `< 0.6.0` | :x:                |
 
 ## Security & Integrity Invariants
 
@@ -19,6 +19,7 @@ Security updates are applied to the latest release series on the `main` branch.
 6. **Briefing Sanitization & Path Traversal Guard**: Automated Markdown briefing generators sanitize output directories and file paths (`filepath.Clean` and `filepath.Base`), preventing directory traversal when persisting reports. Telemetry aggregations strictly enforce deterministic sorting and bounds checking.
 7. **Declarative Policy Synthesis Integrity & Schema Conformance**: Synthetic Falco runtime rules and OPA Gatekeeper ConstraintTemplates enforce sanitized YAML escaping, strict Rego syntax constraints, and schema conformance to prevent policy injection or admission bypass vulnerabilities.
 8. **SARIF & JSON Security Audit Exporter Integrity**: Exporters for OASIS SARIF v2.1.0 and structured JSON enforce strict schema validation, defend against directory traversal (`filepath.Clean`), guarantee deterministic rule index mapping, and prevent arbitrary field injection in CI/CD and GitHub Code Scanning pipelines.
+9. **Bare-Metal eBPF Telemetry Isolation & Bounds Protection**: Kernel telemetry probes enforce thread-safe multi-node channel aggregation (`sync.RWMutex`), bounded event buffers (10,000 snapshot ceiling), drop-on-saturation ring-buffer ergonomics, and fixture file bounds protection (10MB ceiling) to prevent memory amplification and denial-of-service in high-throughput node clusters.
 
 ## Reporting a Vulnerability
 

@@ -292,8 +292,55 @@ func BuildSARIFReport(opts ReportOptions) (*SARIFLog, error) {
 		}
 	}
 
-	// 3. Process Standalone Feed Advisories (if neither k8s nor flake was specified)
-	if (opts.K8sReport == nil || len(opts.K8sReport.Violations) == 0) && len(opts.FlakeMatches) == 0 && opts.Feed != nil {
+	// 3. Process Bare-Metal eBPF Telemetry Findings
+	if len(opts.ProbeEvents) > 0 {
+		for _, ev := range opts.ProbeEvents {
+			if ev.RiskScore < 4.0 && ev.Severity != "CRITICAL" && ev.Severity != "HIGH" {
+				continue
+			}
+			ruleID := ev.EventType
+			if len(ev.ThreatTags) > 0 {
+				ruleID = ev.ThreatTags[0]
+			}
+			tags := []string{"security", "ebpf", "telemetry", string(ev.ProbeType), ev.NodeName}
+			ruleIdx := getOrCreateRule(ruleID, ev.EventType, ev.Message, "Isolate suspicious node/pod and enforce network policy egress restrictions.", intel.Severity(ev.Severity), ev.RiskScore, tags)
+			level := SeverityToSARIFLevel(ev.Severity, ev.RiskScore)
+
+			locURI := fmt.Sprintf("nodes/%s/%s", ev.NodeName, strings.ToLower(string(ev.ProbeType)))
+			resMsg := fmt.Sprintf("[%s/%s] %s: %s (PID: %d, Comm: %s)", ev.NodeName, ev.ProbeType, ev.EventType, ev.Message, ev.PID, ev.Comm)
+
+			results = append(results, SARIFResult{
+				RuleID:    ruleID,
+				RuleIndex: ruleIdx,
+				Level:     level,
+				Message:   SARIFMessage{Text: resMsg},
+				Locations: []SARIFLocation{
+					{
+						PhysicalLocation: &PhysicalLocation{
+							ArtifactLocation: ArtifactLocation{
+								URI:       locURI,
+								URIBaseID: "%SRCROOT%",
+							},
+							Region: &Region{
+								StartLine:   1,
+								StartColumn: 1,
+							},
+						},
+						LogicalLocations: []LogicalLocation{
+							{
+								Name:               ev.Comm,
+								Kind:               "KernelProcess",
+								FullyQualifiedName: fmt.Sprintf("%s/%s", ev.NodeName, ev.Comm),
+							},
+						},
+					},
+				},
+			})
+		}
+	}
+
+	// 4. Process Standalone Feed Advisories (if neither k8s nor flake nor probe was specified)
+	if (opts.K8sReport == nil || len(opts.K8sReport.Violations) == 0) && len(opts.FlakeMatches) == 0 && len(opts.ProbeEvents) == 0 && opts.Feed != nil {
 		feedItems := opts.Feed.Items
 		if opts.TargetFilter != "" {
 			feedItems = opts.Feed.FilterByTarget(opts.TargetFilter)

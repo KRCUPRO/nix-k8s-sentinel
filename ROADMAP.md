@@ -50,21 +50,31 @@ Automated generation of defense-in-depth rules:
 - [x] Open Policy Agent (OPA) Gatekeeper ConstraintTemplate and Constraint auto-generator (`pkg/policy/opa.go`).
 - [x] Multi-engine policy orchestration with schema conformance validation and CLI integration (`--policy-out`, `--policy-engine`, `--enforce-action`) (`pkg/policy/synthesizer.go`).
 
-### Version 0.6.0 — SARIF Code Scanning & Bare-Metal Telemetry (Current)
+### Version 0.6.0 — SARIF Code Scanning & Security Exporters (Completed)
 - [x] Native OASIS SARIF v2.1.0 output formatting for GitHub Security Code Scanning integration (`pkg/report/sarif.go`).
 - [x] Structured JSON audit telemetry generator with severity distributions and multi-resource correlation (`pkg/report/json_report.go`).
 - [x] CLI output format selection (`--format=console|json|sarif`) with atomic file exports (`--output=<path>`).
-- [ ] eBPF socket monitoring probes for multi-node bare-metal Kubernetes clusters (`pkg/probe/ebpf.go`).
+
+### Version 0.7.0 — Bare-Metal eBPF Telemetry Probes & Kernel Defense (Current)
+- [x] eBPF socket and syscall monitoring probe interface for bare-metal Kubernetes clusters (`pkg/probe/types.go`).
+- [x] Multi-node eBPF telemetry aggregator and thread-safe streaming manager (`pkg/probe/ebpf.go`).
+- [x] Kernel-level runtime anomaly and threat detector (`pkg/probe/detector.go`) catching reverse shells, etcd/kubelet port sweeps, immutable `/nix/store` tampering, and container boundary escape attempts.
+- [x] Offline multi-node bare-metal simulation engine and telemetry replay fixtures (`pkg/probe/mock.go`, `fixtures/probe-telemetry.json`).
+- [x] Full CLI integration (`--probe`, `--probe-fixture`, `--probe-nodes`) with unified SARIF, JSON, and threat briefing telemetry exports.
 - [ ] Rook Ceph distributed storage OSD peering anomaly and BlueStore integrity rules (`pkg/storage/ceph.go`).
 
-### Version 0.7.0 — Distributed Storage & Cryptographic Mesh Security (Planned)
+### Version 0.8.0 — Distributed Storage & Cryptographic Mesh Security (Planned)
 - [ ] WireGuard mesh network cryptographic key rotation and ephemeral peer posture auditing (`pkg/crypto/wireguard.go`).
 - [ ] Kube-Bench and CIS Kubernetes Benchmark declarative NixOS validator (`pkg/bench/cis.go`).
 - [ ] Kubernetes Gateway API and EnvoyFilter route threat radar (`pkg/gateway/radar.go`).
 
-### Version 0.8.0 — Supply Chain Attestation & Workload Identity (Planned)
+### Version 0.9.0 — Supply Chain Attestation & Workload Identity (Planned)
 - [ ] Confidential Computing AMD SEV-SNP and Intel TDX measured boot attestation verifier.
 - [ ] Multi-cluster fleet synchronization and federated OIDC token radar.
 - [ ] SPIFFE/SPIRE workload attestation and cryptographic mTLS certificate monitoring.
 - [ ] Software Bill of Materials (SBOM) ingestion for SPDX v3.0 / CycloneDX v1.6 and In-Toto provenance validation.
 - [ ] Hardware Security Module (HSM) PKCS#11 envelope encryption and KMS v2 key health checks.
+
+### Version 1.0.0 — Ephemeral Sandboxing & Autonomous Remediation (Vision)
+- [ ] Dynamic Firecracker microVM orchestration on NixOS for isolated detonating of suspicious container payloads.
+- [ ] Autonomous GitOps Pull Request synthesizer generating declarative Kustomize and Flake patches for CVE mitigations.

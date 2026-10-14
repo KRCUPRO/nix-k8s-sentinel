@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2026-10-14
+
+### Added
+- **Bare-Metal eBPF Kernel Telemetry Probe Interface** (`pkg/probe/types.go`): Abstract probe interfaces and typed telemetry events for kernel-level socket monitoring (`connect`, `accept`), process execution (`execve`), storage mutations (`openat2`), and privileged operations (`ptrace`, `bpf`). Includes node-level configuration abstractions (`ProbeConfig`) with default baselines for bare-metal Kubernetes and NixOS clusters.
+- **Multi-Node eBPF Telemetry Orchestrator** (`pkg/probe/ebpf.go`): Thread-safe multi-node telemetry aggregator (`EBPFManager`) with asynchronous stream consumption, bounded ring-buffer snapshots (10,000 capacity ceiling), real-time severity counters, node and syscall distribution metrics, and graceful cancellation lifecycle.
+- **Kernel-Level Runtime Anomaly & Threat Pattern Detector** (`pkg/probe/detector.go`): Multi-vector security evaluator detecting interactive shell reverse connections (`nc`, `socat`, `sh`, `bash`), sensitive control plane port sweeps (etcd 2379/2380, Kubelet 10250, Ceph 6789, API Server 6443), immutable `/nix/store` tampering attempts, container namespace boundary escapes via privileged syscalls, and automated correlation against normalized CVE feeds.
+- **Multi-Node Cluster Simulation Engine & Telemetry Replay** (`pkg/probe/mock.go`): Configurable mock probes and file loader (`LoadEventsFromFile`) supporting offline bare-metal cluster testing with strict bounds checking (10MB ceiling, 10,000 events ceiling).
+- **Production-Like Bare-Metal Telemetry Fixtures** (`fixtures/probe-telemetry.json`): Realistic multi-node kernel telemetry fixture representing reverse shell attacks from compromised ingress pods, unauthorized etcd probes, Nix store tamper attempts, container escapes, and normal health check baselines across control and worker nodes.
+- **CLI Telemetry Flags**: Added `--probe`, `--probe-fixture`, and `--probe-nodes` to `cmd/sentinel/main.go` for one-command bare-metal cluster telemetry inspection and risk analysis.
+- **Unified Reporting Integration**: Seamlessly integrated captured eBPF findings into SARIF v2.1.0 code scanning results, structured JSON telemetry outputs, and hourly Markdown threat briefings.
+- **Comprehensive Probe Test Suite** (`pkg/probe/probe_test.go`): 100% test coverage across probe lifecycles, anomaly vectors, multi-node concurrency, fixture parsing, and cluster simulations.
+
+### Changed
+- Bumped engine release to `v0.7.0`.
+- Updated `SECURITY.md` establishing bare-metal eBPF telemetry isolation, memory bounds, and drop-on-saturation invariants.
+- Updated `scripts/ARCHITECTURE_MAP.md` documenting new probe packages with sub-250 LOC modularity.
+
+---
+
 ## [0.6.0] - 2026-10-14
 
 ### Added
