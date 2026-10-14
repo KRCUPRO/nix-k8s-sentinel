@@ -8,25 +8,32 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/intel"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/k8s"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nix"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/storage"
 )
 
 // TelemetrySummary captures aggregated vulnerability metrics across all audit domains.
 type TelemetrySummary struct {
-	TotalThreats          int            `json:"total_threats"`
-	CriticalCount         int            `json:"critical_count"`
-	HighCount             int            `json:"high_count"`
-	MediumCount           int            `json:"medium_count"`
-	LowCount              int            `json:"low_count"`
-	AverageCVSS           float64        `json:"average_cvss"`
-	MaxCVSS               float64        `json:"max_cvss"`
-	TargetDistribution    map[string]int `json:"target_distribution"`
-	ComponentDistribution map[string]int `json:"component_distribution"`
-	TotalViolations       int            `json:"total_violations"`
-	TotalFlakeMatches     int            `json:"total_flake_matches"`
+	TotalThreats           int            `json:"total_threats"`
+	CriticalCount          int            `json:"critical_count"`
+	HighCount              int            `json:"high_count"`
+	MediumCount            int            `json:"medium_count"`
+	LowCount               int            `json:"low_count"`
+	AverageCVSS            float64        `json:"average_cvss"`
+	MaxCVSS                float64        `json:"max_cvss"`
+	TargetDistribution     map[string]int `json:"target_distribution"`
+	ComponentDistribution  map[string]int `json:"component_distribution"`
+	TotalViolations        int            `json:"total_violations"`
+	TotalFlakeMatches      int            `json:"total_flake_matches"`
+	TotalStorageViolations int            `json:"total_storage_violations"`
 }
 
 // ComputeTelemetry aggregates CVSS metrics from the threat feed, K8s violations, and Nix flake matches.
 func ComputeTelemetry(feed *intel.Feed, k8sReport *k8s.ManifestAuditReport, flakeMatches []nix.FlakeVulnerabilityMatch) TelemetrySummary {
+	return ComputeTelemetryExtended(feed, k8sReport, flakeMatches, nil)
+}
+
+// ComputeTelemetryExtended aggregates CVSS metrics including Rook Ceph storage violations.
+func ComputeTelemetryExtended(feed *intel.Feed, k8sReport *k8s.ManifestAuditReport, flakeMatches []nix.FlakeVulnerabilityMatch, storageViolations []storage.StorageViolation) TelemetrySummary {
 	summary := TelemetrySummary{
 		TargetDistribution:    make(map[string]int),
 		ComponentDistribution: make(map[string]int),
@@ -82,6 +89,10 @@ func ComputeTelemetry(feed *intel.Feed, k8sReport *k8s.ManifestAuditReport, flak
 
 	if len(flakeMatches) > 0 {
 		summary.TotalFlakeMatches = len(flakeMatches)
+	}
+
+	if len(storageViolations) > 0 {
+		summary.TotalStorageViolations = len(storageViolations)
 	}
 
 	return summary

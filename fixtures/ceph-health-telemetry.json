@@ -1,0 +1,89 @@
+{
+  "cluster_fsid": "a7f1e428-98bc-4f72-b816-11e2f3899cb1",
+  "status": "HEALTH_WARN",
+  "summary": [
+    "1 OSDs down, 1 out of quorum",
+    "Degraded data redundancy: 32 pgs degraded",
+    "Pool 'replicapool-nvme' nearfull (82.4% used)",
+    "BlueStore detected 2 hardware checksum mismatch errors on osd.4",
+    "OSD 7 NVMe async direct I/O flush timeout (CVE-2026-15509)"
+  ],
+  "mon_quorum": [
+    "mon.a",
+    "mon.b",
+    "mon.c"
+  ],
+  "osd_stats": {
+    "total": 12,
+    "up": 11,
+    "in": 11,
+    "down": 1,
+    "out": 1,
+    "flapping_count": 2,
+    "avg_heartbeat_ms": 38.5,
+    "max_heartbeat_ms": 1420.0
+  },
+  "pg_stats": {
+    "total": 512,
+    "active_clean": 480,
+    "peering": 4,
+    "degraded": 28,
+    "undersized": 4,
+    "incomplete": 0,
+    "stale": 0,
+    "inconsistent": 1,
+    "backfill_wait": 2
+  },
+  "pools": [
+    {
+      "name": "replicapool-nvme",
+      "id": 1,
+      "used_bytes": 8240000000000,
+      "total_bytes": 10000000000000,
+      "percent_used": 82.4,
+      "near_full": true,
+      "full": false
+    },
+    {
+      "name": "cephfs-metadata",
+      "id": 2,
+      "used_bytes": 12000000000,
+      "total_bytes": 500000000000,
+      "percent_used": 2.4,
+      "near_full": false,
+      "full": false
+    }
+  ],
+  "bluestore_alerts": [
+    {
+      "osd_id": 4,
+      "device": "/dev/nvme0n1p3",
+      "engine": "bluestore",
+      "checksum_errors": 2,
+      "slow_ops_count": 0,
+      "async_flush_errors": 0,
+      "kernel_version": "6.12.14-nixos",
+      "message": "CRC32c checksum failure on extents 0x1000000-0x1004000"
+    },
+    {
+      "osd_id": 7,
+      "device": "/dev/nvme1n1p2",
+      "engine": "bluestore",
+      "checksum_errors": 0,
+      "slow_ops_count": 8,
+      "async_flush_errors": 5,
+      "kernel_version": "6.12.14-nixos",
+      "message": "Direct I/O async flush synchronization dropped metadata commit"
+    }
+  ],
+  "peering_alerts": [
+    {
+      "pg_id": "1.1a",
+      "primary_osd": 2,
+      "peer_osds": [5, 7],
+      "state": "active+clean+peering",
+      "duration_seconds": 45,
+      "message": "Peering interval heartbeat delayed by OSD 7 heartbeat ping drop"
+    }
+  ]
+}

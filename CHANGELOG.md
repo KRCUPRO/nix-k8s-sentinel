@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - 2026-10-14
+
+### Added
+- **Rook Ceph Storage Cluster Integrity Ruleset** (`pkg/storage/rules.go`): Canonical integrity rules catalog (`ROOK-CEPH-001` through `ROOK-CEPH-014`) auditing insecure host network exposures (ports 6789, 3300, 6800-7300), disabled in-transit wire encryption (`msgr2` secure mode), unencrypted OSD storage disks (dm-crypt / KMS), sub-optimal pool replication (`size < 3` or `failureDomain: osd`), fragile MON quorums (< 3 or even count), insecure cleartext dashboards (`ssl: false`), unconfined privileged daemon security contexts, and PVC volume postures.
+- **Declarative Rook Ceph Manifest Scanner** (`pkg/storage/crd_scanner.go`): High-performance YAML/JSON manifest parser auditing `CephCluster`, `CephBlockPool`, `CephFilesystem`, `StorageClass`, and `PersistentVolumeClaim` with streaming bounds safety (`MaxManifestBytes = 10MB`, `MaxDocumentsPerStream = 1000`).
+- **Ceph OSD Peering & BlueStore Anomaly Detector** (`pkg/storage/osd_detector.go`): Runtime telemetry analyzer intercepting OSD down/out states, peering storms exceeding 30s, heartbeat ping latency spikes (> 1000ms), placement group degradation (`degraded`, `undersized`, `inconsistent`), storage pool capacity watermarks (`nearfull` >= 80%, `backfillfull` >= 85%, `full` >= 90%), hardware CRC32c/XXH64 BlueStore checksum corruptions, and Linux 6.12 async direct I/O metadata desync threats (CVE-2026-15509).
+- **Storage Volume & Reclaim Policy Verifier** (`pkg/storage/volume.go`): Dedicated auditor preventing catastrophic filesystem corruption caused by unsafe `ReadWriteMany` (RWX) multi-attach access modes on Ceph RBD block volumes, alongside reclaim policy checks (`reclaimPolicy: Delete`) on persistent database storage classes.
+- **Production-Like Rook Ceph Fixtures**: Added sample multi-resource declarative manifest (`fixtures/rook-ceph-cluster.yaml`) and realistic Ceph cluster health telemetry (`fixtures/ceph-health-telemetry.json`) representing degraded PGs, BlueStore CRC corruption, and CVE-2026-15509 desync alerts.
+- **CLI Storage Audit Flags**: Integrated `--ceph=<path>`, `--storage=<path>`, and `--ceph-telemetry=<path>` flags into `cmd/sentinel/main.go` supporting single manifest files, recursive directory trees, and runtime telemetry JSON inspection.
+- **Unified Reporting & Exporter Integration**: Linked storage findings and Ceph cluster health reports directly into OASIS SARIF v2.1.0 code scanning results, structured JSON telemetry outputs, and hourly Markdown threat briefings.
+- **Comprehensive Unit Test Suite** (`pkg/storage/storage_test.go`): 100% test coverage across declarative rules, volume postures, anomaly detection vectors, bounds checks, and recursive directory walking.
+
+### Changed
+- Bumped engine release to `v0.8.0`.
+- Updated `SECURITY.md` establishing Rook Ceph distributed storage integrity, BlueStore checksum verification, and PVC multi-attach invariants.
+- Updated `scripts/ARCHITECTURE_MAP.md` documenting new storage packages with sub-350 LOC modularity.
+
+---
+
 ## [0.7.0] - 2026-10-14
 
 ### Added

@@ -11,6 +11,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/k8s"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nix"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/probe"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/storage"
 )
 
 func TestBuildJSONReport_Comprehensive(t *testing.T) {
@@ -190,6 +191,47 @@ func TestBuildJSONReport_WithProbeTelemetry(t *testing.T) {
 	}
 	if rep.ProbeEvents[0].ID != "EVT-TEST-01" {
 		t.Errorf("expected EVT-TEST-01, got %s", rep.ProbeEvents[0].ID)
+	}
+}
+
+func TestBuildJSONReport_WithStorageIntegrity(t *testing.T) {
+	violations := []storage.StorageViolation{
+		{
+			RuleID:       storage.RuleRookHostNetwork,
+			Title:        "Rook Ceph Insecure Host Network Public Exposure",
+			ResourceKind: "CephCluster",
+			ResourceName: "rook-ceph",
+			Severity:     intel.SeverityHigh,
+			CVSSScore:    7.5,
+		},
+	}
+
+	health := &storage.CephHealthReport{
+		ClusterFSID: "c1-test-cluster",
+		Status:      storage.HealthWarn,
+		Summary:     []string{"1 OSD down"},
+	}
+
+	opts := ReportOptions{
+		Version:           "0.8.0",
+		StorageViolations: violations,
+		StorageHealth:     health,
+		Pretty:            true,
+	}
+
+	rep, err := BuildJSONReport(opts)
+	if err != nil {
+		t.Fatalf("failed to build JSON report: %v", err)
+	}
+
+	if len(rep.StorageViolations) != 1 {
+		t.Fatalf("expected 1 storage violation, got %d", len(rep.StorageViolations))
+	}
+	if rep.CephHealth == nil || rep.CephHealth.ClusterFSID != "c1-test-cluster" {
+		t.Errorf("expected CephHealth to be preserved in JSON report")
+	}
+	if rep.Telemetry.TotalStorageViolations != 1 {
+		t.Errorf("expected TotalStorageViolations == 1, got %d", rep.Telemetry.TotalStorageViolations)
 	}
 }
 

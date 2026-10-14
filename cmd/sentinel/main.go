@@ -14,10 +14,11 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/policy"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/probe"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/report"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/storage"
 )
 
 var (
-	version = "0.7.0"
+	version = "0.8.0"
 )
 
 func main() {
@@ -26,6 +27,9 @@ func main() {
 	targetFilter := flag.String("target", "", "Filter feed by target ('nixos' or 'kubernetes')")
 	flakePath := flag.String("flake", "", "Path to NixOS flake.lock to audit for known CVEs")
 	k8sPath := flag.String("k8s", "", "Path to Kubernetes manifest file or directory to audit")
+	cephPath := flag.String("ceph", "", "Path to Rook Ceph manifest file or directory to audit")
+	storageShort := flag.String("storage", "", "Alias for --ceph")
+	cephTelemetry := flag.String("ceph-telemetry", "", "Path to Ceph runtime health telemetry JSON to inspect")
 	briefing := flag.Bool("briefing", false, "Generate automated Markdown threat intelligence briefing")
 	briefingDir := flag.String("briefing-dir", "intel/briefings", "Output directory for threat briefings")
 	briefingFile := flag.String("briefing-file", "", "Custom filename for threat briefing markdown")
@@ -39,6 +43,10 @@ func main() {
 	outFile := flag.String("output", "", "Output destination file for formatted report (defaults to stdout)")
 	outShort := flag.String("o", "", "Shorthand for --output")
 	flag.Parse()
+
+	if *cephPath == "" && *storageShort != "" {
+		*cephPath = *storageShort
+	}
 
 	if *outFile == "" && *outShort != "" {
 		*outFile = *outShort
@@ -80,6 +88,8 @@ func main() {
 	var flakeMatches []nix.FlakeVulnerabilityMatch
 	var k8sReport *k8s.ManifestAuditReport
 	var probeSnapshots []probe.TelemetryEvent
+	var storageViolations []storage.StorageViolation
+	var storageHealth *storage.CephHealthReport
 
 	// 1. Audit Nix Flake if --flake is provided
 	if *flakePath != "" {
@@ -249,17 +259,94 @@ func main() {
 		}
 	}
 
-	// 5. Generate Threat Briefing if --briefing is requested
+	// 5. Audit Rook Ceph Storage Manifests & Telemetry
+	if *cephPath != "" {
+		logInfo("[+] Auditing Rook Ceph Storage Manifests: %s\n", *cephPath)
+		storageScanner := storage.NewStorageScanner(feed)
+		fileInfo, err := os.Stat(*cephPath)
+		if err != nil {
+			logErr("[-] Failed to inspect Ceph manifest path: %v\n", err)
+			os.Exit(1)
+		}
+
+		var findings []storage.StorageViolation
+		if fileInfo.IsDir() {
+			rep, err := storageScanner.ScanDirectory(*cephPath)
+			if err != nil {
+				logErr("[-] Failed to audit Ceph directory: %v\n", err)
+				os.Exit(1)
+			}
+			findings = rep.Violations
+			logInfo("[+] Scanned %d files for Rook Ceph storage configurations.\n", rep.TotalFiles)
+		} else {
+			findings, err = storageScanner.ScanFile(*cephPath)
+			if err != nil {
+				logErr("[-] Failed to audit Ceph file: %v\n", err)
+				os.Exit(1)
+			}
+		}
+
+		storageViolations = append(storageViolations, findings...)
+		if len(findings) == 0 {
+			logInfo("[+] Zero integrity or security violations detected in Rook Ceph manifests.\n")
+		} else {
+			logInfo("[-] WARNING: %d Rook Ceph storage violations identified!\n", len(findings))
+			for i, v := range findings {
+				cveTag := ""
+				if v.MatchedCVE != "" {
+					cveTag = fmt.Sprintf(" [%s]", v.MatchedCVE)
+				}
+				logInfo("  [%d] [%s] %s (%s)%s [CVSS: %.1f]\n", i+1, v.RuleID, v.Title, v.Severity, cveTag, v.CVSSScore)
+				logInfo("      Target: %s/%s\n", v.ResourceKind, v.ResourceName)
+				logInfo("      Details: %s\n", v.Description)
+				logInfo("      Remediation: %s\n", v.Remediation)
+			}
+		}
+	}
+
+	if *cephTelemetry != "" {
+		logInfo("[+] Ingesting Ceph Runtime Health Telemetry: %s\n", *cephTelemetry)
+		detector := storage.NewCephAnomalyDetector(feed)
+		health, anomalies, err := detector.AnalyzeHealthFile(*cephTelemetry)
+		if err != nil {
+			logErr("[-] Failed to analyze Ceph health telemetry: %v\n", err)
+			os.Exit(1)
+		}
+		storageHealth = health
+		storageViolations = append(storageViolations, anomalies...)
+
+		logInfo("[+] Ceph Cluster Status: %s (Monitors: %d | OSDs: %d Up/%d Total | PGs: %d ActiveClean/%d Total)\n",
+			health.Status, len(health.MonQuorum), health.OSDStats.Up, health.OSDStats.Total, health.PGStats.ActiveClean, health.PGStats.Total)
+
+		if len(anomalies) == 0 {
+			logInfo("[+] Zero storage runtime anomalies detected.\n")
+		} else {
+			logInfo("[-] WARNING: %d Ceph storage anomalies identified!\n", len(anomalies))
+			for i, a := range anomalies {
+				cveTag := ""
+				if a.MatchedCVE != "" {
+					cveTag = fmt.Sprintf(" [%s]", a.MatchedCVE)
+				}
+				logInfo("  [%d] [%s] %s (%s)%s [CVSS: %.1f]\n", i+1, a.RuleID, a.Title, a.Severity, cveTag, a.CVSSScore)
+				logInfo("      Details: %s\n", a.Description)
+				logInfo("      Remediation: %s\n", a.Remediation)
+			}
+		}
+	}
+
+	// 6. Generate Threat Briefing if --briefing is requested
 	if *briefing {
 		logInfo("[+] Synthesizing Threat Intelligence Briefing...\n")
 		briefingOpts := report.BriefingOptions{
-			Version:        version,
-			Feed:           feed,
-			K8sReport:      k8sReport,
-			FlakeMatches:   flakeMatches,
-			ProbeEvents:    probeSnapshots,
-			OutputDir:      *briefingDir,
-			CustomFilename: *briefingFile,
+			Version:           version,
+			Feed:              feed,
+			K8sReport:         k8sReport,
+			FlakeMatches:      flakeMatches,
+			ProbeEvents:       probeSnapshots,
+			StorageViolations: storageViolations,
+			StorageHealth:     storageHealth,
+			OutputDir:         *briefingDir,
+			CustomFilename:    *briefingFile,
 		}
 
 		rep, err := report.GenerateBriefing(briefingOpts)
@@ -286,18 +373,21 @@ func main() {
 		return
 	}
 
-	// 6. Handle Structured Formats (SARIF / JSON)
+	// 7. Handle Structured Formats (SARIF / JSON)
 	if *format == "sarif" || *format == "json" {
 		reportOpts := report.ReportOptions{
-			Version:      version,
-			Feed:         feed,
-			K8sReport:    k8sReport,
-			FlakeMatches: flakeMatches,
-			ProbeEvents:  probeSnapshots,
-			FlakePath:    *flakePath,
-			K8sPath:      *k8sPath,
-			TargetFilter: *targetFilter,
-			Pretty:       true,
+			Version:           version,
+			Feed:              feed,
+			K8sReport:         k8sReport,
+			FlakeMatches:      flakeMatches,
+			ProbeEvents:       probeSnapshots,
+			StorageViolations: storageViolations,
+			StorageHealth:     storageHealth,
+			FlakePath:         *flakePath,
+			K8sPath:           *k8sPath,
+			StoragePath:       *cephPath,
+			TargetFilter:      *targetFilter,
+			Pretty:            true,
 		}
 
 		if *format == "sarif" {
@@ -349,8 +439,8 @@ func main() {
 		}
 	}
 
-	// 7. Default feed summary (when neither flake nor k8s nor policy nor probe was requested)
-	if *flakePath == "" && *k8sPath == "" && *policyOut == "" && !*probeFlag {
+	// 8. Default feed summary (when neither flake nor k8s nor policy nor probe nor storage was requested)
+	if *flakePath == "" && *k8sPath == "" && *policyOut == "" && !*probeFlag && *cephPath == "" && *cephTelemetry == "" {
 		items := feed.Items
 		if *targetFilter != "" {
 			items = feed.FilterByTarget(*targetFilter)

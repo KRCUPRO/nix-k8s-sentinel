@@ -12,19 +12,22 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/k8s"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nix"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/probe"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/storage"
 )
 
 // BriefingOptions defines the parameters for generating an hourly threat briefing.
 type BriefingOptions struct {
-	Title          string
-	Version        string
-	HourlyWindow   time.Time
-	Feed           *intel.Feed
-	K8sReport      *k8s.ManifestAuditReport
-	FlakeMatches   []nix.FlakeVulnerabilityMatch
-	ProbeEvents    []probe.TelemetryEvent
-	OutputDir      string
-	CustomFilename string
+	Title             string
+	Version           string
+	HourlyWindow      time.Time
+	Feed              *intel.Feed
+	K8sReport         *k8s.ManifestAuditReport
+	FlakeMatches      []nix.FlakeVulnerabilityMatch
+	ProbeEvents       []probe.TelemetryEvent
+	StorageViolations []storage.StorageViolation
+	StorageHealth     *storage.CephHealthReport
+	OutputDir         string
+	CustomFilename    string
 }
 
 // BriefingReport represents a generated Markdown briefing and its associated metadata.
@@ -55,7 +58,7 @@ func GenerateBriefing(opts BriefingOptions) (*BriefingReport, error) {
 		version = "0.4.0"
 	}
 
-	telemetry := ComputeTelemetry(opts.Feed, opts.K8sReport, opts.FlakeMatches)
+	telemetry := ComputeTelemetryExtended(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations)
 
 	var buf bytes.Buffer
 
@@ -204,12 +207,37 @@ func GenerateBriefing(opts BriefingOptions) (*BriefingReport, error) {
 		buf.WriteString("\n---\n\n")
 	}
 
-	// 7. Action Items Checklist
+	// 7. Rook Ceph Distributed Storage Integrity Findings (if applicable)
+	if len(opts.StorageViolations) > 0 || opts.StorageHealth != nil {
+		buf.WriteString("## 🗄️ Rook Ceph Distributed Storage Integrity\n\n")
+		if opts.StorageHealth != nil {
+			buf.WriteString(fmt.Sprintf("**Cluster Status:** `%s` | **Mon Quorum:** %d monitors | **OSDs:** %d up / %d total | **PGs:** %d active+clean / %d total\n\n",
+				opts.StorageHealth.Status, len(opts.StorageHealth.MonQuorum), opts.StorageHealth.OSDStats.Up, opts.StorageHealth.OSDStats.Total, opts.StorageHealth.PGStats.ActiveClean, opts.StorageHealth.PGStats.Total))
+		}
+		if len(opts.StorageViolations) > 0 {
+			buf.WriteString(fmt.Sprintf("⚠️ **%d storage cluster integrity violations detected:**\n\n", len(opts.StorageViolations)))
+			buf.WriteString("| Rule ID | Resource | Severity | CVSS | Finding & Impact | Remediation Playbook |\n")
+			buf.WriteString("| :--- | :--- | :---: | :---: | :--- | :--- |\n")
+			for _, sv := range opts.StorageViolations {
+				cveTag := ""
+				if sv.MatchedCVE != "" {
+					cveTag = fmt.Sprintf(" (`%s`)", sv.MatchedCVE)
+				}
+				buf.WriteString(fmt.Sprintf("| `%s` | `%s/%s` | **%s** | %.1f | %s%s | %s |\n",
+					sv.RuleID, sv.ResourceKind, sv.ResourceName, sv.Severity, sv.CVSSScore, sv.Description, cveTag, sv.Remediation))
+			}
+			buf.WriteString("\n")
+		}
+		buf.WriteString("---\n\n")
+	}
+
+	// 8. Action Items Checklist
 	buf.WriteString("## 📋 SecOps & SRE Operational Checklist\n\n")
 	buf.WriteString("- [ ] Review high and critical severity advisories against production deployment manifests.\n")
 	buf.WriteString("- [ ] Verify that ingress controllers enforce URI path normalization and snippet guards.\n")
 	buf.WriteString("- [ ] Confirm cluster namespaces enforce default-deny ingress/egress network policies.\n")
 	buf.WriteString("- [ ] Ensure NixOS systems evaluate flakes in pure mode with explicitly pinned hashes.\n")
+	buf.WriteString("- [ ] Validate Ceph OSD peering, BlueStore integrity, and storage class volume protection policies.\n")
 	buf.WriteString("- [ ] Archive this briefing record into security audit ledger.\n")
 
 	report := &BriefingReport{

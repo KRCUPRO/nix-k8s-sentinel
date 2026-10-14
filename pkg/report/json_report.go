@@ -11,6 +11,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/k8s"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nix"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/probe"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/storage"
 )
 
 // JSONAuditReport models the consolidated security audit report serialized to JSON.
@@ -25,13 +26,15 @@ type JSONAuditReport struct {
 	FlakeVulnerabilities []nix.FlakeVulnerabilityMatch `json:"flake_vulnerabilities,omitempty"`
 	ThreatAdvisories     []intel.ThreatItem             `json:"threat_advisories,omitempty"`
 	ProbeEvents          []probe.TelemetryEvent         `json:"probe_events,omitempty"`
+	StorageViolations    []storage.StorageViolation     `json:"storage_violations,omitempty"`
+	CephHealth           *storage.CephHealthReport      `json:"ceph_health,omitempty"`
 }
 
 // BuildJSONReport compiles the consolidated JSON audit report from provided audit data.
 func BuildJSONReport(opts ReportOptions) (*JSONAuditReport, error) {
 	ver := opts.Version
 	if ver == "" {
-		ver = "0.6.0"
+		ver = "0.8.0"
 	}
 
 	scanned := make([]string, 0)
@@ -41,8 +44,11 @@ func BuildJSONReport(opts ReportOptions) (*JSONAuditReport, error) {
 	if opts.K8sPath != "" {
 		scanned = append(scanned, opts.K8sPath)
 	}
+	if opts.StoragePath != "" {
+		scanned = append(scanned, opts.StoragePath)
+	}
 
-	telemetry := ComputeTelemetry(opts.Feed, opts.K8sReport, opts.FlakeMatches)
+	telemetry := ComputeTelemetryExtended(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations)
 
 	var advisories []intel.ThreatItem
 	if opts.Feed != nil {
@@ -64,6 +70,8 @@ func BuildJSONReport(opts ReportOptions) (*JSONAuditReport, error) {
 		FlakeVulnerabilities: opts.FlakeMatches,
 		ThreatAdvisories:     advisories,
 		ProbeEvents:          opts.ProbeEvents,
+		StorageViolations:    opts.StorageViolations,
+		CephHealth:           opts.StorageHealth,
 	}
 
 	return rep, nil

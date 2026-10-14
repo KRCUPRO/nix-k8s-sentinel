@@ -11,6 +11,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/k8s"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nix"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/probe"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/storage"
 )
 
 func TestBuildSARIFReport_EmptyFindings(t *testing.T) {
@@ -372,6 +373,73 @@ func TestBuildSARIFReport_ProbeTelemetry(t *testing.T) {
 	}
 	if run.Results[0].Level != "error" {
 		t.Errorf("expected error level for critical probe event, got %s", run.Results[0].Level)
+	}
+}
+
+func TestBuildSARIFReport_StorageViolations(t *testing.T) {
+	storageViolations := []storage.StorageViolation{
+		{
+			RuleID:       storage.RuleRookHostNetwork,
+			Title:        "Rook Ceph Insecure Host Network Public Exposure",
+			ResourceKind: "CephCluster",
+			ResourceName: "rook-ceph-vulnerable",
+			Namespace:    "rook-ceph",
+			Severity:     intel.SeverityHigh,
+			CVSSScore:    7.5,
+			Description:  "Host network is exposed",
+			Remediation:  "Disable hostNetwork or isolate interfaces",
+			FilePath:     "fixtures/rook-ceph-cluster.yaml",
+			StartLine:    15,
+		},
+		{
+			RuleID:       storage.RuleRookPVCMultiAttach,
+			Title:        "Rook Ceph RBD Block Volume Unsafe Multi-Attach (RWX)",
+			ResourceKind: "PersistentVolumeClaim",
+			ResourceName: "shared-db-pvc",
+			Namespace:    "prod-database",
+			Severity:     intel.SeverityCritical,
+			CVSSScore:    9.0,
+			Description:  "Multi-attach RWX on block volume risks corruption",
+			Remediation:  "Use ReadWriteOnce or CephFS",
+			FilePath:     "fixtures/rook-ceph-cluster.yaml",
+			StartLine:    40,
+		},
+	}
+
+	opts := ReportOptions{
+		Version:           "0.8.0",
+		StorageViolations: storageViolations,
+	}
+
+	log, err := BuildSARIFReport(opts)
+	if err != nil {
+		t.Fatalf("failed to build SARIF with storage violations: %v", err)
+	}
+
+	run := log.Runs[0]
+	if len(run.Results) != 2 {
+		t.Fatalf("expected 2 storage SARIF results, got %d", len(run.Results))
+	}
+
+	foundHostNet := false
+	foundPVCMulti := false
+	for _, res := range run.Results {
+		if res.RuleID == storage.RuleRookHostNetwork {
+			foundHostNet = true
+			if res.Level != "error" {
+				t.Errorf("expected error level for ROOK-CEPH-001 (CVSS 7.5), got %s", res.Level)
+			}
+		}
+		if res.RuleID == storage.RuleRookPVCMultiAttach {
+			foundPVCMulti = true
+			if res.Level != "error" {
+				t.Errorf("expected error level for ROOK-CEPH-008 (CVSS 9.0), got %s", res.Level)
+			}
+		}
+	}
+
+	if !foundHostNet || !foundPVCMulti {
+		t.Errorf("expected both storage rules in results, foundHostNet=%v, foundPVCMulti=%v", foundHostNet, foundPVCMulti)
 	}
 }
 
