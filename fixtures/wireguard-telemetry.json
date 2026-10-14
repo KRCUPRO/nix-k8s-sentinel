@@ -1,0 +1,50 @@
+[
+  {
+    "interface_name": "wg0",
+    "public_key": "MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDE=",
+    "listen_port": 51820,
+    "key_created_at": "2026-08-15T00:00:00Z",
+    "peers": [
+      {
+        "public_key": "MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTIzNDU2Nzg5MDE=",
+        "preshared_key_present": true,
+        "endpoint": "198.51.100.10:51820",
+        "allowed_ips": [
+          "10.100.0.10/32"
+        ],
+        "latest_handshake": "2026-10-14T19:50:00Z",
+        "transfer_rx_bytes": 104857600,
+        "transfer_tx_bytes": 83886080,
+        "persistent_keepalive": 25,
+        "key_created_at": "2026-09-01T00:00:00Z"
+      },
+      {
+        "public_key": "YWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXoxMjM0NTY=",
+        "preshared_key_present": false,
+        "endpoint": "198.51.100.20:51820",
+        "allowed_ips": [
+          "0.0.0.0/0",
+          "10.100.0.20/32"
+        ],
+        "latest_handshake": "2026-10-12T10:00:00Z",
+        "transfer_rx_bytes": 4194304,
+        "transfer_tx_bytes": 2097152,
+        "persistent_keepalive": 25,
+        "key_created_at": "2026-06-15T00:00:00Z"
+      },
+      {
+        "public_key": "ZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXoxMjM0NTY3ODk=",
+        "preshared_key_present": true,
+        "endpoint": "198.51.100.99:51820",
+        "allowed_ips": [
+          "10.100.0.99/32"
+        ],
+        "latest_handshake": "2026-10-14T19:45:00Z",
+        "transfer_rx_bytes": 1048576,
+        "transfer_tx_bytes": 524288,
+        "persistent_keepalive": 25,
+        "key_created_at": "2026-07-20T00:00:00Z"
+      }
+    ]
+  }
+]

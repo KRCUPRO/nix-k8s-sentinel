@@ -12,6 +12,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nix"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/probe"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/storage"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/wireguard"
 )
 
 func TestBuildJSONReport_Comprehensive(t *testing.T) {
@@ -232,6 +233,51 @@ func TestBuildJSONReport_WithStorageIntegrity(t *testing.T) {
 	}
 	if rep.Telemetry.TotalStorageViolations != 1 {
 		t.Errorf("expected TotalStorageViolations == 1, got %d", rep.Telemetry.TotalStorageViolations)
+	}
+}
+
+func TestBuildJSONReport_WithWireGuardMesh(t *testing.T) {
+	wv := []wireguard.WireGuardViolation{
+		{
+			RuleID:        wireguard.RuleWGPlaintextPrivateKey,
+			Title:         "Plaintext WireGuard Private Key Exposed in Nix Configuration",
+			InterfaceName: "wg0",
+			Severity:      intel.SeverityCritical,
+			CVSSScore:     9.2,
+		},
+	}
+
+	rec := &wireguard.ReconciliationReport{
+		InterfaceCount:        1,
+		DeclarativePeersCount: 2,
+		RuntimePeersCount:     2,
+		KeyRotation: wireguard.KeyRotationSummary{
+			TotalKeys:   2,
+			ActiveKeys:  1,
+			ExpiredKeys: 1,
+		},
+	}
+
+	opts := ReportOptions{
+		Version:                 "0.9.0",
+		WireGuardViolations:     wv,
+		WireGuardReconciliation: rec,
+		Pretty:                  true,
+	}
+
+	rep, err := BuildJSONReport(opts)
+	if err != nil {
+		t.Fatalf("failed to build JSON report with WireGuard: %v", err)
+	}
+
+	if len(rep.WireGuardViolations) != 1 {
+		t.Fatalf("expected 1 wireguard violation, got %d", len(rep.WireGuardViolations))
+	}
+	if rep.WireGuardReconciliation == nil || rep.WireGuardReconciliation.KeyRotation.ExpiredKeys != 1 {
+		t.Errorf("expected KeyRotation summary to be preserved")
+	}
+	if rep.Telemetry.TotalWireGuardViolations != 1 {
+		t.Errorf("expected TotalWireGuardViolations == 1, got %d", rep.Telemetry.TotalWireGuardViolations)
 	}
 }
 

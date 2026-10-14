@@ -12,29 +12,32 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nix"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/probe"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/storage"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/wireguard"
 )
 
 // JSONAuditReport models the consolidated security audit report serialized to JSON.
 type JSONAuditReport struct {
-	ToolName             string                         `json:"tool_name"`
-	ToolVersion          string                         `json:"tool_version"`
-	GeneratedAt          time.Time                      `json:"generated_at"`
-	TargetFilter         string                         `json:"target_filter,omitempty"`
-	ScannedPaths         []string                       `json:"scanned_paths,omitempty"`
-	Telemetry            TelemetrySummary               `json:"telemetry"`
-	KubernetesReport     *k8s.ManifestAuditReport       `json:"kubernetes_report,omitempty"`
-	FlakeVulnerabilities []nix.FlakeVulnerabilityMatch `json:"flake_vulnerabilities,omitempty"`
-	ThreatAdvisories     []intel.ThreatItem             `json:"threat_advisories,omitempty"`
-	ProbeEvents          []probe.TelemetryEvent         `json:"probe_events,omitempty"`
-	StorageViolations    []storage.StorageViolation     `json:"storage_violations,omitempty"`
-	CephHealth           *storage.CephHealthReport      `json:"ceph_health,omitempty"`
+	ToolName                string                          `json:"tool_name"`
+	ToolVersion             string                          `json:"tool_version"`
+	GeneratedAt             time.Time                       `json:"generated_at"`
+	TargetFilter            string                          `json:"target_filter,omitempty"`
+	ScannedPaths            []string                        `json:"scanned_paths,omitempty"`
+	Telemetry               TelemetrySummary                `json:"telemetry"`
+	KubernetesReport        *k8s.ManifestAuditReport        `json:"kubernetes_report,omitempty"`
+	FlakeVulnerabilities    []nix.FlakeVulnerabilityMatch  `json:"flake_vulnerabilities,omitempty"`
+	ThreatAdvisories        []intel.ThreatItem              `json:"threat_advisories,omitempty"`
+	ProbeEvents             []probe.TelemetryEvent          `json:"probe_events,omitempty"`
+	StorageViolations       []storage.StorageViolation      `json:"storage_violations,omitempty"`
+	CephHealth              *storage.CephHealthReport       `json:"ceph_health,omitempty"`
+	WireGuardViolations     []wireguard.WireGuardViolation  `json:"wireguard_violations,omitempty"`
+	WireGuardReconciliation *wireguard.ReconciliationReport `json:"wireguard_reconciliation,omitempty"`
 }
 
 // BuildJSONReport compiles the consolidated JSON audit report from provided audit data.
 func BuildJSONReport(opts ReportOptions) (*JSONAuditReport, error) {
 	ver := opts.Version
 	if ver == "" {
-		ver = "0.8.0"
+		ver = "0.9.0"
 	}
 
 	scanned := make([]string, 0)
@@ -47,8 +50,11 @@ func BuildJSONReport(opts ReportOptions) (*JSONAuditReport, error) {
 	if opts.StoragePath != "" {
 		scanned = append(scanned, opts.StoragePath)
 	}
+	if opts.WireGuardPath != "" {
+		scanned = append(scanned, opts.WireGuardPath)
+	}
 
-	telemetry := ComputeTelemetryExtended(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations)
+	telemetry := ComputeTelemetryFull(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations)
 
 	var advisories []intel.ThreatItem
 	if opts.Feed != nil {
@@ -60,18 +66,20 @@ func BuildJSONReport(opts ReportOptions) (*JSONAuditReport, error) {
 	}
 
 	rep := &JSONAuditReport{
-		ToolName:             "nix-k8s-sentinel",
-		ToolVersion:          ver,
-		GeneratedAt:          time.Now().UTC(),
-		TargetFilter:         opts.TargetFilter,
-		ScannedPaths:         scanned,
-		Telemetry:            telemetry,
-		KubernetesReport:     opts.K8sReport,
-		FlakeVulnerabilities: opts.FlakeMatches,
-		ThreatAdvisories:     advisories,
-		ProbeEvents:          opts.ProbeEvents,
-		StorageViolations:    opts.StorageViolations,
-		CephHealth:           opts.StorageHealth,
+		ToolName:                "nix-k8s-sentinel",
+		ToolVersion:             ver,
+		GeneratedAt:             time.Now().UTC(),
+		TargetFilter:            opts.TargetFilter,
+		ScannedPaths:            scanned,
+		Telemetry:               telemetry,
+		KubernetesReport:        opts.K8sReport,
+		FlakeVulnerabilities:    opts.FlakeMatches,
+		ThreatAdvisories:        advisories,
+		ProbeEvents:             opts.ProbeEvents,
+		StorageViolations:       opts.StorageViolations,
+		CephHealth:              opts.StorageHealth,
+		WireGuardViolations:     opts.WireGuardViolations,
+		WireGuardReconciliation: opts.WireGuardReconciliation,
 	}
 
 	return rep, nil

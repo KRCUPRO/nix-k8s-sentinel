@@ -62,7 +62,7 @@ Automated generation of defense-in-depth rules:
 - [x] Offline multi-node bare-metal simulation engine and telemetry replay fixtures (`pkg/probe/mock.go`, `fixtures/probe-telemetry.json`).
 - [x] Full CLI integration (`--probe`, `--probe-fixture`, `--probe-nodes`) with unified SARIF, JSON, and threat briefing telemetry exports.
 
-### Version 0.8.0 — Rook Ceph Distributed Storage Integrity & BlueStore Anomaly Ruleset (Current)
+### Version 0.8.0 — Rook Ceph Distributed Storage Integrity & BlueStore Anomaly Ruleset (Completed)
 - [x] Canonical storage integrity ruleset covering hostNetwork, in-transit `msgr2` crypto, at-rest OSD encryption, replication factors, and mon quorum (`pkg/storage/rules.go`).
 - [x] Declarative Rook Ceph manifest scanner auditing `CephCluster`, `CephBlockPool`, `StorageClass`, and `PersistentVolumeClaim` (`pkg/storage/crd_scanner.go`).
 - [x] Ceph OSD peering stall, placement group degradation, and nearfull watermark anomaly detector (`pkg/storage/osd_detector.go`).
@@ -70,10 +70,17 @@ Automated generation of defense-in-depth rules:
 - [x] Volume health auditor preventing unsafe ReadWriteMany (RWX) multi-attaches on Ceph RBD block storage (`pkg/storage/volume.go`).
 - [x] Full CLI integration (`--ceph`, `--storage`, `--ceph-telemetry`) and seamless export to SARIF v2.1.0, JSON, and Markdown briefings.
 
-### Version 0.9.0 — Cryptographic Mesh & CIS Benchmark Security (Planned)
-- [ ] WireGuard mesh network cryptographic key rotation and ephemeral peer posture auditing (`pkg/crypto/wireguard.go`).
-- [ ] Kube-Bench and CIS Kubernetes Benchmark declarative NixOS validator (`pkg/bench/cis.go`).
-- [ ] Kubernetes Gateway API and EnvoyFilter route threat radar (`pkg/gateway/radar.go`).
+### Version 0.9.0 — WireGuard Mesh Network Cryptographic Key Rotation Engine (Current)
+- [x] WireGuard mesh network cryptographic key rotation and ephemeral peer posture auditing (`pkg/wireguard`).
+- [x] Canonical rule catalog `WG-MESH-001` through `WG-MESH-012` detecting plaintext private keys in `/nix/store` (CVE-2026-31048), missing PSK for post-quantum defense, allowedIPs 0.0.0.0/0 route hijacking, and subnet collisions.
+- [x] Runtime mesh telemetry reconciler identifying configuration drift, unmanaged ephemeral peers, and stale/abandoned handshakes (> 24 hours).
+- [x] Zero-leak key masking and 60-day warning / 90-day hard expiration lifecycle enforcement with Curve25519 format validation.
+- [x] Integrated CLI flags (`--wg`, `--wireguard`, `--wg-telemetry`) with unified export to SARIF v2.1.0, JSON telemetry, and Markdown threat briefings.
+
+### Version 0.10.0 — Kube-Bench & CIS Benchmark Declarative Validator (Planned)
+- [ ] Audit NixOS systemd unit definitions and kubelet flags against CIS Kubernetes Benchmark (`pkg/bench/cis.go`).
+- [ ] Automated remediation recommendations for unhardened control plane components.
+- [ ] Kubernetes Gateway API & EnvoyFilter route threat radar (`pkg/gateway/radar.go`).
 
 ### Version 1.0.0 — Supply Chain Attestation & Workload Identity (Planned)
 - [ ] Confidential Computing AMD SEV-SNP and Intel TDX measured boot attestation verifier.

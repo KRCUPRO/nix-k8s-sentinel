@@ -19,7 +19,7 @@
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](./LICENSE)
 [![Go Report Card](https://goreportcard.com/badge/github.com/KRCUPRO/nix-k8s-sentinel)](https://goreportcard.com/report/github.com/KRCUPRO/nix-k8s-sentinel)
-[![Version](https://img.shields.io/badge/Release-v0.8.0-emerald.svg)](https://github.com/KRCUPRO/nix-k8s-sentinel/releases)
+[![Version](https://img.shields.io/badge/Release-v0.9.0-emerald.svg)](https://github.com/KRCUPRO/nix-k8s-sentinel/releases)
 [![Architecture](https://img.shields.io/badge/Architecture-Bare--Metal_NixOS_+_K8s-8b5cf6.svg)](#-architecture-overview)
 [![Security](https://img.shields.io/badge/Security-Declarative_Audit-38bdf8.svg)](./SECURITY.md)
 
@@ -31,7 +31,7 @@
 
 `nix-k8s-sentinel` is a high-performance declarative vulnerability scanner and continuous threat intelligence engine designed specifically for bare-metal NixOS clusters and Kubernetes infrastructure.
 
-Unlike ephemeral container scanners, `nix-k8s-sentinel` audits declarative configuration matrices (NixOS Flakes, Kubernetes CNI policies, Ingress controllers, and Rook Ceph storage clusters) against real-time normalized CVSS threat intelligence feeds, enabling automated mitigation before workloads are scheduled.
+Unlike ephemeral container scanners, `nix-k8s-sentinel` audits declarative configuration matrices (NixOS Flakes, Kubernetes CNI policies, Ingress controllers, Rook Ceph storage clusters, and WireGuard mesh networks) against real-time normalized CVSS threat intelligence feeds, enabling automated mitigation before workloads are scheduled.
 
 ---
 
@@ -40,6 +40,7 @@ Unlike ephemeral container scanners, `nix-k8s-sentinel` audits declarative confi
 - **🔍 Declarative Infrastructure Auditing**: Pattern matching and input tracking for NixOS Flake inputs, Kubernetes manifests, and CNI policies.
 - **🌐 Kubernetes Ingress Security**: Automated detection of snippet injections (CVE-2023-5044 / CVE-2026-21801), URI rewrite capture group mismatches, unanchored path traversals, insecure SSL redirect policies, and permissive CORS wildcard configurations.
 - **🔌 CNI Network Policy Verification**: Multi-engine policy audits for standard Kubernetes NetworkPolicies, Calico GlobalNetworkPolicies, and CiliumNetworkPolicies. Enforces default-deny zero trust, detects unconstrained 0.0.0.0/0 egress data leaks, sensitive port exposures (etcd, kubelet), and L7 bypasses.
+- **🔐 WireGuard Mesh Cryptographic Key Rotation Engine**: Audits declarative NixOS WireGuard configurations for world-readable plaintext private keys in `/nix/store` (CVE-2026-31048), missing pre-shared keys (PSK) for post-quantum defense, allowedIPs 0.0.0.0/0 split-tunnel hijacking, and peer CIDR routing collisions. Reconciles live `wg show` telemetry to detect configuration drift, unmanaged ephemeral peers, stale handshakes (> 24h), and enforces 90-day keypair rotation lifetimes with zero-leak key masking.
 - **🗄️ Rook Ceph Storage Integrity Ruleset**: Audits `CephCluster`, `CephBlockPool`, `StorageClass`, and `PVC` manifests for unencrypted wire transport (`msgr2`), missing OSD disk encryption, fragile mon quorums, unsafe ReadWriteMany (RWX) on block storage, OSD peering stalls, and Linux 6.12 BlueStore async direct I/O metadata desync threats (CVE-2026-15509).
 - **🔬 Bare-Metal eBPF Telemetry Probes**: Kernel-level socket (`connect`), syscall (`execve`, `ptrace`, `bpf`), and storage integrity monitoring across multi-node bare-metal clusters with automated anomaly correlation.
 - **📊 Automated Hourly Threat Briefings**: Synthesizes comprehensive Markdown advisories and CVSS risk telemetry matrices under `intel/briefings/` for audit trails and SecOps dashboards.
@@ -73,6 +74,10 @@ go run cmd/sentinel/main.go --flake=fixtures/flake.lock
 # Audit Kubernetes manifests for Ingress and CNI policy violations
 go run cmd/sentinel/main.go --k8s=fixtures/k8s-ingress-vulnerable.yaml
 go run cmd/sentinel/main.go --k8s=fixtures/
+
+# Audit NixOS WireGuard mesh configuration & runtime peer telemetry
+go run cmd/sentinel/main.go --wg=fixtures/nixos-wireguard.nix
+go run cmd/sentinel/main.go --wg=fixtures/nixos-wireguard.nix --wg-telemetry=fixtures/wireguard-telemetry.json
 
 # Audit Rook Ceph distributed storage manifests & runtime health telemetry
 go run cmd/sentinel/main.go --ceph=fixtures/rook-ceph-cluster.yaml

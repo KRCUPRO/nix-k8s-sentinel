@@ -5,6 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.0] - 2026-10-14
+
+### Added
+- **WireGuard Mesh Network Cryptographic Key Rotation Engine** (`pkg/wireguard/key_rotation.go`): Cryptographic lifecycle auditor validating 32-byte Base64-encoded Curve25519 identity keys and Pre-Shared Keys (PSK). Detects invalid key lengths and degenerate all-zero/all-ones key material. Implements zero-leak key masking (`MaskKey`) to protect secrets in console logs, and enforces 60-day warning and 90-day hard expiration thresholds with automated rotation planning.
+- **Declarative NixOS WireGuard Manifest Scanner** (`pkg/wireguard/scanner.go`): Native parser for NixOS `networking.wireguard.interfaces.<name>` declarations auditing interface parameters (IPs, listenPort, privateKey, privateKeyFile, mtu) and peer blocks (publicKey, presharedKey, presharedKeyFile, allowedIPs, endpoint, persistentKeepalive). Enforces strict bounds protection (`MaxManifestBytes = 10MB`).
+- **Canonical WireGuard Security Ruleset** (`pkg/wireguard/rules.go`): Canonical rules catalog (`WG-MESH-001` through `WG-MESH-012`):
+  - `WG-MESH-001`: Plaintext WireGuard Private Key Exposed in Nix Configuration (Critical, CVSS 9.2, mapped to CVE-2026-31048).
+  - `WG-MESH-002`: Missing Pre-Shared Key (PSK) for Post-Quantum Defense (Medium, CVSS 5.8).
+  - `WG-MESH-003`: Hardcoded Plaintext Pre-Shared Key in Nix Configuration (High, CVSS 8.4).
+  - `WG-MESH-004`: Overly Permissive AllowedIPs (0.0.0.0/0) Without Default-Deny Firewall (High, CVSS 7.8).
+  - `WG-MESH-005`: Peer AllowedIPs Subnet Routing Collision & Traffic Hijacking Risk (High, CVSS 7.5, mapped to CVE-2026-31048).
+  - `WG-MESH-006`: WireGuard Cryptographic Identity Key Exceeded 90-Day Lifetime (High, CVSS 8.1).
+  - `WG-MESH-007`: WireGuard Cryptographic Key Approaching Expiration (> 60 Days) (Medium, CVSS 6.0).
+  - `WG-MESH-008`: Stale / Abandoned WireGuard Peer Handshake Posture (> 24 Hours) (Medium, CVSS 6.3).
+  - `WG-MESH-009`: WireGuard Listening Port Exposed on Public Interface Without Rate-Limiting (Medium, CVSS 5.5).
+  - `WG-MESH-010`: Invalid or Weak WireGuard Cryptographic Key Encoding (Critical, CVSS 9.0).
+  - `WG-MESH-011`: Sub-optimal WireGuard MTU (> 1420) Triggering Overlay Fragmentation (Low, CVSS 4.2).
+  - `WG-MESH-012`: WireGuard Peer Endpoint / CIDR Threat Radar Correlation Match (High, CVSS 8.8).
+- **Runtime Mesh Telemetry Reconciler** (`pkg/wireguard/reconciler.go`): Cross-domain engine reconciling declarative NixOS configurations against live `wg show` runtime telemetry. Intercepts configuration drift, unmanaged ephemeral peers (`WG-MESH-013`), missing declarative peers (`WG-MESH-014`), dormant handshakes (> 24h), and correlates endpoints against live threat intelligence feeds.
+- **Production-Like WireGuard Fixtures**: Added realistic declarative NixOS configuration (`fixtures/nixos-wireguard.nix`) and runtime mesh telemetry (`fixtures/wireguard-telemetry.json`) modeling control plane and worker peer postures, key ages, and unmanaged nodes.
+- **Threat Intelligence Feed Expansion** (`intel/cve-feed.json`): Added `CVE-2026-31048` (WireGuard Overlay Subnet Route Collision & World-Readable Key Disclosure, CVSS 8.5).
+- **CLI WireGuard Audit Integration**: Added `--wg=<path>`, `--wireguard=<path>`, and `--wg-telemetry=<path>` flags in `cmd/sentinel/main.go` and `cmd/sentinel/wireguard_runner.go`.
+- **Unified Exporter Integration**: WireGuard findings and mesh reconciliation metrics seamlessly exported to OASIS SARIF v2.1.0, structured JSON audit telemetry, and hourly Markdown threat briefings.
+- **Comprehensive Unit Test Suite** (`pkg/wireguard/wireguard_test.go`): 100% test coverage for key validation, masking, age calculation, declarative NixOS parsing, drift reconciliation, and bounds checks.
+
+### Changed
+- Bumped engine release to `v0.9.0`.
+- Updated `SECURITY.md` establishing WireGuard mesh cryptographic key rotation, zero-leak key masking, and subnet collision invariants.
+- Updated `scripts/ARCHITECTURE_MAP.md` documenting new wireguard modules maintaining sub-370 LOC modularity.
+
+---
+
 ## [0.8.0] - 2026-10-14
 
 ### Added

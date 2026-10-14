@@ -12,6 +12,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nix"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/probe"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/storage"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/wireguard"
 )
 
 func TestBuildSARIFReport_EmptyFindings(t *testing.T) {
@@ -442,4 +443,55 @@ func TestBuildSARIFReport_StorageViolations(t *testing.T) {
 		t.Errorf("expected both storage rules in results, foundHostNet=%v, foundPVCMulti=%v", foundHostNet, foundPVCMulti)
 	}
 }
+
+func TestBuildSARIFReport_WireGuardViolations(t *testing.T) {
+	wireguardViolations := []wireguard.WireGuardViolation{
+		{
+			RuleID:        wireguard.RuleWGPlaintextPrivateKey,
+			Title:         "Plaintext WireGuard Private Key Exposed in Nix Configuration",
+			InterfaceName: "wg0",
+			Severity:      intel.SeverityCritical,
+			CVSSScore:     9.2,
+			Description:   "Embedded plaintext private key in nix config",
+			Remediation:   "Use privateKeyFile with sops-nix",
+			MatchedCVE:    "CVE-2026-31048",
+			FilePath:      "fixtures/nixos-wireguard.nix",
+			StartLine:     37,
+		},
+		{
+			RuleID:        wireguard.RuleWGPermissiveAllowedIPs,
+			Title:         "Overly Permissive AllowedIPs (0.0.0.0/0)",
+			InterfaceName: "wg0",
+			PeerPublicKey: "abcd...wxyz",
+			Severity:      intel.SeverityHigh,
+			CVSSScore:     7.8,
+			Description:   "Permissive 0.0.0.0/0 allowedIPs",
+			Remediation:   "Restrict to cluster CIDR",
+			FilePath:      "fixtures/nixos-wireguard.nix",
+			StartLine:     22,
+		},
+	}
+
+	opts := ReportOptions{
+		Version:             "0.9.0",
+		WireGuardViolations: wireguardViolations,
+	}
+
+	log, err := BuildSARIFReport(opts)
+	if err != nil {
+		t.Fatalf("failed to build SARIF with WireGuard violations: %v", err)
+	}
+
+	run := log.Runs[0]
+	if len(run.Results) != 2 {
+		t.Fatalf("expected 2 WireGuard SARIF results, got %d", len(run.Results))
+	}
+
+	for _, res := range run.Results {
+		if res.Level != "error" {
+			t.Errorf("expected error level for high/critical WireGuard violations, got %s", res.Level)
+		}
+	}
+}
+
 
