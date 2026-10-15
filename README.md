@@ -19,7 +19,7 @@
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](./LICENSE)
 [![Go Report Card](https://goreportcard.com/badge/github.com/KRCUPRO/nix-k8s-sentinel)](https://goreportcard.com/report/github.com/KRCUPRO/nix-k8s-sentinel)
-[![Version](https://img.shields.io/badge/Release-v0.13.0-emerald.svg)](https://github.com/KRCUPRO/nix-k8s-sentinel/releases)
+[![Version](https://img.shields.io/badge/Release-v0.14.0-emerald.svg)](https://github.com/KRCUPRO/nix-k8s-sentinel/releases)
 [![Architecture](https://img.shields.io/badge/Architecture-Bare--Metal_NixOS_+_K8s-8b5cf6.svg)](#-architecture-overview)
 [![Security](https://img.shields.io/badge/Security-Declarative_Audit-38bdf8.svg)](./SECURITY.md)
 
@@ -31,13 +31,14 @@
 
 `nix-k8s-sentinel` is a high-performance declarative vulnerability scanner and continuous threat intelligence engine designed specifically for bare-metal NixOS clusters and Kubernetes infrastructure.
 
-Unlike ephemeral container scanners, `nix-k8s-sentinel` audits declarative configuration matrices (NixOS Flakes, Kubernetes CNI policies, Ingress controllers, Gateway API routes, Istio EnvoyFilters, Rook Ceph storage clusters, WireGuard mesh networks, CIS Kubernetes Benchmarks, Confidential Computing measured boot chains, and Multi-Cluster GitOps fleet topologies) against real-time normalized CVSS threat intelligence feeds, enabling automated mitigation before workloads are scheduled.
+Unlike ephemeral container scanners, `nix-k8s-sentinel` audits declarative configuration matrices (NixOS Flakes, Kubernetes CNI policies, Ingress controllers, Gateway API routes, Istio EnvoyFilters, Rook Ceph storage clusters, WireGuard mesh networks, CIS Kubernetes Benchmarks, Confidential Computing measured boot chains, Multi-Cluster GitOps fleet topologies, and SPIFFE/SPIRE Zero-Trust microsegmentation) against real-time normalized CVSS threat intelligence feeds, enabling automated mitigation before workloads are scheduled.
 
 ---
 
 ## 🏛️ Core Capabilities
 
 - **🔍 Declarative Infrastructure Auditing**: Pattern matching and input tracking for NixOS Flake inputs, Kubernetes manifests, and CNI policies.
+- **🔒 Zero-Trust Microsegmentation & SPIFFE/SPIRE Workload Attestation**: Native audit engine for SPIFFE/SPIRE workload identities and Cilium eBPF network microsegmentation. Validates RFC-compliant SPIFFE IDs against trusted domain allowlists, enforces mandatory Cilium mTLS (`authentication.mode: required`), flags weak crypto keys (RSA-1024/2048), detects dangerous wildcard selectors (`k8s:ns:*`), identifies expiring or desynchronized SVIDs (< 15 min remaining) to prevent active workload disconnections (CVE-2026-67210), and autonomously synthesizes zero-trust `CiliumNetworkPolicy` manifests (`--spiffe-policy-out`).
 - **🛰️ Multi-Cluster Fleet Synchronization & OIDC Token Radar**: Fleet-wide synchronization and federated identity auditing for geographically distributed Kubernetes clusters. Audits multi-tenant RBAC permissions to eliminate wildcard verbs/resources (`*`), block dangerous privilege escalations (`bind`/`escalate`), prevent impersonation without resourceNames whitelists, disallow cluster-wide secret reading across tenant boundaries, and block `cluster-admin` bindings to broad groups (`system:authenticated`). Intercepts insecure OIDC signing algorithms (`none`, `HS256`), excessive token lifetimes (> 24 hours), and missing audience/issuer claims. Statically audits ArgoCD Applications and Flux Kustomizations for automated self-healing (`selfHeal: true`, `prune: true`), floating branch tracking, and wildcard target clusters (`server: "*"`), while reconciling live cluster telemetry to detect configuration drift and degraded health postures (CVE-2026-60114).
 - **🔒 Confidential Computing & Measured Boot Attestation Verifier**: Hardware-rooted security verification for AMD SEV-SNP (`mem_encrypt=on kvm_amd.sev=1`) and Intel TDX (`intel_iommu=on kvm_intel.tdx=1`) confidential computing enclaves. Verifies TPM 2.0 PCR quotations (PCR 0 firmware, PCR 7 Secure Boot, PCR 8 kernel cmdline, PCR 9 initrd, PCR 11 UKI system closure digest) and remote attestation tokens. Intercepts debug mode enclave flags, expired/revoked attestation tokens, missing systemd-boot/Lanzaboote measured boot chains, and desynchronized Nix store path cryptographic signatures against runtime measurements (CVE-2026-51204).
 - **🌐 Kubernetes Gateway API & EnvoyFilter Route Threat Radar**: Declarative security inspection of Gateway API resources (`Gateway`, `HTTPRoute`, `GRPCRoute`, `TCPRoute`, `ReferenceGrant`) and Istio `EnvoyFilter` manifests. Enforces cross-namespace `ReferenceGrant` validation to prevent tenant route hijacking (CVE-2026-44219), intercepts unsafe inline Lua script injections (`os.execute`, `io.popen`), detects filter chain order bypasses before authentication modules, flags unencrypted plaintext listeners, identifies path traversal rewrites (`..`, `//`), blocks identity header spoofing (`X-Remote-User`), and guards sensitive control plane ports (2379, 6443).
@@ -89,6 +90,12 @@ go run cmd/sentinel/main.go --attest=fixtures/nixos-measured-boot.nix
 # Verify TPM 2.0 PCR quotations & remote attestation tokens across cluster nodes
 go run cmd/sentinel/main.go --attest-telemetry=fixtures/attestation-telemetry.json
 go run cmd/sentinel/main.go --attest=fixtures/nixos-measured-boot.nix --attest-telemetry=fixtures/attestation-telemetry.json --format=sarif --output=attest-results.sarif
+
+# Audit SPIFFE/SPIRE workload registration manifests & Cilium microsegmentation
+go run cmd/sentinel/main.go --spiffe=fixtures/spiffe-manifests.yaml
+
+# Reconcile runtime SVID telemetry and generate hardened CiliumNetworkPolicies
+go run cmd/sentinel/main.go --spiffe=fixtures/spiffe-manifests.yaml --svid-telemetry=fixtures/spiffe-telemetry.json --spiffe-policy-out=policies/generated/cilium-spiffe-policies.yaml --format=sarif --output=spiffe-results.sarif
 
 # Audit Multi-Cluster fleet manifests (RBAC, ArgoCD, Flux)
 go run cmd/sentinel/main.go --fleet=fixtures/fleet-manifests.yaml

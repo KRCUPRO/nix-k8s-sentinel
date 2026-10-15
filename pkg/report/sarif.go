@@ -704,8 +704,69 @@ func BuildSARIFReport(opts ReportOptions) (*SARIFLog, error) {
 		}
 	}
 
-	// 10. Process Standalone Feed Advisories (if no specific audit targets yielded findings)
-	if (opts.K8sReport == nil || len(opts.K8sReport.Violations) == 0) && len(opts.FlakeMatches) == 0 && len(opts.ProbeEvents) == 0 && len(opts.StorageViolations) == 0 && len(opts.WireGuardViolations) == 0 && len(opts.CISViolations) == 0 && len(opts.GatewayViolations) == 0 && len(opts.AttestViolations) == 0 && len(opts.FleetViolations) == 0 && opts.Feed != nil {
+	// 10. Process Zero-Trust Microsegmentation & SPIFFE/SPIRE Workload Attestation Violations
+	if len(opts.SPIFFEViolations) > 0 {
+		for _, sv := range opts.SPIFFEViolations {
+			tags := []string{"security", "kubernetes", "spiffe", "spire", "cilium", "zero-trust", strings.ToLower(string(sv.Category))}
+			if sv.MatchedCVE != "" {
+				tags = append(tags, sv.MatchedCVE)
+			}
+			ruleIdx := getOrCreateRule(sv.RuleID, sv.Title, sv.Message, sv.Remediation, sv.Severity, sv.CVSSScore, tags)
+			level := SeverityToSARIFLevel(string(sv.Severity), sv.CVSSScore)
+
+			locURI := sv.FilePath
+			if locURI == "" {
+				locURI = opts.SPIFFEPath
+			}
+			if locURI == "" {
+				locURI = opts.SPIFFETelemetryPath
+			}
+			if locURI == "" {
+				locURI = "spiffe/workload"
+			}
+
+			line := sv.StartLine
+			if line <= 0 {
+				line = 1
+			}
+
+			resMsg := fmt.Sprintf("[%s] %s: %s (Remediation: %s)", sv.RuleID, sv.Title, sv.Message, sv.Remediation)
+			if sv.SPIFFEID != "" {
+				resMsg = fmt.Sprintf("[%s] %s: %s (SPIFFE ID: %s, Remediation: %s)", sv.RuleID, sv.Title, sv.Message, sv.SPIFFEID, sv.Remediation)
+			}
+
+			results = append(results, SARIFResult{
+				RuleID:    sv.RuleID,
+				RuleIndex: ruleIdx,
+				Level:     level,
+				Message:   SARIFMessage{Text: resMsg},
+				Locations: []SARIFLocation{
+					{
+						PhysicalLocation: &PhysicalLocation{
+							ArtifactLocation: ArtifactLocation{
+								URI:       locURI,
+								URIBaseID: "%SRCROOT%",
+							},
+							Region: &Region{
+								StartLine:   line,
+								StartColumn: 1,
+							},
+						},
+						LogicalLocations: []LogicalLocation{
+							{
+								Name:               sv.RuleID,
+								Kind:               sv.ResourceKind,
+								FullyQualifiedName: fmt.Sprintf("spiffe/%s/%s", sv.ResourceKind, sv.ResourceName),
+							},
+						},
+					},
+				},
+			})
+		}
+	}
+
+	// 11. Process Standalone Feed Advisories (if no specific audit targets yielded findings)
+	if (opts.K8sReport == nil || len(opts.K8sReport.Violations) == 0) && len(opts.FlakeMatches) == 0 && len(opts.ProbeEvents) == 0 && len(opts.StorageViolations) == 0 && len(opts.WireGuardViolations) == 0 && len(opts.CISViolations) == 0 && len(opts.GatewayViolations) == 0 && len(opts.AttestViolations) == 0 && len(opts.FleetViolations) == 0 && len(opts.SPIFFEViolations) == 0 && opts.Feed != nil {
 		feedItems := opts.Feed.Items
 		if opts.TargetFilter != "" {
 			feedItems = opts.Feed.FilterByTarget(opts.TargetFilter)

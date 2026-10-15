@@ -16,6 +16,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/k8s"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nix"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/probe"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/spiffe"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/storage"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/wireguard"
 )
@@ -41,6 +42,8 @@ type BriefingOptions struct {
 	AttestSummary           *attest.AttestationSummary
 	FleetViolations         []fleet.FleetViolation
 	FleetSummary            *fleet.FleetSummary
+	SPIFFEViolations        []spiffe.SPIFFEViolation
+	SPIFFESummary           *spiffe.SPIFFESummary
 	OutputDir               string
 	CustomFilename          string
 }
@@ -73,7 +76,7 @@ func GenerateBriefing(opts BriefingOptions) (*BriefingReport, error) {
 		version = "0.4.0"
 	}
 
-	telemetry := ComputeTelemetryFleet(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations, opts.GatewayViolations, opts.AttestViolations, opts.FleetViolations)
+	telemetry := ComputeTelemetrySPIFFE(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations, opts.GatewayViolations, opts.AttestViolations, opts.FleetViolations, opts.SPIFFEViolations)
 
 	var buf bytes.Buffer
 
@@ -389,7 +392,38 @@ func GenerateBriefing(opts BriefingOptions) (*BriefingReport, error) {
 		buf.WriteString("---\n\n")
 	}
 
-	// 13. Action Items Checklist
+	// 13. Zero-Trust Microsegmentation & SPIFFE/SPIRE Workload Attestation Posture (if applicable)
+	if len(opts.SPIFFEViolations) > 0 || opts.SPIFFESummary != nil {
+		buf.WriteString("## 🛡️ Zero-Trust Microsegmentation & SPIFFE/SPIRE Workload Attestation\n\n")
+		if opts.SPIFFESummary != nil {
+			sum := opts.SPIFFESummary
+			buf.WriteString(fmt.Sprintf("**Compliance Score:** `%.1f%%` | **SVIDs Audited:** %d | **Valid:** %d | **Expired / Near-Expiry:** %d | **Policies Synthesized:** %d\n",
+				sum.ComplianceScore, sum.SVIDsAudited, sum.SVIDsValid, sum.SVIDsExpiredOrNearExpiry, sum.CiliumPoliciesSynthesized))
+			buf.WriteString(fmt.Sprintf("**Severity Breakdown:** %d Critical | %d High | %d Medium | %d Low\n\n",
+				sum.CriticalCount, sum.HighCount, sum.MediumCount, sum.LowCount))
+		}
+		if len(opts.SPIFFEViolations) > 0 {
+			buf.WriteString(fmt.Sprintf("⚠️ **%d SPIFFE/SPIRE workload attestation and Cilium microsegmentation violations identified:**\n\n", len(opts.SPIFFEViolations)))
+			buf.WriteString("| Rule ID | Category | Workload / Resource | Severity | CVSS | Finding & Threat Impact | Remediation Action |\n")
+			buf.WriteString("| :--- | :--- | :--- | :---: | :---: | :--- | :--- |\n")
+			for _, sv := range opts.SPIFFEViolations {
+				cveTag := ""
+				if sv.MatchedCVE != "" {
+					cveTag = fmt.Sprintf(" (`%s`)", sv.MatchedCVE)
+				}
+				targetTag := sv.ResourceName
+				if sv.Workload != "" {
+					targetTag = sv.Workload
+				}
+				buf.WriteString(fmt.Sprintf("| `%s` | %s | `%s` | **%s** | %.1f | %s%s | %s |\n",
+					sv.RuleID, sv.Category, targetTag, sv.Severity, sv.CVSSScore, sv.Message, cveTag, sv.Remediation))
+			}
+			buf.WriteString("\n")
+		}
+		buf.WriteString("---\n\n")
+	}
+
+	// 14. Action Items Checklist
 	buf.WriteString("## 📋 SecOps & SRE Operational Checklist\n\n")
 	buf.WriteString("- [ ] Review high and critical severity advisories against production deployment manifests.\n")
 	buf.WriteString("- [ ] Verify that ingress controllers enforce URI path normalization and snippet guards.\n")
@@ -401,6 +435,7 @@ func GenerateBriefing(opts BriefingOptions) (*BriefingReport, error) {
 	buf.WriteString("- [ ] Audit Kubernetes Gateway API routes against ReferenceGrants and sanitize dynamic EnvoyFilter Lua injections.\n")
 	buf.WriteString("- [ ] Verify AMD SEV-SNP and Intel TDX attestation reports against golden NixOS UKI closure measurements in PCR 11.\n")
 	buf.WriteString("- [ ] Reconcile multi-cluster GitOps synchronization drift and rotate federated OIDC identity tokens exceeding 24 hours.\n")
+	buf.WriteString("- [ ] Validate SPIFFE/SPIRE X.509 SVID renewal windows and enforce mutual TLS with attested workload identities in CiliumNetworkPolicies.\n")
 	buf.WriteString("- [ ] Archive this briefing record into security audit ledger.\n")
 
 	report := &BriefingReport{

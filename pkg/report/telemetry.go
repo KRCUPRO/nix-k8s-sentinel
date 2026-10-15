@@ -12,6 +12,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/intel"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/k8s"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nix"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/spiffe"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/storage"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/wireguard"
 )
@@ -35,6 +36,7 @@ type TelemetrySummary struct {
 	TotalGatewayViolations    int            `json:"total_gateway_violations"`
 	TotalAttestViolations     int            `json:"total_attest_violations"`
 	TotalFleetViolations      int            `json:"total_fleet_violations"`
+	TotalSPIFFEViolations     int            `json:"total_spiffe_violations"`
 }
 
 // ComputeTelemetry aggregates CVSS metrics from the threat feed, K8s violations, and Nix flake matches.
@@ -69,6 +71,11 @@ func ComputeTelemetryAttest(feed *intel.Feed, k8sReport *k8s.ManifestAuditReport
 
 // ComputeTelemetryFleet aggregates CVSS metrics across all domains including Multi-Cluster Fleet Synchronization & OIDC Token Radar violations.
 func ComputeTelemetryFleet(feed *intel.Feed, k8sReport *k8s.ManifestAuditReport, flakeMatches []nix.FlakeVulnerabilityMatch, storageViolations []storage.StorageViolation, wireguardViolations []wireguard.WireGuardViolation, cisViolations []bench.CISViolation, gatewayViolations []gateway.GatewayViolation, attestViolations []attest.AttestationViolation, fleetViolations []fleet.FleetViolation) TelemetrySummary {
+	return ComputeTelemetrySPIFFE(feed, k8sReport, flakeMatches, storageViolations, wireguardViolations, cisViolations, gatewayViolations, attestViolations, fleetViolations, nil)
+}
+
+// ComputeTelemetrySPIFFE aggregates CVSS metrics across all domains including Zero-Trust Microsegmentation & SPIFFE/SPIRE Workload Attestation violations.
+func ComputeTelemetrySPIFFE(feed *intel.Feed, k8sReport *k8s.ManifestAuditReport, flakeMatches []nix.FlakeVulnerabilityMatch, storageViolations []storage.StorageViolation, wireguardViolations []wireguard.WireGuardViolation, cisViolations []bench.CISViolation, gatewayViolations []gateway.GatewayViolation, attestViolations []attest.AttestationViolation, fleetViolations []fleet.FleetViolation, spiffeViolations []spiffe.SPIFFEViolation) TelemetrySummary {
 	summary := TelemetrySummary{
 		TargetDistribution:    make(map[string]int),
 		ComponentDistribution: make(map[string]int),
@@ -148,6 +155,10 @@ func ComputeTelemetryFleet(feed *intel.Feed, k8sReport *k8s.ManifestAuditReport,
 
 	if len(fleetViolations) > 0 {
 		summary.TotalFleetViolations = len(fleetViolations)
+	}
+
+	if len(spiffeViolations) > 0 {
+		summary.TotalSPIFFEViolations = len(spiffeViolations)
 	}
 
 	return summary

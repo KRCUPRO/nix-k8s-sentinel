@@ -5,6 +5,39 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.14.0] - 2026-10-15
+
+### Added
+- **Zero-Trust Microsegmentation & SPIFFE/SPIRE Workload Attestation Engine** (`pkg/spiffe/scanner.go`): Native security audit and attestation reconciler for SPIFFE/SPIRE workload identities and Cilium eBPF network microsegmentation in multi-tenant Kubernetes clusters.
+- **Strict SPIFFE ID Parser & SVID Lifecycle / Cryptographic Auditor** (`pkg/spiffe/validator.go`): Deep security inspector for X.509 SVID records and SPIRE Registration Entry manifests:
+  - Validates RFC-compliant SPIFFE ID format (`spiffe://<trust-domain>/<workload-path>`) against trusted domain white-lists (`SPIFFE-SVID-001`).
+  - Detects excessive SVID lifespans exceeding production bounds (> 24 hours) (`SPIFFE-SVID-002`).
+  - Identifies expiring or expired SVIDs within the renewal threshold (< 15 minutes remaining) triggering active workload disconnects (`SPIFFE-SVID-003`, mapped to CVE-2026-67210).
+  - Flags insecure wildcard selectors (`k8s:ns:*`, `k8s:pod-label:*`) in SPIRE registration entries permitting unconstrained identity issuance (`SPIFFE-SVID-004`).
+  - Identifies insecure or world-accessible SPIRE Agent Admin socket file modes (`chmod 0777` or missing `0660` restrictions) (`SPIFFE-SVID-005`).
+  - Enforces mandatory Cilium mTLS authentication mode (`authentication.mode: required`) in `CiliumNetworkPolicy` (`SPIFFE-SVID-006`).
+  - Flags missing SPIFFE ID label match expressions in ingress/egress endpoint rules (`SPIFFE-SVID-007`).
+  - Flags weak cryptographic key algorithms (`RSA-1024`, `RSA-2048`) or non-ECC keys for SVID issuance (`SPIFFE-SVID-008`).
+  - Detects missing Pod identity node attestation constraints (`k8s:node-name`) in SPIRE registration entries (`SPIFFE-SVID-009`).
+  - Identifies unencrypted SPIRE Agent-to-Server gTLS control planes without mutual attestation (`SPIFFE-SVID-010`).
+  - Flags missing SVID auto-renewal loop configurations in workload sidecars (`SPIFFE-SVID-011`).
+  - Intercepts default-allow network policies lacking microsegmentation ingress/egress boundaries (`SPIFFE-SVID-012`).
+- **Autonomous Cilium Policy Synthesizer** (`pkg/spiffe/cilium_synth.go`): Generates zero-trust `CiliumNetworkPolicy` (`cilium.io/v2`) manifests enforcing mandatory SPIFFE-authenticated mTLS (`authentication.mode: required`) and workload isolation based on audited SPIFFE identities.
+- **Canonical SPIFFE/SPIRE Threat Catalog** (`pkg/spiffe/rules.go`): Authoritative suite of 12 canonical rules with CVSS v3.1 scores, detailed technical impact analysis, and remediation playbooks.
+- **Dedicated CLI SPIFFE Runner & Modularization** (`cmd/sentinel/spiffe_runner.go`): High-performance runner keeping `cmd/sentinel/main.go` under 470 LOC and strictly adhering to the 300~500 LOC soft ceiling. Adds `--spiffe=<path>`, `--spire=<path>`, `--svid-telemetry=<path>`, and `--spiffe-policy-out=<path>` flags.
+- **Threat Feed Expansion** (`intel/cve-feed.json`): Added `CVE-2026-67210` (SPIFFE/SPIRE Workload Attestation SVID Expiration Desync & Cilium Identity Spoofing, CVSS 9.3).
+- **Unified Exporter Integration**: SPIFFE findings, SVID audit tallies, and microsegmentation summaries seamlessly exported to OASIS SARIF v2.1.0, structured JSON audit telemetry, and hourly Markdown threat briefings.
+- **Production Fixtures & Synthesized Policies**: Added realistic declarative fixture (`fixtures/spiffe-manifests.yaml`), runtime SVID telemetry payload (`fixtures/spiffe-telemetry.json`), and synthesized Cilium policies (`policies/generated/cilium-spiffe-policies.yaml`).
+- **Comprehensive Unit Test Suites** (`pkg/spiffe/spiffe_test.go`, `pkg/report/spiffe_report_test.go`): 100% test coverage across rule catalog, SPIFFE ID parsing, SVID lifetime audits, wildcard selector detection, Cilium policy generation, telemetry reconciliation, SARIF/JSON/Briefing serialization, and defensive bounds checks.
+
+### Changed
+- Bumped engine release to `v0.14.0`.
+- Updated `SECURITY.md` establishing Zero-Trust Microsegmentation & SPIFFE/SPIRE Workload Attestation security invariants (Invariant 16).
+- Updated `ROADMAP.md` marking Milestone M14 as completed and scheduling M15 (Autonomous Remediation Operator & Drift Auto-Heal Reconciliation).
+- Updated `scripts/ARCHITECTURE_MAP.md` documenting new SPIFFE/SPIRE modules, synthesized policies, and O(1) symbols.
+
+---
+
 ## [0.13.0] - 2026-10-15
 
 ### Added
