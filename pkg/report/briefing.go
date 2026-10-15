@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/bench"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/gateway"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/intel"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/k8s"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nix"
@@ -32,6 +33,8 @@ type BriefingOptions struct {
 	WireGuardReconciliation *wireguard.ReconciliationReport
 	CISViolations           []bench.CISViolation
 	CISSummary              *bench.CISSummary
+	GatewayViolations       []gateway.GatewayViolation
+	GatewaySummary          *gateway.GatewaySummary
 	OutputDir               string
 	CustomFilename          string
 }
@@ -64,7 +67,7 @@ func GenerateBriefing(opts BriefingOptions) (*BriefingReport, error) {
 		version = "0.4.0"
 	}
 
-	telemetry := ComputeTelemetryOmni(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations)
+	telemetry := ComputeTelemetryRadar(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations, opts.GatewayViolations)
 
 	var buf bytes.Buffer
 
@@ -295,7 +298,34 @@ func GenerateBriefing(opts BriefingOptions) (*BriefingReport, error) {
 		buf.WriteString("---\n\n")
 	}
 
-	// 10. Action Items Checklist
+	// 10. Kubernetes Gateway API & EnvoyFilter Route Threat Radar Posture (if applicable)
+	if len(opts.GatewayViolations) > 0 || opts.GatewaySummary != nil {
+		buf.WriteString("## 🌐 Kubernetes Gateway API & EnvoyFilter Route Threat Radar\n\n")
+		if opts.GatewaySummary != nil {
+			sum := opts.GatewaySummary
+			buf.WriteString(fmt.Sprintf("**Compliance Score:** `%.1f%%` | **Passed:** %d | **Failed:** %d | **Total Evaluated:** %d\n",
+				sum.ComplianceScore, sum.PassedChecks, sum.TotalChecks-sum.PassedChecks, sum.TotalChecks))
+			buf.WriteString(fmt.Sprintf("**Severity Breakdown:** %d Critical | %d High | %d Medium | %d Low\n\n",
+				sum.CriticalCount, sum.HighCount, sum.MediumCount, sum.LowCount))
+		}
+		if len(opts.GatewayViolations) > 0 {
+			buf.WriteString(fmt.Sprintf("⚠️ **%d Gateway API and EnvoyFilter routing violations identified:**\n\n", len(opts.GatewayViolations)))
+			buf.WriteString("| Rule ID | Resource | Namespace | Severity | CVSS | Finding & Threat Impact | Remediation Action |\n")
+			buf.WriteString("| :--- | :--- | :---: | :---: | :---: | :--- | :--- |\n")
+			for _, gv := range opts.GatewayViolations {
+				cveTag := ""
+				if gv.MatchedCVE != "" {
+					cveTag = fmt.Sprintf(" (`%s`)", gv.MatchedCVE)
+				}
+				buf.WriteString(fmt.Sprintf("| `%s` | `%s/%s` | `%s` | **%s** | %.1f | %s%s | %s |\n",
+					gv.RuleID, gv.ResourceKind, gv.ResourceName, gv.Namespace, gv.Severity, gv.CVSSScore, gv.Message, cveTag, gv.Remediation))
+			}
+			buf.WriteString("\n")
+		}
+		buf.WriteString("---\n\n")
+	}
+
+	// 11. Action Items Checklist
 	buf.WriteString("## 📋 SecOps & SRE Operational Checklist\n\n")
 	buf.WriteString("- [ ] Review high and critical severity advisories against production deployment manifests.\n")
 	buf.WriteString("- [ ] Verify that ingress controllers enforce URI path normalization and snippet guards.\n")
@@ -304,6 +334,7 @@ func GenerateBriefing(opts BriefingOptions) (*BriefingReport, error) {
 	buf.WriteString("- [ ] Validate Ceph OSD peering, BlueStore integrity, and storage class volume protection policies.\n")
 	buf.WriteString("- [ ] Enforce WireGuard 90-day cryptographic key rotation and prune dormant peer routing slots.\n")
 	buf.WriteString("- [ ] Remediate unhardened CIS Kubernetes Benchmark control plane and Kubelet findings.\n")
+	buf.WriteString("- [ ] Audit Kubernetes Gateway API routes against ReferenceGrants and sanitize dynamic EnvoyFilter Lua injections.\n")
 	buf.WriteString("- [ ] Archive this briefing record into security audit ledger.\n")
 
 	report := &BriefingReport{

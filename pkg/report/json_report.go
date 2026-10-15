@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/bench"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/gateway"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/intel"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/k8s"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nix"
@@ -34,6 +35,8 @@ type JSONAuditReport struct {
 	WireGuardReconciliation *wireguard.ReconciliationReport `json:"wireguard_reconciliation,omitempty"`
 	CISViolations           []bench.CISViolation            `json:"cis_violations,omitempty"`
 	CISSummary              *bench.CISSummary               `json:"cis_summary,omitempty"`
+	GatewayViolations       []gateway.GatewayViolation      `json:"gateway_violations,omitempty"`
+	GatewaySummary          *gateway.GatewaySummary         `json:"gateway_summary,omitempty"`
 }
 
 // BuildJSONReport compiles the consolidated JSON audit report from provided audit data.
@@ -59,8 +62,11 @@ func BuildJSONReport(opts ReportOptions) (*JSONAuditReport, error) {
 	if opts.CISPath != "" {
 		scanned = append(scanned, opts.CISPath)
 	}
+	if opts.GatewayPath != "" {
+		scanned = append(scanned, opts.GatewayPath)
+	}
 
-	telemetry := ComputeTelemetryOmni(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations)
+	telemetry := ComputeTelemetryRadar(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations, opts.GatewayViolations)
 
 	var advisories []intel.ThreatItem
 	if opts.Feed != nil {
@@ -88,6 +94,8 @@ func BuildJSONReport(opts ReportOptions) (*JSONAuditReport, error) {
 		WireGuardReconciliation: opts.WireGuardReconciliation,
 		CISViolations:           opts.CISViolations,
 		CISSummary:              opts.CISSummary,
+		GatewayViolations:       opts.GatewayViolations,
+		GatewaySummary:          opts.GatewaySummary,
 	}
 
 	return rep, nil

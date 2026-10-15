@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/bench"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/gateway"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/intel"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/k8s"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nix"
@@ -38,11 +39,14 @@ type ReportOptions struct {
 	WireGuardReconciliation *wireguard.ReconciliationReport
 	CISViolations           []bench.CISViolation
 	CISSummary              *bench.CISSummary
+	GatewayViolations       []gateway.GatewayViolation
+	GatewaySummary          *gateway.GatewaySummary
 	FlakePath               string
 	K8sPath                 string
 	StoragePath             string
 	WireGuardPath           string
 	CISPath                 string
+	GatewayPath             string
 	TargetFilter            string
 	Pretty                  bool
 }

@@ -1,0 +1,186 @@
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: edge-gateway-public
+  namespace: gateway-infra
+spec:
+  gatewayClassName: istio
+  listeners:
+    - name: http
+      port: 80
+      protocol: HTTP
+      allowedRoutes:
+        namespaces:
+          from: All
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: allow-tenant-payments
+  namespace: payment-backend
+spec:
+  from:
+    - group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      namespace: tenant-prod
+  to:
+    - group: ""
+      kind: Service
+      name: payment-service
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: safe-payment-route
+  namespace: tenant-prod
+spec:
+  parentRefs:
+    - name: edge-gateway-public
+      namespace: gateway-infra
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /api/v1/payments
+      backendRefs:
+        - name: payment-service
+          namespace: payment-backend
+          port: 8443
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: vulnerable-admin-route
+  namespace: tenant-dev
+spec:
+  parentRefs:
+    - name: edge-gateway-public
+      namespace: gateway-infra
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /dev/admin
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            path:
+              type: ReplacePrefixMatch
+              replacePrefixMatch: /../../var/run/secrets/kubernetes.io
+        - type: RequestHeaderModifier
+          requestHeaderModifier:
+            set:
+              - name: X-Remote-User
+                value: cluster-admin
+      backendRefs:
+        - name: audit-service
+          namespace: core-security
+          port: 9000
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: wildcard-root-route
+  namespace: tenant-public
+spec:
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /
+      backendRefs:
+        - name: landing-page
+          port: 8080
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: GRPCRoute
+metadata:
+  name: admin-grpc-wildcard
+  namespace: prod
+spec:
+  rules:
+    - matches:
+        - method:
+            service: com.internal.admin.ControlService
+            method: "*"
+      backendRefs:
+        - name: admin-grpc-svc
+          port: 9090
+---
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: TCPRoute
+metadata:
+  name: direct-etcd-forwarding
+  namespace: infra-ingress
+spec:
+  rules:
+    - backendRefs:
+        - name: etcd-cluster
+          port: 2379
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  name: unsafe-lua-injection
+  namespace: istio-system
+spec:
+  configPatches:
+    - applyTo: HTTP_FILTER
+      match:
+        context: SIDECAR_INBOUND
+        listener:
+          filterChain:
+            filter:
+              name: envoy.filters.network.http_connection_manager
+              subFilter:
+                name: envoy.filters.http.router
+      patch:
+        operation: INSERT_BEFORE
+        value:
+          name: envoy.filters.http.lua
+          typed_config:
+            "@type": type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+            inlineCode: |
+              function envoy_on_request(request_handle)
+                local handle = io.popen("whoami")
+                local result = handle:read("*a")
+                request_handle:headers():add("connection", "close")
+                request_handle:headers():add("x-lua-output", result)
+              end
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  name: auth-order-bypass
+  namespace: istio-system
+spec:
+  configPatches:
+    - applyTo: HTTP_FILTER
+      match:
+        context: SIDECAR_INBOUND
+        listener:
+          filterChain:
+            filter:
+              name: envoy.filters.network.http_connection_manager
+              subFilter:
+                name: envoy.filters.http.jwt_authn
+      patch:
+        operation: INSERT_BEFORE
+        value:
+          name: custom.preauth.filter
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: EnvoyFilter
+metadata:
+  name: disable-client-tls
+  namespace: istio-system
+spec:
+  configPatches:
+    - applyTo: LISTENER
+      match:
+        context: SIDECAR_INBOUND
+      patch:
+        operation: MERGE
+        value:
+          require_client_certificate: false

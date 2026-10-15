@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/bench"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/gateway"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/intel"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/k8s"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nix"
@@ -18,7 +19,7 @@ import (
 )
 
 var (
-	version = "0.10.0"
+	version = "0.11.0"
 )
 
 func main() {
@@ -37,6 +38,8 @@ func main() {
 	benchShort := flag.String("bench", "", "Alias for --cis")
 	kubeBenchLong := flag.String("kube-bench", "", "Alias for --cis")
 	remediationOut := flag.String("remediation-out", "", "Output path to write synthesized NixOS CIS hardening remediation module")
+	gwPath := flag.String("gateway", "", "Path to Kubernetes Gateway API or EnvoyFilter manifest file or directory to audit")
+	gatewayShort := flag.String("gw", "", "Alias for --gateway")
 	briefing := flag.Bool("briefing", false, "Generate automated Markdown threat intelligence briefing")
 	briefingDir := flag.String("briefing-dir", "intel/briefings", "Output directory for threat briefings")
 	briefingFile := flag.String("briefing-file", "", "Custom filename for threat briefing markdown")
@@ -64,6 +67,10 @@ func main() {
 	}
 	if *cisPath == "" && *kubeBenchLong != "" {
 		*cisPath = *kubeBenchLong
+	}
+
+	if *gwPath == "" && *gatewayShort != "" {
+		*gwPath = *gatewayShort
 	}
 
 	if *outFile == "" && *outShort != "" {
@@ -112,6 +119,8 @@ func main() {
 	var wireguardReconciliation *wireguard.ReconciliationReport
 	var cisViolations []bench.CISViolation
 	var cisSummary *bench.CISSummary
+	var gatewayViolations []gateway.GatewayViolation
+	var gatewaySummary *gateway.GatewaySummary
 
 	// 1. Audit Nix Flake if --flake is provided
 	if *flakePath != "" {
@@ -250,7 +259,12 @@ func main() {
 		}
 	}
 
-	// 8. Generate Threat Briefing if --briefing is requested
+	// 8. Audit Kubernetes Gateway API & EnvoyFilter if --gateway is provided
+	if *gwPath != "" {
+		gatewayViolations, gatewaySummary = runGatewayAudit(*gwPath, feed, logInfo, logErr)
+	}
+
+	// 9. Generate Threat Briefing if --briefing is requested
 	if *briefing {
 		logInfo("[+] Synthesizing Threat Intelligence Briefing...\n")
 		briefingOpts := report.BriefingOptions{
@@ -265,6 +279,8 @@ func main() {
 			WireGuardReconciliation: wireguardReconciliation,
 			CISViolations:           cisViolations,
 			CISSummary:              cisSummary,
+			GatewayViolations:       gatewayViolations,
+			GatewaySummary:          gatewaySummary,
 			OutputDir:               *briefingDir,
 			CustomFilename:          *briefingFile,
 		}
@@ -293,7 +309,7 @@ func main() {
 		return
 	}
 
-	// 9. Handle Structured Formats (SARIF / JSON)
+	// 10. Handle Structured Formats (SARIF / JSON)
 	if *format == "sarif" || *format == "json" {
 		reportOpts := report.ReportOptions{
 			Version:                 version,
@@ -307,11 +323,14 @@ func main() {
 			WireGuardReconciliation: wireguardReconciliation,
 			CISViolations:           cisViolations,
 			CISSummary:              cisSummary,
+			GatewayViolations:       gatewayViolations,
+			GatewaySummary:          gatewaySummary,
 			FlakePath:               *flakePath,
 			K8sPath:                 *k8sPath,
 			StoragePath:             *cephPath,
 			WireGuardPath:           *wgPath,
 			CISPath:                 *cisPath,
+			GatewayPath:             *gwPath,
 			TargetFilter:            *targetFilter,
 			Pretty:                  true,
 		}
@@ -365,8 +384,8 @@ func main() {
 		}
 	}
 
-	// 10. Default feed summary (when no specific audit target was requested)
-	if *flakePath == "" && *k8sPath == "" && *policyOut == "" && !*probeFlag && *cephPath == "" && *cephTelemetry == "" && *wgPath == "" && *wgTelemetry == "" && *cisPath == "" {
+	// 11. Default feed summary (when no specific audit target was requested)
+	if *flakePath == "" && *k8sPath == "" && *policyOut == "" && !*probeFlag && *cephPath == "" && *cephTelemetry == "" && *wgPath == "" && *wgTelemetry == "" && *cisPath == "" && *gwPath == "" {
 		items := feed.Items
 		if *targetFilter != "" {
 			items = feed.FilterByTarget(*targetFilter)

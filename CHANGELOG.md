@@ -5,6 +5,39 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.0] - 2026-10-15
+
+### Added
+- **Kubernetes Gateway API Threat Radar Engine** (`pkg/gateway/radar.go`): Native declarative scanner auditing Gateway API resources (`Gateway`, `GatewayClass`, `HTTPRoute`, `GRPCRoute`, `TCPRoute`, `UDPRoute`, `TLSRoute`, `ReferenceGrant`) against modern cloud-native routing vulnerabilities.
+- **Cross-Namespace ReferenceGrant Security Enforcement** (`pkg/gateway/radar.go`): Multi-pass declarative validator that constructs an in-memory cross-namespace permission matrix from `ReferenceGrant` manifests and verifies every cross-namespace `backendRef` and `parentRef` across tenant routes, stopping unauthorized cross-tenant backend access and service hijacking (CVE-2026-44219).
+- **Istio EnvoyFilter Security Auditor** (`pkg/gateway/envoy.go`): Dedicated auditor for `EnvoyFilter` CRDs (`networking.istio.io/v1alpha3`) detecting arbitrary inline Lua code injections (`os.execute`, `io.popen`, `loadstring`, `require os/io`), filter chain order bypasses (`INSERT_BEFORE` relative to `jwt_authn`, `istio.authn`, `rbac`), unauthenticated listener exposures, and disabled client TLS verification (`require_client_certificate: false`).
+- **Canonical Gateway API & EnvoyFilter Radar Ruleset** (`pkg/gateway/rules.go`): Suite of 12 canonical rules (`GW-RADAR-001` through `GW-RADAR-012`) with CVSS v3.1 scoring, remediation playbooks, and category classifications:
+  - `GW-RADAR-001`: Unrestricted Cross-Namespace Backend Reference (Missing ReferenceGrant) (High, CVSS 7.8, mapped to CVE-2026-44219).
+  - `GW-RADAR-002`: Unsafe EnvoyFilter Inline Lua Script Injection (Critical, CVSS 9.3, mapped to CVE-2026-44219).
+  - `GW-RADAR-003`: EnvoyFilter Filter Chain Order Bypass (High, CVSS 8.2, mapped to CVE-2026-44219).
+  - `GW-RADAR-004`: Gateway Insecure Plaintext Listener Without TLS Termination (Medium, CVSS 6.5).
+  - `GW-RADAR-005`: HTTPRoute Unrestricted Wildcard Path & Open Routing (Medium, CVSS 5.8).
+  - `GW-RADAR-006`: HTTPRoute Unsafe Path Prefix Rewrite Traversal (High, CVSS 7.5).
+  - `GW-RADAR-007`: HTTPRoute Identity Header Spoofing via RequestHeaderModifier (High, CVSS 7.7).
+  - `GW-RADAR-008`: GRPCRoute Unrestricted Administrative Method Dispatch (Medium, CVSS 6.2).
+  - `GW-RADAR-009`: TCPRoute / UDPRoute Sensitive Infrastructure Port Forwarding (High, CVSS 8.0).
+  - `GW-RADAR-010`: EnvoyFilter Disabling Client TLS Verification (Critical, CVSS 9.1).
+  - `GW-RADAR-011`: Gateway AllowedRoutes Namespace Wildcard Violation (High, CVSS 7.4).
+  - `GW-RADAR-012`: EnvoyFilter Unrestricted Hop-by-Hop Header Mutation (Medium, CVSS 6.8).
+- **Dedicated CLI Gateway Runner & Architecture Modularization** (`cmd/sentinel/gateway_runner.go`): Modular runner dispatch pattern keeping `cmd/sentinel/main.go` under 420 LOC and adhering strictly to the 300~500 LOC soft ceiling. Adds `--gateway=<path>` and `--gw=<path>` flags.
+- **Threat Feed Expansion** (`intel/cve-feed.json`): Added `CVE-2026-44219` (Kubernetes Gateway API & EnvoyFilter Cross-Namespace Route Hijacking & Lua Remote Execution, CVSS 9.6).
+- **Unified Exporter Integration**: Gateway API and EnvoyFilter findings and compliance summaries seamlessly exported to OASIS SARIF v2.1.0, structured JSON audit telemetry, and hourly Markdown threat briefings.
+- **Production-Like Fixtures**: Added realistic declarative fixture (`fixtures/gateway-api-routes.yaml`) modeling compliant and vulnerable Gateway, HTTPRoute, GRPCRoute, TCPRoute, ReferenceGrant, and EnvoyFilter resources.
+- **Comprehensive Unit Test Suites** (`pkg/gateway/gateway_test.go`, `pkg/report/gateway_report_test.go`): 100% test coverage for rules catalog, cross-namespace ReferenceGrant authorization, path traversal detection, header spoofing, Lua injections, filter ordering, report serialization, and defensive bounds checks.
+
+### Changed
+- Bumped engine release to `v0.11.0`.
+- Updated `SECURITY.md` establishing Gateway API and EnvoyFilter route threat radar security invariants.
+- Updated `ROADMAP.md` marking Milestone M11 as completed.
+- Updated `scripts/ARCHITECTURE_MAP.md` documenting new gateway modules and O(1) symbols.
+
+---
+
 ## [0.10.0] - 2026-10-14
 
 ### Added
