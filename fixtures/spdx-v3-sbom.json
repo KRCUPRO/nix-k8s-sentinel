@@ -1,0 +1,58 @@
+{
+  "spdxVersion": "SPDX-3.0.0",
+  "name": "nixos-k8s-node-closure",
+  "comment": "Authoritative build-time Software Bill of Materials for NixOS cluster nodes",
+  "packages": [
+    {
+      "spdxId": "SPDXRef-Package-containerd",
+      "name": "containerd",
+      "versionInfo": "1.7.22",
+      "supplier": "Organization: Containerd Authors",
+      "licenseConcluded": "Apache-2.0",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceType": "purl",
+          "referenceLocator": "pkg:generic/containerd@1.7.22"
+        }
+      ]
+    },
+    {
+      "spdxId": "SPDXRef-Package-linux-kernel",
+      "name": "linux-kernel",
+      "versionInfo": "6.12.18-hardened",
+      "supplier": "Organization: NixOS Foundation",
+      "licenseConcluded": "GPL-2.0-only",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceType": "purl",
+          "referenceLocator": "pkg:generic/linux@6.12.18"
+        }
+      ]
+    },
+    {
+      "spdxId": "SPDXRef-Package-spire-agent",
+      "name": "spire-agent",
+      "versionInfo": "1.9.3",
+      "supplier": "Organization: SPIFFE",
+      "licenseConcluded": "Apache-2.0",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "99887766554433221100aabbccddeeff99887766554433221100aabbccddeeff"
+        }
+      ]
+    }
+  ]
+}

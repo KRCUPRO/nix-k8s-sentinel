@@ -116,15 +116,22 @@ Automated generation of defense-in-depth rules:
 - [x] Full CLI integration (`--spiffe`, `--spire`, `--svid-telemetry`, `--spiffe-policy-out`) with unified SARIF v2.1.0 code scanning, JSON audit telemetry, and Markdown briefing exports (`cmd/sentinel/spiffe_runner.go`).
 - [x] Production sample fixtures (`fixtures/spiffe-manifests.yaml`, `fixtures/spiffe-telemetry.json`) and threat feed correlation with `CVE-2026-67210`.
 
-### Version 0.15.0 — Software Bill of Materials (SBOM) & In-Toto Supply Chain Attestation (Planned)
-- [ ] Ingest SPDX v3.0 and CycloneDX v1.6 SBOM documents from Nix store paths and container images.
-- [ ] Verify SLSA Level 3 provenance metadata and In-Toto cryptographic attestations prior to workload deployment.
-- [ ] Implement automated SBOM delta generator comparing cluster runtime state against declarative manifests.
+### Version 0.15.0 — Software Bill of Materials (SBOM) & In-Toto Supply Chain Attestation (Completed)
+- [x] High-performance multi-format parser for SPDX v3.0, SPDX v2.3, CycloneDX v1.6, and Nix store closures (`pkg/sbom/parser.go`).
+- [x] Canonical rule catalog `SBOM-CHAIN-001` through `SBOM-CHAIN-012` covering missing SBOMs, unverified In-Toto envelopes, non-compliant SLSA levels (< Level 3), subject digest tampering (CVE-2026-71044), unpinned dependencies, non-hermetic build sandboxes, unknown licenses, and undeclared runtime shadow injections (`pkg/sbom/rules.go`).
+- [x] Cryptographic In-Toto Statement and SLSA Level 3 provenance verifier evaluating hermetic build environments, pinned dependency materials, and verified signatures (`pkg/sbom/attest.go`).
+- [x] Automated SBOM delta reconciliation comparing cluster runtime state against declarative manifests to identify version drift, missing components, and shadow binary injections (`pkg/sbom/delta.go`).
+- [x] Full CLI integration (`--sbom`, `--attestation`, `--intoto`, `--sbom-runtime`, `--sbom-delta`) with unified SARIF v2.1.0 code scanning, JSON audit telemetry, and Markdown briefing exports (`cmd/sentinel/sbom_runner.go`).
+- [x] Production sample fixtures (`fixtures/spdx-v3-sbom.json`, `fixtures/cyclonedx-v1.6-sbom.json`, `fixtures/intoto-slsa-attestation.json`, `fixtures/sbom-runtime-state.json`) and threat feed correlation with `CVE-2026-71044`.
+
+### Version 0.16.0 — Hardware Security Module (HSM) & PKCS#11 Envelope Encryption Pipeline (Planned)
+- [ ] Interface with hardware security modules and Nitro Enclaves for cluster master key wrapping.
+- [ ] Audit Kubernetes etcd encryption at rest posture and KMS v2 plugin health.
+- [ ] Automated detection of unrotated envelope keys and insecure cryptographic suites.
 
 ### Version 1.0.0 — Supply Chain Attestation & Workload Identity (Planned)
-- [ ] SPIFFE/SPIRE workload attestation and cryptographic mTLS certificate monitoring.
-- [ ] Software Bill of Materials (SBOM) ingestion for SPDX v3.0 / CycloneDX v1.6 and In-Toto provenance validation.
-- [ ] Hardware Security Module (HSM) PKCS#11 envelope encryption and KMS v2 key health checks.
+- [ ] Full end-to-end integration of SPIFFE/SPIRE workload attestation, In-Toto provenance, and HSM envelope encryption.
+- [ ] Enterprise continuous audit mode with asynchronous event streaming and webhook alerting.
 
 ### Version 1.1.0 — Ephemeral Sandboxing & Autonomous Remediation (Vision)
 - [ ] Dynamic Firecracker microVM orchestration on NixOS for isolated detonating of suspicious container payloads.

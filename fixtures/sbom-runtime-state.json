@@ -1,0 +1,34 @@
+{
+  "timestamp": "2026-10-15T21:30:00Z",
+  "cluster": "nixos-baremetal-cluster",
+  "packages": [
+    {
+      "package_name": "containerd",
+      "version": "1.7.22",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "store_path": "/nix/store/c1d2e3-containerd-1.7.22",
+      "node": "nixos-worker-01"
+    },
+    {
+      "package_name": "linux-kernel",
+      "version": "6.12.18-hardened",
+      "sha256": "4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b",
+      "store_path": "/nix/store/l1k2m3-linux-kernel-6.12.18-hardened",
+      "node": "nixos-worker-01"
+    },
+    {
+      "package_name": "spire-agent",
+      "version": "1.9.4",
+      "sha256": "99887766554433221100aabbccddeeff99887766554433221100aabbccddeeff",
+      "store_path": "/nix/store/s1p2r3-spire-agent-1.9.4",
+      "node": "nixos-worker-02"
+    },
+    {
+      "package_name": "unauthorized-debug-daemon",
+      "version": "0.1.0",
+      "sha256": "deadbeef11223344556677889900aabbccddeeff",
+      "store_path": "/tmp/unauthorized-debug-daemon",
+      "node": "nixos-worker-02"
+    }
+  ]
+}

@@ -1,0 +1,58 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.6",
+  "serialNumber": "urn:uuid:3e671687-395b-41f5-a30f-a58921a69b79",
+  "version": 1,
+  "metadata": {
+    "timestamp": "2026-10-15T20:00:00Z",
+    "component": {
+      "name": "nix-k8s-sentinel-workloads",
+      "version": "0.15.0",
+      "type": "application"
+    }
+  },
+  "components": [
+    {
+      "name": "cilium",
+      "version": "1.16.2",
+      "purl": "pkg:generic/cilium@1.16.2",
+      "licenses": [
+        {
+          "license": {
+            "id": "Apache-2.0"
+          }
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "887766554433221100ffeeddccbbaa99887766554433221100ffeeddccbbaa99"
+        }
+      ],
+      "properties": [
+        {
+          "name": "nix:storePath",
+          "value": "/nix/store/h1j2k3-cilium-1.16.2"
+        }
+      ]
+    },
+    {
+      "name": "wireguard-tools",
+      "version": "1.0.20210914",
+      "purl": "pkg:generic/wireguard-tools@1.0.20210914",
+      "licenses": [
+        {
+          "license": {
+            "id": "GPL-2.0-only"
+          }
+        }
+      ],
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "11223344556677889900aabbccddeeff11223344556677889900aabbccddeeff"
+        }
+      ]
+    }
+  ]
+}

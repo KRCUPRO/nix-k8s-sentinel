@@ -16,6 +16,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/k8s"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nix"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/probe"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/sbom"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/spiffe"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/storage"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/wireguard"
@@ -44,6 +45,9 @@ type BriefingOptions struct {
 	FleetSummary            *fleet.FleetSummary
 	SPIFFEViolations        []spiffe.SPIFFEViolation
 	SPIFFESummary           *spiffe.SPIFFESummary
+	SBOMViolations          []sbom.SBOMViolation
+	SBOMSummary             *sbom.SBOMSummary
+	SBOMDelta               []sbom.SBOMDeltaItem
 	OutputDir               string
 	CustomFilename          string
 }
@@ -76,7 +80,7 @@ func GenerateBriefing(opts BriefingOptions) (*BriefingReport, error) {
 		version = "0.4.0"
 	}
 
-	telemetry := ComputeTelemetrySPIFFE(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations, opts.GatewayViolations, opts.AttestViolations, opts.FleetViolations, opts.SPIFFEViolations)
+	telemetry := ComputeTelemetrySBOM(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations, opts.GatewayViolations, opts.AttestViolations, opts.FleetViolations, opts.SPIFFEViolations, opts.SBOMViolations)
 
 	var buf bytes.Buffer
 
@@ -423,7 +427,53 @@ func GenerateBriefing(opts BriefingOptions) (*BriefingReport, error) {
 		buf.WriteString("---\n\n")
 	}
 
-	// 14. Action Items Checklist
+	// 14. Software Bill of Materials (SBOM) & In-Toto Supply Chain Attestation
+	if opts.SBOMSummary != nil || len(opts.SBOMViolations) > 0 || len(opts.SBOMDelta) > 0 {
+		buf.WriteString("## 📦 Software Bill of Materials (SBOM) & In-Toto Supply Chain Attestation\n\n")
+		if opts.SBOMSummary != nil {
+			buf.WriteString("| Evaluated Metric | Value | Security Posture Threshold |\n")
+			buf.WriteString("| :--- | :---: | :--- |\n")
+			buf.WriteString(fmt.Sprintf("| Total SBOM Packages Audited | **%d** | Baseline component coverage |\n", opts.SBOMSummary.TotalPackages))
+			buf.WriteString(fmt.Sprintf("| Evaluated SLSA Provenance Level | **%s** | Mandatory Level 3 for production deployments |\n", opts.SBOMSummary.EvaluatedSLSALevel))
+			attestStatus := "Verified"
+			if !opts.SBOMSummary.AttestationVerified {
+				attestStatus = "Unverified / Missing"
+			}
+			buf.WriteString(fmt.Sprintf("| In-Toto Envelope Signature | **%s** | Cryptographic envelope integrity |\n", attestStatus))
+			buf.WriteString(fmt.Sprintf("| Drifting Packages (Version/Hash) | **%d** | Zero-drift invariant |\n", opts.SBOMSummary.DriftingPackages))
+			buf.WriteString(fmt.Sprintf("| Undeclared Shadow Packages | **%d** | Zero-undeclared container invariant |\n", opts.SBOMSummary.UndeclaredPackages))
+			buf.WriteString(fmt.Sprintf("| Supply Chain Compliance Score | **%.1f%%** | >= 80.0%% minimum passing grade |\n\n", opts.SBOMSummary.ComplianceScore))
+		}
+
+		if len(opts.SBOMDelta) > 0 {
+			buf.WriteString("### Declarative vs. Runtime Cluster Package Delta\n\n")
+			buf.WriteString("| Package Name | Declared Version | Runtime Version | Reconciliation Status | Operational Impact |\n")
+			buf.WriteString("| :--- | :---: | :---: | :---: | :--- |\n")
+			for _, delta := range opts.SBOMDelta {
+				buf.WriteString(fmt.Sprintf("| `%s` | `%s` | `%s` | **%s** | %s |\n",
+					delta.PackageName, delta.DeclaredVersion, delta.RuntimeVersion, delta.Status, delta.SecurityImpact))
+			}
+			buf.WriteString("\n")
+		}
+
+		if len(opts.SBOMViolations) > 0 {
+			buf.WriteString("### Supply Chain Security Violations\n\n")
+			buf.WriteString("| Rule ID | Component / Target | Severity | Finding Description | Remediation Advisory |\n")
+			buf.WriteString("| :--- | :--- | :---: | :--- | :--- |\n")
+			for _, v := range opts.SBOMViolations {
+				cveStr := ""
+				if v.MatchedCVE != "" {
+					cveStr = fmt.Sprintf(" (%s)", v.MatchedCVE)
+				}
+				buf.WriteString(fmt.Sprintf("| `%s` | `%s` | %s | %s%s | %s |\n",
+					v.RuleID, v.PackageName, SeverityBadge(string(v.Severity)), v.Description, cveStr, v.Remediation))
+			}
+			buf.WriteString("\n")
+		}
+		buf.WriteString("---\n\n")
+	}
+
+	// 15. Action Items Checklist
 	buf.WriteString("## 📋 SecOps & SRE Operational Checklist\n\n")
 	buf.WriteString("- [ ] Review high and critical severity advisories against production deployment manifests.\n")
 	buf.WriteString("- [ ] Verify that ingress controllers enforce URI path normalization and snippet guards.\n")
@@ -436,6 +486,7 @@ func GenerateBriefing(opts BriefingOptions) (*BriefingReport, error) {
 	buf.WriteString("- [ ] Verify AMD SEV-SNP and Intel TDX attestation reports against golden NixOS UKI closure measurements in PCR 11.\n")
 	buf.WriteString("- [ ] Reconcile multi-cluster GitOps synchronization drift and rotate federated OIDC identity tokens exceeding 24 hours.\n")
 	buf.WriteString("- [ ] Validate SPIFFE/SPIRE X.509 SVID renewal windows and enforce mutual TLS with attested workload identities in CiliumNetworkPolicies.\n")
+	buf.WriteString("- [ ] Ingest SPDX v3.0 / CycloneDX v1.6 SBOMs, verify In-Toto SLSA Level 3 attestations, and reconcile cluster runtime package deltas.\n")
 	buf.WriteString("- [ ] Archive this briefing record into security audit ledger.\n")
 
 	report := &BriefingReport{

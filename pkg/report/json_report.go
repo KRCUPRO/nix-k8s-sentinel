@@ -15,6 +15,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/k8s"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nix"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/probe"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/sbom"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/spiffe"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/storage"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/wireguard"
@@ -46,6 +47,9 @@ type JSONAuditReport struct {
 	FleetSummary            *fleet.FleetSummary             `json:"fleet_summary,omitempty"`
 	SPIFFEViolations        []spiffe.SPIFFEViolation        `json:"spiffe_violations,omitempty"`
 	SPIFFESummary           *spiffe.SPIFFESummary           `json:"spiffe_summary,omitempty"`
+	SBOMViolations          []sbom.SBOMViolation            `json:"sbom_violations,omitempty"`
+	SBOMSummary             *sbom.SBOMSummary               `json:"sbom_summary,omitempty"`
+	SBOMDelta               []sbom.SBOMDeltaItem            `json:"sbom_delta,omitempty"`
 }
 
 // BuildJSONReport compiles the consolidated JSON audit report from provided audit data.
@@ -92,8 +96,17 @@ func BuildJSONReport(opts ReportOptions) (*JSONAuditReport, error) {
 	if opts.SPIFFETelemetryPath != "" {
 		scanned = append(scanned, opts.SPIFFETelemetryPath)
 	}
+	if opts.SBOMPath != "" {
+		scanned = append(scanned, opts.SBOMPath)
+	}
+	if opts.SBOMAttestPath != "" {
+		scanned = append(scanned, opts.SBOMAttestPath)
+	}
+	if opts.SBOMRuntimePath != "" {
+		scanned = append(scanned, opts.SBOMRuntimePath)
+	}
 
-	telemetry := ComputeTelemetrySPIFFE(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations, opts.GatewayViolations, opts.AttestViolations, opts.FleetViolations, opts.SPIFFEViolations)
+	telemetry := ComputeTelemetrySBOM(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations, opts.GatewayViolations, opts.AttestViolations, opts.FleetViolations, opts.SPIFFEViolations, opts.SBOMViolations)
 
 	var advisories []intel.ThreatItem
 	if opts.Feed != nil {
@@ -129,6 +142,9 @@ func BuildJSONReport(opts ReportOptions) (*JSONAuditReport, error) {
 		FleetSummary:            opts.FleetSummary,
 		SPIFFEViolations:        opts.SPIFFEViolations,
 		SPIFFESummary:           opts.SPIFFESummary,
+		SBOMViolations:          opts.SBOMViolations,
+		SBOMSummary:             opts.SBOMSummary,
+		SBOMDelta:               opts.SBOMDelta,
 	}
 
 	return rep, nil
