@@ -84,10 +84,13 @@ Automated generation of defense-in-depth rules:
 - [x] Full CLI integration (`--cis`, `--bench`, `--kube-bench`, `--remediation-out`) with unified SARIF v2.1.0 code scanning, JSON audit telemetry, and Markdown briefing exports.
 - [x] Production sample fixtures (`fixtures/nixos-kubernetes.nix`, `fixtures/kubelet-config.yaml`) and threat feed correlation with `CVE-2026-38102`.
 
-### Version 0.11.0 — Kubernetes Gateway API & EnvoyFilter Route Threat Radar (Planned)
-- [ ] Implement declarative HTTPRoute, GRPCRoute, and TCPRoute path & header rewrite audit.
-- [ ] Detect unsafe EnvoyFilter Lua injections, filter chain order bypasses, and unauthenticated listener exposures.
-- [ ] Cross-namespace ReferenceGrant security enforcement validation.
+### Version 0.11.0 — Kubernetes Gateway API & EnvoyFilter Route Threat Radar (Completed)
+- [x] Static threat radar and cross-namespace authorization engine for Kubernetes Gateway API resources (`pkg/gateway/radar.go`).
+- [x] Canonical rule catalog `GW-RADAR-001` through `GW-RADAR-012` detecting missing ReferenceGrants, unauthenticated HTTP listeners, path traversal rewrites, and identity header injections (`pkg/gateway/rules.go`).
+- [x] Istio EnvoyFilter security auditor intercepting arbitrary Lua code injections (`os.execute`, `io.popen`), filter chain order bypasses before authentication filters, and disabled client TLS verification (`pkg/gateway/envoy.go`).
+- [x] Comprehensive manifest file and directory scanner with CVE threat feed correlation (`CVE-2026-44219`) (`pkg/gateway/scanner.go`).
+- [x] Full CLI integration (`--gateway`, `--gw`) with unified SARIF v2.1.0 code scanning, JSON audit telemetry, and Markdown briefing exports.
+- [x] Production sample fixture `fixtures/gateway-api-routes.yaml` modeling realistic edge gateways, HTTPRoutes, GRPCRoutes, TCPRoutes, and EnvoyFilters.
 
 ### Version 0.12.0 — Confidential Computing & Measured Boot Attestation Verifier (Planned)
 - [ ] Audit AMD SEV-SNP and Intel TDX measured boot artifacts against NixOS store path signatures.

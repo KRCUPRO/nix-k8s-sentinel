@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/bench"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/gateway"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/intel"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/k8s"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nix"
@@ -29,6 +30,7 @@ type TelemetrySummary struct {
 	TotalStorageViolations    int            `json:"total_storage_violations"`
 	TotalWireGuardViolations  int            `json:"total_wireguard_violations"`
 	TotalCISViolations        int            `json:"total_cis_violations"`
+	TotalGatewayViolations    int            `json:"total_gateway_violations"`
 }
 
 // ComputeTelemetry aggregates CVSS metrics from the threat feed, K8s violations, and Nix flake matches.
@@ -48,6 +50,11 @@ func ComputeTelemetryFull(feed *intel.Feed, k8sReport *k8s.ManifestAuditReport, 
 
 // ComputeTelemetryOmni aggregates CVSS metrics across all domains including CIS benchmark violations.
 func ComputeTelemetryOmni(feed *intel.Feed, k8sReport *k8s.ManifestAuditReport, flakeMatches []nix.FlakeVulnerabilityMatch, storageViolations []storage.StorageViolation, wireguardViolations []wireguard.WireGuardViolation, cisViolations []bench.CISViolation) TelemetrySummary {
+	return ComputeTelemetryRadar(feed, k8sReport, flakeMatches, storageViolations, wireguardViolations, cisViolations, nil)
+}
+
+// ComputeTelemetryRadar aggregates CVSS metrics across all domains including Gateway API & EnvoyFilter violations.
+func ComputeTelemetryRadar(feed *intel.Feed, k8sReport *k8s.ManifestAuditReport, flakeMatches []nix.FlakeVulnerabilityMatch, storageViolations []storage.StorageViolation, wireguardViolations []wireguard.WireGuardViolation, cisViolations []bench.CISViolation, gatewayViolations []gateway.GatewayViolation) TelemetrySummary {
 	summary := TelemetrySummary{
 		TargetDistribution:    make(map[string]int),
 		ComponentDistribution: make(map[string]int),
@@ -115,6 +122,10 @@ func ComputeTelemetryOmni(feed *intel.Feed, k8sReport *k8s.ManifestAuditReport, 
 
 	if len(cisViolations) > 0 {
 		summary.TotalCISViolations = len(cisViolations)
+	}
+
+	if len(gatewayViolations) > 0 {
+		summary.TotalGatewayViolations = len(gatewayViolations)
 	}
 
 	return summary

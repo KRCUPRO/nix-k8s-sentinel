@@ -524,8 +524,65 @@ func BuildSARIFReport(opts ReportOptions) (*SARIFLog, error) {
 		}
 	}
 
-	// 7. Process Standalone Feed Advisories (if neither k8s nor flake nor probe nor storage nor wireguard nor cis was specified)
-	if (opts.K8sReport == nil || len(opts.K8sReport.Violations) == 0) && len(opts.FlakeMatches) == 0 && len(opts.ProbeEvents) == 0 && len(opts.StorageViolations) == 0 && len(opts.WireGuardViolations) == 0 && len(opts.CISViolations) == 0 && opts.Feed != nil {
+	// 7. Process Gateway API & EnvoyFilter Route Threat Radar Violations
+	if len(opts.GatewayViolations) > 0 {
+		for _, gv := range opts.GatewayViolations {
+			tags := []string{"security", "kubernetes", "gateway-api", "envoy", strings.ToLower(gv.Category)}
+			ruleIdx := getOrCreateRule(gv.RuleID, gv.Title, gv.Message, gv.Remediation, gv.Severity, gv.CVSSScore, tags)
+			level := SeverityToSARIFLevel(string(gv.Severity), gv.CVSSScore)
+
+			locURI := gv.FilePath
+			if locURI == "" {
+				locURI = opts.GatewayPath
+			}
+			if locURI == "" {
+				locURI = "gateway-routes.yaml"
+			}
+			locURI = filepath.ToSlash(locURI)
+
+			line := gv.StartLine
+			if line <= 0 {
+				line = 1
+			}
+
+			cveSuffix := ""
+			if gv.MatchedCVE != "" {
+				cveSuffix = fmt.Sprintf(" [%s]", gv.MatchedCVE)
+			}
+			resMsg := fmt.Sprintf("[%s/%s] %s: %s%s (Remediation: %s)", gv.ResourceKind, gv.ResourceName, gv.Title, gv.Message, cveSuffix, gv.Remediation)
+
+			results = append(results, SARIFResult{
+				RuleID:    gv.RuleID,
+				RuleIndex: ruleIdx,
+				Level:     level,
+				Message:   SARIFMessage{Text: resMsg},
+				Locations: []SARIFLocation{
+					{
+						PhysicalLocation: &PhysicalLocation{
+							ArtifactLocation: ArtifactLocation{
+								URI:       locURI,
+								URIBaseID: "%SRCROOT%",
+							},
+							Region: &Region{
+								StartLine:   line,
+								StartColumn: 1,
+							},
+						},
+						LogicalLocations: []LogicalLocation{
+							{
+								Name:               gv.RuleID,
+								Kind:               gv.ResourceKind,
+								FullyQualifiedName: fmt.Sprintf("gateway/%s/%s/%s", gv.Namespace, gv.ResourceKind, gv.ResourceName),
+							},
+						},
+					},
+				},
+			})
+		}
+	}
+
+	// 8. Process Standalone Feed Advisories (if no specific audit targets yielded findings)
+	if (opts.K8sReport == nil || len(opts.K8sReport.Violations) == 0) && len(opts.FlakeMatches) == 0 && len(opts.ProbeEvents) == 0 && len(opts.StorageViolations) == 0 && len(opts.WireGuardViolations) == 0 && len(opts.CISViolations) == 0 && len(opts.GatewayViolations) == 0 && opts.Feed != nil {
 		feedItems := opts.Feed.Items
 		if opts.TargetFilter != "" {
 			feedItems = opts.Feed.FilterByTarget(opts.TargetFilter)
