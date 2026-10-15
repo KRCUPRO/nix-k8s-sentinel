@@ -12,6 +12,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/k8s"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nix"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/probe"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/spiffe"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/storage"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/wireguard"
 )
@@ -47,6 +48,8 @@ type ReportOptions struct {
 	AttestSummary           *attest.AttestationSummary
 	FleetViolations         []fleet.FleetViolation
 	FleetSummary            *fleet.FleetSummary
+	SPIFFEViolations        []spiffe.SPIFFEViolation
+	SPIFFESummary           *spiffe.SPIFFESummary
 	FlakePath               string
 	K8sPath                 string
 	StoragePath             string
@@ -57,6 +60,8 @@ type ReportOptions struct {
 	AttestTelemetryPath     string
 	FleetPath               string
 	FleetTelemetryPath      string
+	SPIFFEPath              string
+	SPIFFETelemetryPath     string
 	TargetFilter            string
 	Pretty                  bool
 }

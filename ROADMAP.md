@@ -108,9 +108,18 @@ Automated generation of defense-in-depth rules:
 - [x] Full CLI integration (`--fleet`, `--gitops`, `--fleet-telemetry`) with unified SARIF v2.1.0 code scanning, JSON audit telemetry, and Markdown briefing exports (`cmd/sentinel/fleet_runner.go`).
 - [x] Production sample fixtures (`fixtures/fleet-manifests.yaml`, `fixtures/fleet-telemetry.json`) and threat feed correlation with `CVE-2026-60114`.
 
-### Version 0.14.0 — Zero-Trust Microsegmentation & SPIFFE/SPIRE Workload Attestation (Planned)
-- [ ] Validate SPIFFE cryptographic X.509 SVID issuing authorities and mTLS certificate renewal windows across worker nodes.
-- [ ] Synthesize Cilium Network Policies enforcing cryptographically attested workload identities.
+### Version 0.14.0 — Zero-Trust Microsegmentation & SPIFFE/SPIRE Workload Attestation (Completed)
+- [x] SPIFFE/SPIRE workload attestation and X.509 SVID issuing authority validation (`pkg/spiffe/validator.go`).
+- [x] Canonical rule catalog `SPIFFE-SVID-001` through `SPIFFE-SVID-012` detecting unauthorized foreign trust domains, excessive certificate lifespans (> 24h), expired/near-expiry SVIDs (< 15m), permissive wildcard selectors (`k8s:ns:*`), insecure agent admin sockets, missing mTLS in Cilium policies, and weak crypto keys (`pkg/spiffe/rules.go`).
+- [x] Declarative manifest scanner and runtime SVID telemetry reconciler evaluating node attestation health across cluster workers (`pkg/spiffe/scanner.go`).
+- [x] Automated synthesis of hardened Cilium Network Policies (`CiliumNetworkPolicy`, `apiVersion: cilium.io/v2`) enforcing mutual TLS authentication (`mode: required`), `io.spiffe.id` label matching, and baseline default-deny microsegmentation posture (`pkg/spiffe/cilium_synth.go`).
+- [x] Full CLI integration (`--spiffe`, `--spire`, `--svid-telemetry`, `--spiffe-policy-out`) with unified SARIF v2.1.0 code scanning, JSON audit telemetry, and Markdown briefing exports (`cmd/sentinel/spiffe_runner.go`).
+- [x] Production sample fixtures (`fixtures/spiffe-manifests.yaml`, `fixtures/spiffe-telemetry.json`) and threat feed correlation with `CVE-2026-67210`.
+
+### Version 0.15.0 — Software Bill of Materials (SBOM) & In-Toto Supply Chain Attestation (Planned)
+- [ ] Ingest SPDX v3.0 and CycloneDX v1.6 SBOM documents from Nix store paths and container images.
+- [ ] Verify SLSA Level 3 provenance metadata and In-Toto cryptographic attestations prior to workload deployment.
+- [ ] Implement automated SBOM delta generator comparing cluster runtime state against declarative manifests.
 
 ### Version 1.0.0 — Supply Chain Attestation & Workload Identity (Planned)
 - [ ] SPIFFE/SPIRE workload attestation and cryptographic mTLS certificate monitoring.

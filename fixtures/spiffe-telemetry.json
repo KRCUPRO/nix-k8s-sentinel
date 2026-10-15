@@ -1,0 +1,84 @@
+{
+  "cluster_id": "nixos-k8s-prod-us-east",
+  "primary_trust_domain": "cluster.local",
+  "federated_domains": [
+    "partner-mesh.internal",
+    "edge-cloud.net"
+  ],
+  "captured_at": "2026-10-15T18:00:00Z",
+  "svids": [
+    {
+      "spiffe_id": "spiffe://cluster.local/ns/finance/sa/payment-service",
+      "trust_domain": "cluster.local",
+      "namespace": "finance",
+      "service_account": "payment-service",
+      "workload_id": "payment-pod-7db6984bf4-m2kqw",
+      "issued_at": "2026-10-15T12:00:00Z",
+      "expires_at": "2026-10-15T22:00:00Z",
+      "key_type": "ECDSA-P256",
+      "key_bits": 256,
+      "serial_number": "7b:8a:9c:01:23:45",
+      "issuer_ca": "SPIRE-Intermediate-CA-East",
+      "active_node": "nixos-worker-01"
+    },
+    {
+      "spiffe_id": "spiffe://partner-mesh.internal/ns/orders/sa/order-client",
+      "trust_domain": "partner-mesh.internal",
+      "namespace": "orders",
+      "service_account": "order-client",
+      "workload_id": "order-client-66c89dfc9-p9z12",
+      "issued_at": "2026-10-15T14:00:00Z",
+      "expires_at": "2026-10-16T02:00:00Z",
+      "key_type": "ECDSA-P256",
+      "key_bits": 256,
+      "serial_number": "3f:1a:2b:4c:5d:6e",
+      "issuer_ca": "Partner-Mesh-Root-CA",
+      "active_node": "nixos-worker-02"
+    },
+    {
+      "spiffe_id": "spiffe://untrusted-external.net/ns/legacy/sa/rogue-runner",
+      "trust_domain": "untrusted-external.net",
+      "namespace": "legacy",
+      "service_account": "rogue-runner",
+      "workload_id": "rogue-runner-84bc76f57-xj89k",
+      "issued_at": "2026-10-15T15:00:00Z",
+      "expires_at": "2026-10-15T19:00:00Z",
+      "key_type": "ECDSA-P256",
+      "key_bits": 256,
+      "serial_number": "11:22:33:44:55:66",
+      "issuer_ca": "Untrusted-Foreign-CA",
+      "active_node": "nixos-worker-02"
+    },
+    {
+      "spiffe_id": "spiffe://cluster.local/ns/production/sa/stale-session-worker",
+      "trust_domain": "cluster.local",
+      "namespace": "production",
+      "service_account": "stale-session-worker",
+      "workload_id": "stale-worker-7598c89b4b-kk812",
+      "issued_at": "2026-10-15T06:00:00Z",
+      "expires_at": "2026-10-15T18:08:00Z",
+      "key_type": "ECDSA-P256",
+      "key_bits": 256,
+      "serial_number": "aa:bb:cc:dd:ee:ff",
+      "issuer_ca": "SPIRE-Intermediate-CA-East",
+      "active_node": "nixos-worker-01"
+    },
+    {
+      "spiffe_id": "spiffe://cluster.local/ns/dev/sa/legacy-database-connector",
+      "trust_domain": "cluster.local",
+      "namespace": "dev",
+      "service_account": "legacy-database-connector",
+      "workload_id": "db-connector-6d87f549c-q4m9a",
+      "issued_at": "2026-10-15T10:00:00Z",
+      "expires_at": "2026-10-15T20:00:00Z",
+      "key_type": "RSA-1024",
+      "key_bits": 1024,
+      "serial_number": "00:11:22:33:44:55",
+      "issuer_ca": "SPIRE-Dev-CA",
+      "active_node": "nixos-worker-02"
+    }
+  ],
+  "agent_admin_sockets": [
+    "/run/spire/sockets/spire-agent.sock (0600 root:root)"
+  ]
+}

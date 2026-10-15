@@ -16,12 +16,13 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/policy"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/probe"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/report"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/spiffe"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/storage"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/wireguard"
 )
 
 var (
-	version = "0.13.0"
+	version = "0.14.0"
 )
 
 func main() {
@@ -48,6 +49,10 @@ func main() {
 	fleetPath := flag.String("fleet", "", "Path to multi-cluster manifest file or directory to audit")
 	gitopsShort := flag.String("gitops", "", "Alias for --fleet")
 	fleetTelemetry := flag.String("fleet-telemetry", "", "Path to runtime fleet telemetry JSON with cluster and OIDC token states")
+	spiffePath := flag.String("spiffe", "", "Path to SPIFFE/SPIRE manifest file or directory to audit")
+	spireShort := flag.String("spire", "", "Alias for --spiffe")
+	svidTelemetry := flag.String("svid-telemetry", "", "Path to runtime X.509 SVID telemetry JSON to inspect")
+	spiffePolicyOut := flag.String("spiffe-policy-out", "", "Output path or directory to write synthesized Cilium zero-trust microsegmentation policies")
 	briefing := flag.Bool("briefing", false, "Generate automated Markdown threat intelligence briefing")
 	briefingDir := flag.String("briefing-dir", "intel/briefings", "Output directory for threat briefings")
 	briefingFile := flag.String("briefing-file", "", "Custom filename for threat briefing markdown")
@@ -87,6 +92,10 @@ func main() {
 
 	if *fleetPath == "" && *gitopsShort != "" {
 		*fleetPath = *gitopsShort
+	}
+
+	if *spiffePath == "" && *spireShort != "" {
+		*spiffePath = *spireShort
 	}
 
 	if *outFile == "" && *outShort != "" {
@@ -141,6 +150,8 @@ func main() {
 	var attestSummary *attest.AttestationSummary
 	var fleetViolations []fleet.FleetViolation
 	var fleetSummary *fleet.FleetSummary
+	var spiffeViolations []spiffe.SPIFFEViolation
+	var spiffeSummary *spiffe.SPIFFESummary
 
 	// 1. Audit Nix Flake if --flake is provided
 	if *flakePath != "" {
@@ -294,7 +305,12 @@ func main() {
 		fleetViolations, fleetSummary = runFleetAudit(*fleetPath, *fleetTelemetry, feed, logInfo, logErr)
 	}
 
-	// 11. Generate Threat Briefing if --briefing is requested
+	// 11. Audit Zero-Trust Microsegmentation & SPIFFE/SPIRE Workload Attestation if --spiffe, --svid-telemetry, or --spiffe-policy-out is provided
+	if *spiffePath != "" || *svidTelemetry != "" || *spiffePolicyOut != "" {
+		spiffeViolations, spiffeSummary = runSPIFFEAudit(*spiffePath, *svidTelemetry, *spiffePolicyOut, feed, logInfo, logErr)
+	}
+
+	// 12. Generate Threat Briefing if --briefing is requested
 	if *briefing {
 		logInfo("[+] Synthesizing Threat Intelligence Briefing...\n")
 		briefingOpts := report.BriefingOptions{
@@ -315,6 +331,8 @@ func main() {
 			AttestSummary:           attestSummary,
 			FleetViolations:         fleetViolations,
 			FleetSummary:            fleetSummary,
+			SPIFFEViolations:        spiffeViolations,
+			SPIFFESummary:           spiffeSummary,
 			OutputDir:               *briefingDir,
 			CustomFilename:          *briefingFile,
 		}
@@ -343,7 +361,7 @@ func main() {
 		return
 	}
 
-	// 12. Handle Structured Formats (SARIF / JSON)
+	// 13. Handle Structured Formats (SARIF / JSON)
 	if *format == "sarif" || *format == "json" {
 		reportOpts := report.ReportOptions{
 			Version:                 version,
@@ -363,6 +381,8 @@ func main() {
 			AttestSummary:           attestSummary,
 			FleetViolations:         fleetViolations,
 			FleetSummary:            fleetSummary,
+			SPIFFEViolations:        spiffeViolations,
+			SPIFFESummary:           spiffeSummary,
 			FlakePath:               *flakePath,
 			K8sPath:                 *k8sPath,
 			StoragePath:             *cephPath,
@@ -373,6 +393,8 @@ func main() {
 			AttestTelemetryPath:     *attestTelemetry,
 			FleetPath:               *fleetPath,
 			FleetTelemetryPath:      *fleetTelemetry,
+			SPIFFEPath:              *spiffePath,
+			SPIFFETelemetryPath:     *svidTelemetry,
 			TargetFilter:            *targetFilter,
 			Pretty:                  true,
 		}
@@ -426,8 +448,8 @@ func main() {
 		}
 	}
 
-	// 13. Default feed summary (when no specific audit target was requested)
-	if *flakePath == "" && *k8sPath == "" && *policyOut == "" && !*probeFlag && *cephPath == "" && *cephTelemetry == "" && *wgPath == "" && *wgTelemetry == "" && *cisPath == "" && *gwPath == "" && *attestPath == "" && *attestTelemetry == "" && *fleetPath == "" && *fleetTelemetry == "" {
+	// 14. Default feed summary (when no specific audit target was requested)
+	if *flakePath == "" && *k8sPath == "" && *policyOut == "" && !*probeFlag && *cephPath == "" && *cephTelemetry == "" && *wgPath == "" && *wgTelemetry == "" && *cisPath == "" && *gwPath == "" && *attestPath == "" && *attestTelemetry == "" && *fleetPath == "" && *fleetTelemetry == "" && *spiffePath == "" && *svidTelemetry == "" && *spiffePolicyOut == "" {
 		items := feed.Items
 		if *targetFilter != "" {
 			items = feed.FilterByTarget(*targetFilter)

@@ -15,6 +15,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/k8s"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nix"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/probe"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/spiffe"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/storage"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/wireguard"
 )
@@ -43,6 +44,8 @@ type JSONAuditReport struct {
 	AttestSummary           *attest.AttestationSummary      `json:"attest_summary,omitempty"`
 	FleetViolations         []fleet.FleetViolation          `json:"fleet_violations,omitempty"`
 	FleetSummary            *fleet.FleetSummary             `json:"fleet_summary,omitempty"`
+	SPIFFEViolations        []spiffe.SPIFFEViolation        `json:"spiffe_violations,omitempty"`
+	SPIFFESummary           *spiffe.SPIFFESummary           `json:"spiffe_summary,omitempty"`
 }
 
 // BuildJSONReport compiles the consolidated JSON audit report from provided audit data.
@@ -83,8 +86,14 @@ func BuildJSONReport(opts ReportOptions) (*JSONAuditReport, error) {
 	if opts.FleetTelemetryPath != "" {
 		scanned = append(scanned, opts.FleetTelemetryPath)
 	}
+	if opts.SPIFFEPath != "" {
+		scanned = append(scanned, opts.SPIFFEPath)
+	}
+	if opts.SPIFFETelemetryPath != "" {
+		scanned = append(scanned, opts.SPIFFETelemetryPath)
+	}
 
-	telemetry := ComputeTelemetryFleet(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations, opts.GatewayViolations, opts.AttestViolations, opts.FleetViolations)
+	telemetry := ComputeTelemetrySPIFFE(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations, opts.GatewayViolations, opts.AttestViolations, opts.FleetViolations, opts.SPIFFEViolations)
 
 	var advisories []intel.ThreatItem
 	if opts.Feed != nil {
@@ -118,6 +127,8 @@ func BuildJSONReport(opts ReportOptions) (*JSONAuditReport, error) {
 		AttestSummary:           opts.AttestSummary,
 		FleetViolations:         opts.FleetViolations,
 		FleetSummary:            opts.FleetSummary,
+		SPIFFEViolations:        opts.SPIFFEViolations,
+		SPIFFESummary:           opts.SPIFFESummary,
 	}
 
 	return rep, nil
