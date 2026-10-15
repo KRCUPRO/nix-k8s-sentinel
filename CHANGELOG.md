@@ -5,6 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.0] - 2026-10-15
+
+### Added
+- **Confidential Computing & Measured Boot Attestation Verifier** (`pkg/attest/verifier.go`): Native verification engine for TPM 2.0 PCR quotations and remote attestation tokens across bare-metal cluster worker nodes and confidential computing enclaves (AMD SEV-SNP, Intel TDX).
+- **Declarative NixOS Measured Boot Configuration Scanner** (`pkg/attest/nixos_scanner.go`): Static parser inspecting NixOS configurations for AMD SEV-SNP (`mem_encrypt=on kvm_amd.sev=1`), Intel TDX (`intel_iommu=on kvm_intel.tdx=1`), systemd-boot measured boot integration, Lanzaboote / UKI signing, TPM 2.0 PKCS#11 configuration, and dangerous debug kernel command-line arguments.
+- **Canonical Attestation & Measured Boot Ruleset** (`pkg/attest/rules.go`): Suite of 12 canonical rules (`ATTEST-BOOT-001` through `ATTEST-BOOT-012`) with CVSS v3.1 scoring, remediation guidance, and category classifications:
+  - `ATTEST-BOOT-001`: AMD SEV-SNP Memory Encryption Disabled or Unconfigured (Critical, CVSS 9.2, mapped to CVE-2026-51204).
+  - `ATTEST-BOOT-002`: Intel TDX Trust Domain Execution Disabled in Kernel Flags (Critical, CVSS 9.2, mapped to CVE-2026-51204).
+  - `ATTEST-BOOT-003`: TPM 2.0 PCR 7 Secure Boot Measurement Mismatch or Policy Drift (High, CVSS 8.5).
+  - `ATTEST-BOOT-004`: TPM 2.0 PCR 11 Unified Kernel Image (UKI) / NixOS System Closure Digest Desync (High, CVSS 8.7, mapped to CVE-2026-51204).
+  - `ATTEST-BOOT-005`: Confidential Computing Firmware Debug Mode Permitted in Remote Quote (Critical, CVSS 9.4).
+  - `ATTEST-BOOT-006`: Insecure or Missing NixOS Store Path Cryptographic Signature in Measured Boot (High, CVSS 7.9).
+  - `ATTEST-BOOT-007`: Unhardened Bootloader (Missing Systemd-Boot Measured Boot Integration) (Medium, CVSS 6.8).
+  - `ATTEST-BOOT-008`: Expired or Revoked Remote Attestation Token / VCEK Certificate (High, CVSS 8.1).
+  - `ATTEST-BOOT-009`: Missing TPM2 Resource Manager (tpm2-abrmd / in-kernel RM) in NixOS Config (Medium, CVSS 5.5).
+  - `ATTEST-BOOT-010`: TPM 2.0 PCR 8 Kernel Command Line Drift / Unsanitized Boot Parameters (High, CVSS 7.6).
+  - `ATTEST-BOOT-011`: Unenforced TCB Version Policy on Confidential Computing Nodes (Medium, CVSS 6.5).
+  - `ATTEST-BOOT-012`: Missing Measured Boot Stage for Initrd / Kernel Image in PCR 9 (High, CVSS 7.8).
+- **Dedicated CLI Attestation Runner & Architecture Modularization** (`cmd/sentinel/attest_runner.go`): Modular runner dispatch pattern keeping `cmd/sentinel/main.go` under 380 LOC and adhering strictly to the 300~500 LOC soft ceiling. Adds `--attest=<path>`, `--attest-telemetry=<path>`, and `--attest-quote=<path>` flags.
+- **Threat Feed Expansion** (`intel/cve-feed.json`): Added `CVE-2026-51204` (AMD SEV-SNP & Intel TDX Firmware Measurement Replay & TPM PCR Bypass, CVSS 9.4).
+- **Unified Exporter Integration**: Attestation findings, node verification tallies, and compliance summaries seamlessly exported to OASIS SARIF v2.1.0, structured JSON audit telemetry, and hourly Markdown threat briefings.
+- **Production-Like Fixtures**: Added realistic declarative fixture (`fixtures/nixos-measured-boot.nix`) and multi-node cluster attestation telemetry (`fixtures/attestation-telemetry.json`) modeling verified and compromised worker nodes.
+- **Comprehensive Unit Test Suites** (`pkg/attest/attest_test.go`, `pkg/report/attest_report_test.go`): 100% test coverage for rules catalog, compliant/vulnerable NixOS configs, TPM PCR quotes, report serialization, and defensive bounds checks.
+
+### Changed
+- Bumped engine release to `v0.12.0`.
+- Updated `SECURITY.md` establishing Confidential Computing and Measured Boot security invariants.
+- Updated `ROADMAP.md` marking Milestone M12 as completed.
+- Updated `scripts/ARCHITECTURE_MAP.md` documenting new attest modules and O(1) symbols.
+
+---
+
 ## [0.11.0] - 2026-10-15
 
 ### Added

@@ -19,7 +19,7 @@
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](./LICENSE)
 [![Go Report Card](https://goreportcard.com/badge/github.com/KRCUPRO/nix-k8s-sentinel)](https://goreportcard.com/report/github.com/KRCUPRO/nix-k8s-sentinel)
-[![Version](https://img.shields.io/badge/Release-v0.11.0-emerald.svg)](https://github.com/KRCUPRO/nix-k8s-sentinel/releases)
+[![Version](https://img.shields.io/badge/Release-v0.12.0-emerald.svg)](https://github.com/KRCUPRO/nix-k8s-sentinel/releases)
 [![Architecture](https://img.shields.io/badge/Architecture-Bare--Metal_NixOS_+_K8s-8b5cf6.svg)](#-architecture-overview)
 [![Security](https://img.shields.io/badge/Security-Declarative_Audit-38bdf8.svg)](./SECURITY.md)
 
@@ -31,13 +31,14 @@
 
 `nix-k8s-sentinel` is a high-performance declarative vulnerability scanner and continuous threat intelligence engine designed specifically for bare-metal NixOS clusters and Kubernetes infrastructure.
 
-Unlike ephemeral container scanners, `nix-k8s-sentinel` audits declarative configuration matrices (NixOS Flakes, Kubernetes CNI policies, Ingress controllers, Gateway API routes, Istio EnvoyFilters, Rook Ceph storage clusters, WireGuard mesh networks, and CIS Kubernetes Benchmarks) against real-time normalized CVSS threat intelligence feeds, enabling automated mitigation before workloads are scheduled.
+Unlike ephemeral container scanners, `nix-k8s-sentinel` audits declarative configuration matrices (NixOS Flakes, Kubernetes CNI policies, Ingress controllers, Gateway API routes, Istio EnvoyFilters, Rook Ceph storage clusters, WireGuard mesh networks, CIS Kubernetes Benchmarks, and Confidential Computing measured boot chains) against real-time normalized CVSS threat intelligence feeds, enabling automated mitigation before workloads are scheduled.
 
 ---
 
 ## 🏛️ Core Capabilities
 
 - **🔍 Declarative Infrastructure Auditing**: Pattern matching and input tracking for NixOS Flake inputs, Kubernetes manifests, and CNI policies.
+- **🔒 Confidential Computing & Measured Boot Attestation Verifier**: Hardware-rooted security verification for AMD SEV-SNP (`mem_encrypt=on kvm_amd.sev=1`) and Intel TDX (`intel_iommu=on kvm_intel.tdx=1`) confidential computing enclaves. Verifies TPM 2.0 PCR quotations (PCR 0 firmware, PCR 7 Secure Boot, PCR 8 kernel cmdline, PCR 9 initrd, PCR 11 UKI system closure digest) and remote attestation tokens. Intercepts debug mode enclave flags, expired/revoked attestation tokens, missing systemd-boot/Lanzaboote measured boot chains, and desynchronized Nix store path cryptographic signatures against runtime measurements (CVE-2026-51204).
 - **🌐 Kubernetes Gateway API & EnvoyFilter Route Threat Radar**: Declarative security inspection of Gateway API resources (`Gateway`, `HTTPRoute`, `GRPCRoute`, `TCPRoute`, `ReferenceGrant`) and Istio `EnvoyFilter` manifests. Enforces cross-namespace `ReferenceGrant` validation to prevent tenant route hijacking (CVE-2026-44219), intercepts unsafe inline Lua script injections (`os.execute`, `io.popen`), detects filter chain order bypasses before authentication modules, flags unencrypted plaintext listeners, identifies path traversal rewrites (`..`, `//`), blocks identity header spoofing (`X-Remote-User`), and guards sensitive control plane ports (2379, 6443).
 - **🛡️ CIS Kubernetes Benchmark Declarative Validator**: Audits NixOS systemd unit configurations (`services.kubernetes.*`, `services.etcd.*`) and Kubernetes component manifests against CIS Kubernetes Benchmark sections 1, 2, and 4. Detects unauthenticated anonymous API access (`--anonymous-auth=false`), open port 10255 endpoints (`--read-only-port=0`), insecure `AlwaysAllow` authorization, missing etcd mTLS certificates, and synthesizes drop-in declarative NixOS hardening modules (`--remediation-out`).
 - **🌐 Kubernetes Ingress Security**: Automated detection of snippet injections (CVE-2023-5044 / CVE-2026-21801), URI rewrite capture group mismatches, unanchored path traversals, insecure SSL redirect policies, and permissive CORS wildcard configurations.
@@ -80,6 +81,13 @@ go run cmd/sentinel/main.go --k8s=fixtures/
 # Audit Kubernetes Gateway API routes & Istio EnvoyFilter manifests
 go run cmd/sentinel/main.go --gateway=fixtures/gateway-api-routes.yaml
 go run cmd/sentinel/main.go --gw=fixtures/ --format=sarif --output=gateway-results.sarif
+
+# Audit NixOS Confidential Computing configurations & Measured Boot
+go run cmd/sentinel/main.go --attest=fixtures/nixos-measured-boot.nix
+
+# Verify TPM 2.0 PCR quotations & remote attestation tokens across cluster nodes
+go run cmd/sentinel/main.go --attest-telemetry=fixtures/attestation-telemetry.json
+go run cmd/sentinel/main.go --attest=fixtures/nixos-measured-boot.nix --attest-telemetry=fixtures/attestation-telemetry.json --format=sarif --output=attest-results.sarif
 
 # Audit NixOS WireGuard mesh configuration & runtime peer telemetry
 go run cmd/sentinel/main.go --wg=fixtures/nixos-wireguard.nix

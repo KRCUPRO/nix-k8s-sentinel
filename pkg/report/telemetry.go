@@ -5,6 +5,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/attest"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/bench"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/gateway"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/intel"
@@ -31,6 +32,7 @@ type TelemetrySummary struct {
 	TotalWireGuardViolations  int            `json:"total_wireguard_violations"`
 	TotalCISViolations        int            `json:"total_cis_violations"`
 	TotalGatewayViolations    int            `json:"total_gateway_violations"`
+	TotalAttestViolations     int            `json:"total_attest_violations"`
 }
 
 // ComputeTelemetry aggregates CVSS metrics from the threat feed, K8s violations, and Nix flake matches.
@@ -55,6 +57,11 @@ func ComputeTelemetryOmni(feed *intel.Feed, k8sReport *k8s.ManifestAuditReport, 
 
 // ComputeTelemetryRadar aggregates CVSS metrics across all domains including Gateway API & EnvoyFilter violations.
 func ComputeTelemetryRadar(feed *intel.Feed, k8sReport *k8s.ManifestAuditReport, flakeMatches []nix.FlakeVulnerabilityMatch, storageViolations []storage.StorageViolation, wireguardViolations []wireguard.WireGuardViolation, cisViolations []bench.CISViolation, gatewayViolations []gateway.GatewayViolation) TelemetrySummary {
+	return ComputeTelemetryAttest(feed, k8sReport, flakeMatches, storageViolations, wireguardViolations, cisViolations, gatewayViolations, nil)
+}
+
+// ComputeTelemetryAttest aggregates CVSS metrics across all domains including Confidential Computing & Measured Boot violations.
+func ComputeTelemetryAttest(feed *intel.Feed, k8sReport *k8s.ManifestAuditReport, flakeMatches []nix.FlakeVulnerabilityMatch, storageViolations []storage.StorageViolation, wireguardViolations []wireguard.WireGuardViolation, cisViolations []bench.CISViolation, gatewayViolations []gateway.GatewayViolation, attestViolations []attest.AttestationViolation) TelemetrySummary {
 	summary := TelemetrySummary{
 		TargetDistribution:    make(map[string]int),
 		ComponentDistribution: make(map[string]int),
@@ -126,6 +133,10 @@ func ComputeTelemetryRadar(feed *intel.Feed, k8sReport *k8s.ManifestAuditReport,
 
 	if len(gatewayViolations) > 0 {
 		summary.TotalGatewayViolations = len(gatewayViolations)
+	}
+
+	if len(attestViolations) > 0 {
+		summary.TotalAttestViolations = len(attestViolations)
 	}
 
 	return summary
