@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/attest"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/bench"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/gateway"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/intel"
@@ -41,12 +42,16 @@ type ReportOptions struct {
 	CISSummary              *bench.CISSummary
 	GatewayViolations       []gateway.GatewayViolation
 	GatewaySummary          *gateway.GatewaySummary
+	AttestViolations        []attest.AttestationViolation
+	AttestSummary           *attest.AttestationSummary
 	FlakePath               string
 	K8sPath                 string
 	StoragePath             string
 	WireGuardPath           string
 	CISPath                 string
 	GatewayPath             string
+	AttestPath              string
+	AttestTelemetryPath     string
 	TargetFilter            string
 	Pretty                  bool
 }

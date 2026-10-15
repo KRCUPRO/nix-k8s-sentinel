@@ -92,9 +92,16 @@ Automated generation of defense-in-depth rules:
 - [x] Full CLI integration (`--gateway`, `--gw`) with unified SARIF v2.1.0 code scanning, JSON audit telemetry, and Markdown briefing exports.
 - [x] Production sample fixture `fixtures/gateway-api-routes.yaml` modeling realistic edge gateways, HTTPRoutes, GRPCRoutes, TCPRoutes, and EnvoyFilters.
 
-### Version 0.12.0 — Confidential Computing & Measured Boot Attestation Verifier (Planned)
-- [ ] Audit AMD SEV-SNP and Intel TDX measured boot artifacts against NixOS store path signatures.
-- [ ] Verify TPM 2.0 PCR quotations and remote attestation tokens for bare-metal cluster worker nodes.
+### Version 0.12.0 — Confidential Computing & Measured Boot Attestation Verifier (Completed)
+- [x] Audit AMD SEV-SNP and Intel TDX measured boot artifacts against NixOS store path signatures (`pkg/attest/nixos_scanner.go`).
+- [x] Canonical rule catalog `ATTEST-BOOT-001` through `ATTEST-BOOT-012` detecting disabled hardware memory encryption, debug mode enclaves, expired attestation tokens, and missing systemd-boot / Lanzaboote UKI integration (`pkg/attest/rules.go`).
+- [x] Verify TPM 2.0 PCR quotations (PCR 0, 7, 8, 9, 11) and remote attestation tokens for bare-metal cluster worker nodes (`pkg/attest/verifier.go`).
+- [x] Full CLI integration (`--attest`, `--attest-telemetry`, `--attest-quote`) with unified SARIF v2.1.0 code scanning, JSON audit telemetry, and Markdown briefing exports (`cmd/sentinel/attest_runner.go`).
+- [x] Production sample fixtures (`fixtures/nixos-measured-boot.nix`, `fixtures/attestation-telemetry.json`) and threat feed correlation with `CVE-2026-51204`.
+
+### Version 0.13.0 — Multi-Cluster Fleet Synchronization & OIDC Token Radar (Planned)
+- [ ] Audit multi-tenant RBAC cluster roles and short-lived OIDC federated identity tokens across geographically distributed clusters.
+- [ ] Implement automated configuration drift detection for declarative ArgoCD Application and Flux Kustomization states.
 
 ### Version 1.0.0 — Supply Chain Attestation & Workload Identity (Planned)
 - [ ] Multi-cluster fleet synchronization and federated OIDC token radar.

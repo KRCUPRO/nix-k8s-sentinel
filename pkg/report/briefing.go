@@ -8,6 +8,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/attest"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/bench"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/gateway"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/intel"
@@ -35,6 +36,8 @@ type BriefingOptions struct {
 	CISSummary              *bench.CISSummary
 	GatewayViolations       []gateway.GatewayViolation
 	GatewaySummary          *gateway.GatewaySummary
+	AttestViolations        []attest.AttestationViolation
+	AttestSummary           *attest.AttestationSummary
 	OutputDir               string
 	CustomFilename          string
 }
@@ -67,7 +70,7 @@ func GenerateBriefing(opts BriefingOptions) (*BriefingReport, error) {
 		version = "0.4.0"
 	}
 
-	telemetry := ComputeTelemetryRadar(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations, opts.GatewayViolations)
+	telemetry := ComputeTelemetryAttest(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations, opts.GatewayViolations, opts.AttestViolations)
 
 	var buf bytes.Buffer
 
@@ -325,7 +328,34 @@ func GenerateBriefing(opts BriefingOptions) (*BriefingReport, error) {
 		buf.WriteString("---\n\n")
 	}
 
-	// 11. Action Items Checklist
+	// 11. Confidential Computing & Measured Boot Attestation Posture (if applicable)
+	if len(opts.AttestViolations) > 0 || opts.AttestSummary != nil {
+		buf.WriteString("## 🔒 Confidential Computing & Measured Boot Attestation Posture\n\n")
+		if opts.AttestSummary != nil {
+			sum := opts.AttestSummary
+			buf.WriteString(fmt.Sprintf("**Compliance Score:** `%.1f%%` | **Attested Nodes:** %d | **Verified Safe:** %d\n",
+				sum.ComplianceScore, sum.NodesAttested, sum.NodesVerified))
+			buf.WriteString(fmt.Sprintf("**Severity Breakdown:** %d Critical | %d High | %d Medium | %d Low\n\n",
+				sum.CriticalCount, sum.HighCount, sum.MediumCount, sum.LowCount))
+		}
+		if len(opts.AttestViolations) > 0 {
+			buf.WriteString(fmt.Sprintf("⚠️ **%d Confidential Computing & Measured Boot anomalies identified:**\n\n", len(opts.AttestViolations)))
+			buf.WriteString("| Rule ID | Technology | Target | Severity | CVSS | Finding & Threat Impact | Remediation Action |\n")
+			buf.WriteString("| :--- | :--- | :--- | :---: | :---: | :--- | :--- |\n")
+			for _, av := range opts.AttestViolations {
+				cveTag := ""
+				if av.MatchedCVE != "" {
+					cveTag = fmt.Sprintf(" (`%s`)", av.MatchedCVE)
+				}
+				buf.WriteString(fmt.Sprintf("| `%s` | `%s` | `%s` | **%s** | %.1f | %s%s | %s |\n",
+					av.RuleID, av.Technology, av.Target, av.Severity, av.CVSSScore, av.Message, cveTag, av.Remediation))
+			}
+			buf.WriteString("\n")
+		}
+		buf.WriteString("---\n\n")
+	}
+
+	// 12. Action Items Checklist
 	buf.WriteString("## 📋 SecOps & SRE Operational Checklist\n\n")
 	buf.WriteString("- [ ] Review high and critical severity advisories against production deployment manifests.\n")
 	buf.WriteString("- [ ] Verify that ingress controllers enforce URI path normalization and snippet guards.\n")
@@ -335,6 +365,7 @@ func GenerateBriefing(opts BriefingOptions) (*BriefingReport, error) {
 	buf.WriteString("- [ ] Enforce WireGuard 90-day cryptographic key rotation and prune dormant peer routing slots.\n")
 	buf.WriteString("- [ ] Remediate unhardened CIS Kubernetes Benchmark control plane and Kubelet findings.\n")
 	buf.WriteString("- [ ] Audit Kubernetes Gateway API routes against ReferenceGrants and sanitize dynamic EnvoyFilter Lua injections.\n")
+	buf.WriteString("- [ ] Verify AMD SEV-SNP and Intel TDX attestation reports against golden NixOS UKI closure measurements in PCR 11.\n")
 	buf.WriteString("- [ ] Archive this briefing record into security audit ledger.\n")
 
 	report := &BriefingReport{

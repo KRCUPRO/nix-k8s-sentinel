@@ -1,0 +1,122 @@
+{
+  "timestamp": "2026-10-15T12:00:00Z",
+  "nodes": [
+    {
+      "node_name": "nixos-worker-sev-01",
+      "platform": "AMD SEV-SNP",
+      "attestation_enclave": "AMD-SEV-SNP-Milan-v2",
+      "attested_at": "2026-10-15T11:45:00Z",
+      "token_expired": false,
+      "debug_mode": false,
+      "memory_encryption_enabled": true,
+      "store_path_signature": "sha256:7f83b1657ff1fc53b92dc18148a1d65dfc2d4b1fa3d677284addd200126d9069",
+      "expected_store_path_signature": "sha256:7f83b1657ff1fc53b92dc18148a1d65dfc2d4b1fa3d677284addd200126d9069",
+      "tcb_version": "0800102b",
+      "min_required_tcb": "08001000",
+      "quotes": [
+        {
+          "index": 0,
+          "digest_algorithm": "sha256",
+          "expected_digest": "4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b",
+          "actual_digest": "4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b",
+          "description": "CRTM and Core System Firmware",
+          "valid": true
+        },
+        {
+          "index": 7,
+          "digest_algorithm": "sha256",
+          "expected_digest": "3b9a11b568e51d3f5d1645f452086c613b7b4f40d180e82066164201a4991471",
+          "actual_digest": "3b9a11b568e51d3f5d1645f452086c613b7b4f40d180e82066164201a4991471",
+          "description": "Secure Boot Certificates & Authority Database",
+          "valid": true
+        },
+        {
+          "index": 8,
+          "digest_algorithm": "sha256",
+          "expected_digest": "b5d4045c3f466fa91fe2cc6abe79232a1a57cdf104f7a26e716e0a1e2789df78",
+          "actual_digest": "b5d4045c3f466fa91fe2cc6abe79232a1a57cdf104f7a26e716e0a1e2789df78",
+          "description": "Immutable Kernel Command Line",
+          "valid": true
+        },
+        {
+          "index": 9,
+          "digest_algorithm": "sha256",
+          "expected_digest": "2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae",
+          "actual_digest": "2c26b46b68ffc68ff99b453c1d30413413422d706483bfa0f98a5e886266e7ae",
+          "description": "Kernel and Initrd Binary Images",
+          "valid": true
+        },
+        {
+          "index": 11,
+          "digest_algorithm": "sha256",
+          "expected_digest": "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918",
+          "actual_digest": "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918",
+          "description": "NixOS Unified Kernel Image System Closure",
+          "valid": true
+        }
+      ]
+    },
+    {
+      "node_name": "nixos-worker-tdx-02",
+      "platform": "Intel TDX",
+      "attestation_enclave": "Intel-TDX-QVE-SapphireRapids",
+      "attested_at": "2026-10-15T11:48:00Z",
+      "token_expired": false,
+      "debug_mode": false,
+      "memory_encryption_enabled": true,
+      "store_path_signature": "sha256:d41d8cd98f00b204e9800998ecf8427e",
+      "expected_store_path_signature": "sha256:d41d8cd98f00b204e9800998ecf8427e",
+      "tcb_version": "0601004a",
+      "min_required_tcb": "06010000",
+      "quotes": [
+        {
+          "index": 7,
+          "digest_algorithm": "sha256",
+          "expected_digest": "3b9a11b568e51d3f5d1645f452086c613b7b4f40d180e82066164201a4991471",
+          "actual_digest": "3b9a11b568e51d3f5d1645f452086c613b7b4f40d180e82066164201a4991471",
+          "description": "Secure Boot Policy",
+          "valid": true
+        },
+        {
+          "index": 11,
+          "digest_algorithm": "sha256",
+          "expected_digest": "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918",
+          "actual_digest": "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918",
+          "description": "NixOS Unified Kernel Image System Closure",
+          "valid": true
+        }
+      ]
+    },
+    {
+      "node_name": "nixos-worker-untrusted-03",
+      "platform": "Bare-Metal TPM2",
+      "attestation_enclave": "TPM20-Discrete-Infineon",
+      "attested_at": "2026-10-14T08:00:00Z",
+      "token_expired": true,
+      "debug_mode": true,
+      "memory_encryption_enabled": false,
+      "store_path_signature": "sha256:tampered_store_path_closure_hash",
+      "expected_store_path_signature": "sha256:golden_signed_store_path_closure_hash",
+      "tcb_version": "04000010",
+      "min_required_tcb": "06000000",
+      "quotes": [
+        {
+          "index": 7,
+          "digest_algorithm": "sha256",
+          "expected_digest": "3b9a11b568e51d3f5d1645f452086c613b7b4f40d180e82066164201a4991471",
+          "actual_digest": "0000000000000000000000000000000000000000000000000000000000000000",
+          "description": "Secure Boot Policy (Tampered)",
+          "valid": false
+        },
+        {
+          "index": 11,
+          "digest_algorithm": "sha256",
+          "expected_digest": "8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918",
+          "actual_digest": "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+          "description": "NixOS Unified Kernel Image System Closure (Desynchronized)",
+          "valid": false
+        }
+      ]
+    }
+  ]
+}

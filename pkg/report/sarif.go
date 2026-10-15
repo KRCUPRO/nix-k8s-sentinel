@@ -581,8 +581,68 @@ func BuildSARIFReport(opts ReportOptions) (*SARIFLog, error) {
 		}
 	}
 
-	// 8. Process Standalone Feed Advisories (if no specific audit targets yielded findings)
-	if (opts.K8sReport == nil || len(opts.K8sReport.Violations) == 0) && len(opts.FlakeMatches) == 0 && len(opts.ProbeEvents) == 0 && len(opts.StorageViolations) == 0 && len(opts.WireGuardViolations) == 0 && len(opts.CISViolations) == 0 && len(opts.GatewayViolations) == 0 && opts.Feed != nil {
+	// 8. Process Confidential Computing & Measured Boot Attestation Violations
+	if len(opts.AttestViolations) > 0 {
+		for _, av := range opts.AttestViolations {
+			tags := []string{"security", "confidential-computing", "measured-boot", "tpm2", strings.ToLower(av.Category)}
+			ruleIdx := getOrCreateRule(av.RuleID, av.Title, av.Message, av.Remediation, av.Severity, av.CVSSScore, tags)
+			level := SeverityToSARIFLevel(string(av.Severity), av.CVSSScore)
+
+			locURI := av.FilePath
+			if locURI == "" {
+				locURI = opts.AttestPath
+			}
+			if locURI == "" {
+				locURI = opts.AttestTelemetryPath
+			}
+			if locURI == "" {
+				locURI = "nixos-attestation.json"
+			}
+			locURI = filepath.ToSlash(locURI)
+
+			line := av.StartLine
+			if line <= 0 {
+				line = 1
+			}
+
+			cveSuffix := ""
+			if av.MatchedCVE != "" {
+				cveSuffix = fmt.Sprintf(" [%s]", av.MatchedCVE)
+			}
+			resMsg := fmt.Sprintf("[%s/%s] %s: %s%s (Remediation: %s)", av.Technology, av.Target, av.Title, av.Message, cveSuffix, av.Remediation)
+
+			results = append(results, SARIFResult{
+				RuleID:    av.RuleID,
+				RuleIndex: ruleIdx,
+				Level:     level,
+				Message:   SARIFMessage{Text: resMsg},
+				Locations: []SARIFLocation{
+					{
+						PhysicalLocation: &PhysicalLocation{
+							ArtifactLocation: ArtifactLocation{
+								URI:       locURI,
+								URIBaseID: "%SRCROOT%",
+							},
+							Region: &Region{
+								StartLine:   line,
+								StartColumn: 1,
+							},
+						},
+						LogicalLocations: []LogicalLocation{
+							{
+								Name:               av.RuleID,
+								Kind:               "AttestationViolation",
+								FullyQualifiedName: fmt.Sprintf("attest/%s/%s", av.Technology, av.Target),
+							},
+						},
+					},
+				},
+			})
+		}
+	}
+
+	// 9. Process Standalone Feed Advisories (if no specific audit targets yielded findings)
+	if (opts.K8sReport == nil || len(opts.K8sReport.Violations) == 0) && len(opts.FlakeMatches) == 0 && len(opts.ProbeEvents) == 0 && len(opts.StorageViolations) == 0 && len(opts.WireGuardViolations) == 0 && len(opts.CISViolations) == 0 && len(opts.GatewayViolations) == 0 && len(opts.AttestViolations) == 0 && opts.Feed != nil {
 		feedItems := opts.Feed.Items
 		if opts.TargetFilter != "" {
 			feedItems = opts.Feed.FilterByTarget(opts.TargetFilter)

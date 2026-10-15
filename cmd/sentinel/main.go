@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/attest"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/bench"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/gateway"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/intel"
@@ -19,7 +20,7 @@ import (
 )
 
 var (
-	version = "0.11.0"
+	version = "0.12.0"
 )
 
 func main() {
@@ -40,6 +41,9 @@ func main() {
 	remediationOut := flag.String("remediation-out", "", "Output path to write synthesized NixOS CIS hardening remediation module")
 	gwPath := flag.String("gateway", "", "Path to Kubernetes Gateway API or EnvoyFilter manifest file or directory to audit")
 	gatewayShort := flag.String("gw", "", "Alias for --gateway")
+	attestPath := flag.String("attest", "", "Path to NixOS measured boot configuration file or directory to audit")
+	attestTelemetry := flag.String("attest-telemetry", "", "Path to node attestation telemetry JSON with TPM 2.0 PCR quotations")
+	attestQuote := flag.String("attest-quote", "", "Alias for --attest-telemetry")
 	briefing := flag.Bool("briefing", false, "Generate automated Markdown threat intelligence briefing")
 	briefingDir := flag.String("briefing-dir", "intel/briefings", "Output directory for threat briefings")
 	briefingFile := flag.String("briefing-file", "", "Custom filename for threat briefing markdown")
@@ -71,6 +75,10 @@ func main() {
 
 	if *gwPath == "" && *gatewayShort != "" {
 		*gwPath = *gatewayShort
+	}
+
+	if *attestTelemetry == "" && *attestQuote != "" {
+		*attestTelemetry = *attestQuote
 	}
 
 	if *outFile == "" && *outShort != "" {
@@ -121,6 +129,8 @@ func main() {
 	var cisSummary *bench.CISSummary
 	var gatewayViolations []gateway.GatewayViolation
 	var gatewaySummary *gateway.GatewaySummary
+	var attestViolations []attest.AttestationViolation
+	var attestSummary *attest.AttestationSummary
 
 	// 1. Audit Nix Flake if --flake is provided
 	if *flakePath != "" {
@@ -264,7 +274,12 @@ func main() {
 		gatewayViolations, gatewaySummary = runGatewayAudit(*gwPath, feed, logInfo, logErr)
 	}
 
-	// 9. Generate Threat Briefing if --briefing is requested
+	// 9. Audit Confidential Computing & Measured Boot if --attest or --attest-telemetry is provided
+	if *attestPath != "" || *attestTelemetry != "" {
+		attestViolations, attestSummary = runAttestAudit(*attestPath, *attestTelemetry, feed, logInfo, logErr)
+	}
+
+	// 10. Generate Threat Briefing if --briefing is requested
 	if *briefing {
 		logInfo("[+] Synthesizing Threat Intelligence Briefing...\n")
 		briefingOpts := report.BriefingOptions{
@@ -281,6 +296,8 @@ func main() {
 			CISSummary:              cisSummary,
 			GatewayViolations:       gatewayViolations,
 			GatewaySummary:          gatewaySummary,
+			AttestViolations:        attestViolations,
+			AttestSummary:           attestSummary,
 			OutputDir:               *briefingDir,
 			CustomFilename:          *briefingFile,
 		}
@@ -309,7 +326,7 @@ func main() {
 		return
 	}
 
-	// 10. Handle Structured Formats (SARIF / JSON)
+	// 11. Handle Structured Formats (SARIF / JSON)
 	if *format == "sarif" || *format == "json" {
 		reportOpts := report.ReportOptions{
 			Version:                 version,
@@ -325,12 +342,16 @@ func main() {
 			CISSummary:              cisSummary,
 			GatewayViolations:       gatewayViolations,
 			GatewaySummary:          gatewaySummary,
+			AttestViolations:        attestViolations,
+			AttestSummary:           attestSummary,
 			FlakePath:               *flakePath,
 			K8sPath:                 *k8sPath,
 			StoragePath:             *cephPath,
 			WireGuardPath:           *wgPath,
 			CISPath:                 *cisPath,
 			GatewayPath:             *gwPath,
+			AttestPath:              *attestPath,
+			AttestTelemetryPath:     *attestTelemetry,
 			TargetFilter:            *targetFilter,
 			Pretty:                  true,
 		}
@@ -384,8 +405,8 @@ func main() {
 		}
 	}
 
-	// 11. Default feed summary (when no specific audit target was requested)
-	if *flakePath == "" && *k8sPath == "" && *policyOut == "" && !*probeFlag && *cephPath == "" && *cephTelemetry == "" && *wgPath == "" && *wgTelemetry == "" && *cisPath == "" && *gwPath == "" {
+	// 12. Default feed summary (when no specific audit target was requested)
+	if *flakePath == "" && *k8sPath == "" && *policyOut == "" && !*probeFlag && *cephPath == "" && *cephTelemetry == "" && *wgPath == "" && *wgTelemetry == "" && *cisPath == "" && *gwPath == "" && *attestPath == "" && *attestTelemetry == "" {
 		items := feed.Items
 		if *targetFilter != "" {
 			items = feed.FilterByTarget(*targetFilter)
