@@ -641,8 +641,71 @@ func BuildSARIFReport(opts ReportOptions) (*SARIFLog, error) {
 		}
 	}
 
-	// 9. Process Standalone Feed Advisories (if no specific audit targets yielded findings)
-	if (opts.K8sReport == nil || len(opts.K8sReport.Violations) == 0) && len(opts.FlakeMatches) == 0 && len(opts.ProbeEvents) == 0 && len(opts.StorageViolations) == 0 && len(opts.WireGuardViolations) == 0 && len(opts.CISViolations) == 0 && len(opts.GatewayViolations) == 0 && len(opts.AttestViolations) == 0 && opts.Feed != nil {
+	// 9. Process Multi-Cluster Fleet Synchronization & OIDC Token Radar Violations
+	if len(opts.FleetViolations) > 0 {
+		for _, fv := range opts.FleetViolations {
+			tags := []string{"security", "kubernetes", "fleet", "gitops", "oidc", strings.ToLower(string(fv.Category))}
+			if fv.MatchedCVE != "" {
+				tags = append(tags, fv.MatchedCVE)
+			}
+			ruleIdx := getOrCreateRule(fv.RuleID, fv.Title, fv.Message, fv.Remediation, fv.Severity, fv.CVSSScore, tags)
+			level := SeverityToSARIFLevel(string(fv.Severity), fv.CVSSScore)
+
+			locURI := fv.FilePath
+			if locURI == "" {
+				locURI = opts.FleetPath
+			}
+			if locURI == "" {
+				locURI = opts.FleetTelemetryPath
+			}
+			if locURI == "" {
+				locURI = "fleet-sync.yaml"
+			}
+			locURI = filepath.ToSlash(locURI)
+
+			line := fv.StartLine
+			if line <= 0 {
+				line = 1
+			}
+
+			cveSuffix := ""
+			if fv.MatchedCVE != "" {
+				cveSuffix = fmt.Sprintf(" [%s]", fv.MatchedCVE)
+			}
+			resMsg := fmt.Sprintf("[%s/%s] %s: %s%s (Remediation: %s)", fv.Category, fv.ResourceKind, fv.Title, fv.Message, cveSuffix, fv.Remediation)
+
+			results = append(results, SARIFResult{
+				RuleID:    fv.RuleID,
+				RuleIndex: ruleIdx,
+				Level:     level,
+				Message:   SARIFMessage{Text: resMsg},
+				Locations: []SARIFLocation{
+					{
+						PhysicalLocation: &PhysicalLocation{
+							ArtifactLocation: ArtifactLocation{
+								URI:       locURI,
+								URIBaseID: "%SRCROOT%",
+							},
+							Region: &Region{
+								StartLine:   line,
+								StartColumn: 1,
+							},
+						},
+						LogicalLocations: []LogicalLocation{
+							{
+								Name:               fv.RuleID,
+								Kind:               fv.ResourceKind,
+								FullyQualifiedName: fmt.Sprintf("fleet/%s/%s/%s", fv.ClusterID, fv.ResourceKind, fv.ResourceName),
+							},
+						},
+					},
+				},
+			})
+		}
+	}
+
+	// 10. Process Standalone Feed Advisories (if no specific audit targets yielded findings)
+	if (opts.K8sReport == nil || len(opts.K8sReport.Violations) == 0) && len(opts.FlakeMatches) == 0 && len(opts.ProbeEvents) == 0 && len(opts.StorageViolations) == 0 && len(opts.WireGuardViolations) == 0 && len(opts.CISViolations) == 0 && len(opts.GatewayViolations) == 0 && len(opts.AttestViolations) == 0 && len(opts.FleetViolations) == 0 && opts.Feed != nil {
 		feedItems := opts.Feed.Items
 		if opts.TargetFilter != "" {
 			feedItems = opts.Feed.FilterByTarget(opts.TargetFilter)

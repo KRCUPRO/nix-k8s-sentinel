@@ -1,0 +1,115 @@
+{
+  "timestamp": "2026-10-15T15:30:00Z",
+  "fleet_id": "federated-production-mesh",
+  "clusters": [
+    {
+      "cluster_id": "us-east-prod-01",
+      "region": "us-east-1",
+      "provider": "aws-baremetal",
+      "k8s_version": "v1.31.2",
+      "connected": true,
+      "rbac_admin_roles": 2,
+      "active_oidc_tokens": 14
+    },
+    {
+      "cluster_id": "eu-central-prod-02",
+      "region": "eu-central-1",
+      "provider": "hetzner-nixos",
+      "k8s_version": "v1.31.2",
+      "connected": true,
+      "rbac_admin_roles": 3,
+      "active_oidc_tokens": 8
+    },
+    {
+      "cluster_id": "ap-southeast-dr-01",
+      "region": "ap-southeast-1",
+      "provider": "equinix-baremetal",
+      "k8s_version": "v1.30.5",
+      "connected": false,
+      "rbac_admin_roles": 9,
+      "active_oidc_tokens": 2
+    }
+  ],
+  "gitops_apps": [
+    {
+      "app_name": "core-banking-api",
+      "target_cluster": "us-east-prod-01",
+      "namespace": "production",
+      "engine": "ArgoCD",
+      "source_repo": "https://github.com/example-org/banking-core.git",
+      "target_revision": "v3.12.0",
+      "current_revision": "v3.12.0",
+      "sync_status": "Synced",
+      "health_status": "Healthy",
+      "automated_self_heal": true
+    },
+    {
+      "app_name": "payment-settlement-worker",
+      "target_cluster": "eu-central-prod-02",
+      "namespace": "production",
+      "engine": "ArgoCD",
+      "source_repo": "https://github.com/example-org/settlement.git",
+      "target_revision": "v1.8.2",
+      "current_revision": "v1.8.0",
+      "sync_status": "OutOfSync",
+      "health_status": "Degraded",
+      "automated_self_heal": false,
+      "drift_details": "Deployment payment-worker replicas mismatched (desired: 6, live: 2)"
+    },
+    {
+      "app_name": "customer-notification-bus",
+      "target_cluster": "ap-southeast-dr-01",
+      "namespace": "dr-standby",
+      "engine": "Flux",
+      "source_repo": "https://github.com/example-org/notification-bus.git",
+      "target_revision": "v2.0.1",
+      "current_revision": "v2.0.0",
+      "sync_status": "OutOfSync",
+      "health_status": "Progressing",
+      "automated_self_heal": true,
+      "drift_details": "Git revision divergence between primary and standby DR cluster"
+    }
+  ],
+  "oidc_tokens": [
+    {
+      "token_id": "tok-corp-sso-01",
+      "cluster_id": "us-east-prod-01",
+      "issuer": "https://sso.enterprise.org/oauth2",
+      "client_id": "k8s-us-east-prod",
+      "audience": "k8s-fleet-workloads",
+      "subject": "serviceaccount:argo-fleet-sync",
+      "signing_alg": "RS256",
+      "issued_at": "2026-10-15T14:00:00Z",
+      "expires_at": "2026-10-15T18:00:00Z",
+      "ttl_seconds": 14400,
+      "key_rotation_days": 28
+    },
+    {
+      "token_id": "tok-legacy-hmac-02",
+      "cluster_id": "eu-central-prod-02",
+      "issuer": "https://idp.legacy-auth.net",
+      "client_id": "eu-cluster-client",
+      "audience": "",
+      "subject": "serviceaccount:legacy-importer",
+      "signing_alg": "HS256",
+      "issued_at": "2026-10-13T10:00:00Z",
+      "expires_at": "2026-10-17T10:00:00Z",
+      "ttl_seconds": 345600,
+      "key_rotation_days": 140
+    },
+    {
+      "token_id": "tok-forged-none-03",
+      "cluster_id": "ap-southeast-dr-01",
+      "issuer": "https://untrusted-issuer.org",
+      "client_id": "dr-bypass",
+      "audience": "k8s-ap-dr",
+      "subject": "system:anonymous",
+      "signing_alg": "none",
+      "issued_at": "2026-10-10T00:00:00Z",
+      "expires_at": "2026-10-25T00:00:00Z",
+      "ttl_seconds": 1296000,
+      "key_rotation_days": 210
+    }
+  ],
+  "telemetry_notes": "Hourly automated multi-cluster telemetry harvest via fleet controller"
+}

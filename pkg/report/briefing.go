@@ -10,6 +10,7 @@ import (
 
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/attest"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/bench"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/fleet"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/gateway"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/intel"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/k8s"
@@ -38,6 +39,8 @@ type BriefingOptions struct {
 	GatewaySummary          *gateway.GatewaySummary
 	AttestViolations        []attest.AttestationViolation
 	AttestSummary           *attest.AttestationSummary
+	FleetViolations         []fleet.FleetViolation
+	FleetSummary            *fleet.FleetSummary
 	OutputDir               string
 	CustomFilename          string
 }
@@ -70,7 +73,7 @@ func GenerateBriefing(opts BriefingOptions) (*BriefingReport, error) {
 		version = "0.4.0"
 	}
 
-	telemetry := ComputeTelemetryAttest(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations, opts.GatewayViolations, opts.AttestViolations)
+	telemetry := ComputeTelemetryFleet(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations, opts.GatewayViolations, opts.AttestViolations, opts.FleetViolations)
 
 	var buf bytes.Buffer
 
@@ -355,7 +358,38 @@ func GenerateBriefing(opts BriefingOptions) (*BriefingReport, error) {
 		buf.WriteString("---\n\n")
 	}
 
-	// 12. Action Items Checklist
+	// 12. Multi-Cluster Fleet Synchronization & OIDC Token Radar Posture (if applicable)
+	if len(opts.FleetViolations) > 0 || opts.FleetSummary != nil {
+		buf.WriteString("## 🛰️ Multi-Cluster Fleet Synchronization & OIDC Token Radar\n\n")
+		if opts.FleetSummary != nil {
+			sum := opts.FleetSummary
+			buf.WriteString(fmt.Sprintf("**Compliance Score:** `%.1f%%` | **Clusters Audited:** %d | **In Sync:** %d | **Drifting Apps:** %d | **OIDC Tokens Verified:** %d\n",
+				sum.ComplianceScore, sum.ClustersAudited, sum.ClustersInSync, sum.DriftingApps, sum.OIDCTokensVerified))
+			buf.WriteString(fmt.Sprintf("**Severity Breakdown:** %d Critical | %d High | %d Medium | %d Low\n\n",
+				sum.CriticalCount, sum.HighCount, sum.MediumCount, sum.LowCount))
+		}
+		if len(opts.FleetViolations) > 0 {
+			buf.WriteString(fmt.Sprintf("⚠️ **%d Multi-Cluster fleet and OIDC identity violations identified:**\n\n", len(opts.FleetViolations)))
+			buf.WriteString("| Rule ID | Category | Resource | Cluster | Severity | CVSS | Finding & Threat Impact | Remediation Action |\n")
+			buf.WriteString("| :--- | :--- | :--- | :---: | :---: | :---: | :--- | :--- |\n")
+			for _, fv := range opts.FleetViolations {
+				cveTag := ""
+				if fv.MatchedCVE != "" {
+					cveTag = fmt.Sprintf(" (`%s`)", fv.MatchedCVE)
+				}
+				clusterTag := fv.ClusterID
+				if clusterTag == "" {
+					clusterTag = "fleet-wide"
+				}
+				buf.WriteString(fmt.Sprintf("| `%s` | %s | `%s/%s` | `%s` | **%s** | %.1f | %s%s | %s |\n",
+					fv.RuleID, fv.Category, fv.ResourceKind, fv.ResourceName, clusterTag, fv.Severity, fv.CVSSScore, fv.Message, cveTag, fv.Remediation))
+			}
+			buf.WriteString("\n")
+		}
+		buf.WriteString("---\n\n")
+	}
+
+	// 13. Action Items Checklist
 	buf.WriteString("## 📋 SecOps & SRE Operational Checklist\n\n")
 	buf.WriteString("- [ ] Review high and critical severity advisories against production deployment manifests.\n")
 	buf.WriteString("- [ ] Verify that ingress controllers enforce URI path normalization and snippet guards.\n")
@@ -366,6 +400,7 @@ func GenerateBriefing(opts BriefingOptions) (*BriefingReport, error) {
 	buf.WriteString("- [ ] Remediate unhardened CIS Kubernetes Benchmark control plane and Kubelet findings.\n")
 	buf.WriteString("- [ ] Audit Kubernetes Gateway API routes against ReferenceGrants and sanitize dynamic EnvoyFilter Lua injections.\n")
 	buf.WriteString("- [ ] Verify AMD SEV-SNP and Intel TDX attestation reports against golden NixOS UKI closure measurements in PCR 11.\n")
+	buf.WriteString("- [ ] Reconcile multi-cluster GitOps synchronization drift and rotate federated OIDC identity tokens exceeding 24 hours.\n")
 	buf.WriteString("- [ ] Archive this briefing record into security audit ledger.\n")
 
 	report := &BriefingReport{

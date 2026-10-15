@@ -99,12 +99,20 @@ Automated generation of defense-in-depth rules:
 - [x] Full CLI integration (`--attest`, `--attest-telemetry`, `--attest-quote`) with unified SARIF v2.1.0 code scanning, JSON audit telemetry, and Markdown briefing exports (`cmd/sentinel/attest_runner.go`).
 - [x] Production sample fixtures (`fixtures/nixos-measured-boot.nix`, `fixtures/attestation-telemetry.json`) and threat feed correlation with `CVE-2026-51204`.
 
-### Version 0.13.0 — Multi-Cluster Fleet Synchronization & OIDC Token Radar (Planned)
-- [ ] Audit multi-tenant RBAC cluster roles and short-lived OIDC federated identity tokens across geographically distributed clusters.
-- [ ] Implement automated configuration drift detection for declarative ArgoCD Application and Flux Kustomization states.
+### Version 0.13.0 — Multi-Cluster Fleet Synchronization & OIDC Token Radar (Completed)
+- [x] Multi-cluster fleet synchronization and federated OIDC token radar (`pkg/fleet/scanner.go`).
+- [x] Canonical rule catalog `FLEET-RBAC-001` through `FLEET-DRIFT-001` detecting wildcard ClusterRoles, privilege escalation via `bind`/`escalate`, `cluster-admin` bindings to broad groups (`system:authenticated`), and cross-namespace secret access (`pkg/fleet/rules.go`).
+- [x] Federated OIDC token security auditing intercepting insecure algorithms (`none`, `HS256`), excessive lifetimes (> 24h), missing audience/issuer claims, and unrotated keys (`pkg/fleet/rbac_oidc.go`).
+- [x] Declarative GitOps manifest inspection auditing ArgoCD Applications and Flux Kustomizations for automated self-healing (`selfHeal: true`, `prune: true`), unpinned floating branches, unauthenticated repositories, and wildcard destination servers (`pkg/fleet/gitops.go`).
+- [x] Runtime fleet telemetry reconciliation detecting configuration drift, degraded cluster states, and revision desynchronization across geographically distributed clusters.
+- [x] Full CLI integration (`--fleet`, `--gitops`, `--fleet-telemetry`) with unified SARIF v2.1.0 code scanning, JSON audit telemetry, and Markdown briefing exports (`cmd/sentinel/fleet_runner.go`).
+- [x] Production sample fixtures (`fixtures/fleet-manifests.yaml`, `fixtures/fleet-telemetry.json`) and threat feed correlation with `CVE-2026-60114`.
+
+### Version 0.14.0 — Zero-Trust Microsegmentation & SPIFFE/SPIRE Workload Attestation (Planned)
+- [ ] Validate SPIFFE cryptographic X.509 SVID issuing authorities and mTLS certificate renewal windows across worker nodes.
+- [ ] Synthesize Cilium Network Policies enforcing cryptographically attested workload identities.
 
 ### Version 1.0.0 — Supply Chain Attestation & Workload Identity (Planned)
-- [ ] Multi-cluster fleet synchronization and federated OIDC token radar.
 - [ ] SPIFFE/SPIRE workload attestation and cryptographic mTLS certificate monitoring.
 - [ ] Software Bill of Materials (SBOM) ingestion for SPDX v3.0 / CycloneDX v1.6 and In-Toto provenance validation.
 - [ ] Hardware Security Module (HSM) PKCS#11 envelope encryption and KMS v2 key health checks.

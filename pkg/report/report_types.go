@@ -6,6 +6,7 @@ import (
 
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/attest"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/bench"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/fleet"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/gateway"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/intel"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/k8s"
@@ -44,6 +45,8 @@ type ReportOptions struct {
 	GatewaySummary          *gateway.GatewaySummary
 	AttestViolations        []attest.AttestationViolation
 	AttestSummary           *attest.AttestationSummary
+	FleetViolations         []fleet.FleetViolation
+	FleetSummary            *fleet.FleetSummary
 	FlakePath               string
 	K8sPath                 string
 	StoragePath             string
@@ -52,6 +55,8 @@ type ReportOptions struct {
 	GatewayPath             string
 	AttestPath              string
 	AttestTelemetryPath     string
+	FleetPath               string
+	FleetTelemetryPath      string
 	TargetFilter            string
 	Pretty                  bool
 }
