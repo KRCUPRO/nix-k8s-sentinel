@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.15.0] - 2026-10-15
+
+### Added
+- **Software Bill of Materials (SBOM) & In-Toto Supply Chain Attestation Engine** (`pkg/sbom/scanner.go`): Comprehensive supply chain verification engine for NixOS bare-metal host store paths, container images, and Kubernetes workload environments.
+- **Universal Multi-Format SBOM Parser** (`pkg/sbom/parser.go`): High-performance streaming parser supporting SPDX v3.0, SPDX v2.3, CycloneDX v1.6, CycloneDX v1.5, and Nix store closure JSON documents with defensive 15MB size ceiling and 10,000 package limit.
+- **In-Toto Statement & SLSA Level 3 Provenance Verifier** (`pkg/sbom/attest.go`): Cryptographic attestation inspector evaluating In-Toto statement envelopes (`_type: https://in-toto.io/Statement/v1`), matching cryptographic subject hashes (`sha256`) against build outputs, enforcing hermetic build sandboxing, requiring immutable pinned dependencies, and validating digital signatures.
+- **Automated Runtime SBOM Delta Reconciler** (`pkg/sbom/delta.go`): Differential engine reconciling declared build-time SBOM components against live cluster package state, detecting version drift (`DeltaVersionDrift`), package hash mismatch (`DeltaHashMismatch`), undeclared shadow container injections (`DeltaUndeclaredRuntime`), and unused dormant components (`DeltaMissingInRuntime`).
+- **Canonical Supply Chain Security Catalog** (`pkg/sbom/rules.go`): Suite of 12 authoritative canonical rules (`SBOM-CHAIN-001` through `SBOM-CHAIN-012`) covering missing SBOMs, unverified In-Toto envelopes, non-compliant SLSA levels (< Level 3), subject digest tampering (CVE-2026-71044), unpinned dependencies, non-hermetic build sandboxes, unknown licenses, and undeclared runtime shadow injections.
+- **Dedicated CLI SBOM Runner & Modularization** (`cmd/sentinel/sbom_runner.go`, `cmd/sentinel/k8s_runner.go`, `cmd/sentinel/policy_runner.go`): Extracted runner modules maintaining `cmd/sentinel/main.go` under 400 LOC (398 LOC) strictly adhering to the 300~500 LOC soft ceiling. Added `--sbom=<path>`, `--attestation=<path>`, `--intoto=<path>`, `--sbom-runtime=<path>`, and `--sbom-delta=<path>` CLI flags.
+- **Threat Feed Expansion** (`intel/cve-feed.json`): Added `CVE-2026-71044` (In-Toto Attestation Digest Desync & Untrusted Nix Store Dependency Injection, CVSS 9.6).
+- **Unified Exporter Integration**: SBOM findings, SLSA provenance ratings, and runtime deltas seamlessly exported to OASIS SARIF v2.1.0 (Section 11), structured JSON audit telemetry, and hourly Markdown threat briefings (Section 14).
+- **Production Fixtures**: Added realistic declarative fixtures (`fixtures/spdx-v3-sbom.json`, `fixtures/cyclonedx-v1.6-sbom.json`), In-Toto SLSA Level 3 attestation envelope (`fixtures/intoto-slsa-attestation.json`), and cluster runtime telemetry (`fixtures/sbom-runtime-state.json`).
+- **Comprehensive Unit Test Suites** (`pkg/sbom/sbom_test.go`, `pkg/report/sbom_report_test.go`): 100% test coverage across rules catalog, SPDX/CycloneDX/Nix parsing, In-Toto SLSA Level 3 verification, subject digest tampering detection, SBOM delta generation, SARIF/JSON/Briefing serialization, and defensive bounds checks.
+
+### Changed
+- Bumped engine release to `v0.15.0`.
+- Updated `SECURITY.md` establishing Software Bill of Materials & In-Toto Supply Chain Attestation security invariants (Invariant 17).
+- Updated `ROADMAP.md` marking Milestone M15 as completed and scheduling M16 (Hardware Security Module & PKCS#11 Envelope Encryption Pipeline).
+- Updated `scripts/ARCHITECTURE_MAP.md` documenting new SBOM modules, runners, and O(1) symbols.
+
+---
+
 ## [0.14.0] - 2026-10-15
 
 ### Added

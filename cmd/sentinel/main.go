@@ -13,16 +13,16 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/intel"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/k8s"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nix"
-	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/policy"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/probe"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/report"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/sbom"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/spiffe"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/storage"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/wireguard"
 )
 
 var (
-	version = "0.14.0"
+	version = "0.15.0"
 )
 
 func main() {
@@ -53,6 +53,11 @@ func main() {
 	spireShort := flag.String("spire", "", "Alias for --spiffe")
 	svidTelemetry := flag.String("svid-telemetry", "", "Path to runtime X.509 SVID telemetry JSON to inspect")
 	spiffePolicyOut := flag.String("spiffe-policy-out", "", "Output path or directory to write synthesized Cilium zero-trust microsegmentation policies")
+	sbomPath := flag.String("sbom", "", "Path to SPDX/CycloneDX SBOM manifest file or directory to audit")
+	attestFile := flag.String("attestation", "", "Path to In-Toto Statement & SLSA Provenance JSON to verify")
+	intotoShort := flag.String("intoto", "", "Alias for --attestation")
+	runtimePath := flag.String("sbom-runtime", "", "Path to cluster runtime package state JSON for SBOM delta audit")
+	deltaShort := flag.String("sbom-delta", "", "Alias for --sbom-runtime")
 	briefing := flag.Bool("briefing", false, "Generate automated Markdown threat intelligence briefing")
 	briefingDir := flag.String("briefing-dir", "intel/briefings", "Output directory for threat briefings")
 	briefingFile := flag.String("briefing-file", "", "Custom filename for threat briefing markdown")
@@ -67,37 +72,37 @@ func main() {
 	outShort := flag.String("o", "", "Shorthand for --output")
 	flag.Parse()
 
+	// Aliases resolution
 	if *cephPath == "" && *storageShort != "" {
 		*cephPath = *storageShort
 	}
-
 	if *wgPath == "" && *wireguardLong != "" {
 		*wgPath = *wireguardLong
 	}
-
 	if *cisPath == "" && *benchShort != "" {
 		*cisPath = *benchShort
 	}
 	if *cisPath == "" && *kubeBenchLong != "" {
 		*cisPath = *kubeBenchLong
 	}
-
 	if *gwPath == "" && *gatewayShort != "" {
 		*gwPath = *gatewayShort
 	}
-
 	if *attestTelemetry == "" && *attestQuote != "" {
 		*attestTelemetry = *attestQuote
 	}
-
 	if *fleetPath == "" && *gitopsShort != "" {
 		*fleetPath = *gitopsShort
 	}
-
 	if *spiffePath == "" && *spireShort != "" {
 		*spiffePath = *spireShort
 	}
-
+	if *attestFile == "" && *intotoShort != "" {
+		*attestFile = *intotoShort
+	}
+	if *runtimePath == "" && *deltaShort != "" {
+		*runtimePath = *deltaShort
+	}
 	if *outFile == "" && *outShort != "" {
 		*outFile = *outShort
 	}
@@ -152,114 +157,26 @@ func main() {
 	var fleetSummary *fleet.FleetSummary
 	var spiffeViolations []spiffe.SPIFFEViolation
 	var spiffeSummary *spiffe.SPIFFESummary
+	var sbomViolations []sbom.SBOMViolation
+	var sbomSummary *sbom.SBOMSummary
+	var sbomDelta []sbom.SBOMDeltaItem
 
-	// 1. Audit Nix Flake if --flake is provided
+	// 1. Audit Nix Flake
 	if *flakePath != "" {
-		logInfo("[+] Auditing Nix Flake Lockfile: %s\n", *flakePath)
-		lock, err := nix.ParseFlakeLockFile(*flakePath)
-		if err != nil {
-			logErr("[-] Failed to parse flake.lock: %v\n", err)
-			os.Exit(1)
-		}
-
-		deps, err := lock.ResolveDependencies(lock.Root)
-		if err != nil {
-			logErr("[-] Failed to resolve flake dependencies: %v\n", err)
-			os.Exit(1)
-		}
-
-		logInfo("[+] Resolved %d pinned flake dependencies.\n", len(deps))
-		matches, err := nix.ScanFlakeAgainstFeed(lock, feed)
-		if err != nil {
-			logErr("[-] Error scanning flake against feed: %v\n", err)
-			os.Exit(1)
-		}
-		flakeMatches = matches
-
-		if len(matches) == 0 {
-			logInfo("[+] Zero matching CVEs detected in flake.lock inputs.\n")
-		} else {
-			logInfo("[-] WARNING: %d vulnerable flake inputs identified!\n", len(matches))
-			for i, m := range matches {
-				logInfo("  [%d] %s (%s) - %s [CVSS: %.1f]\n", i+1, m.AdvisoryID, m.Severity, m.Title, m.CVSSScore)
-				logInfo("      Input: %s (Node: %s) | Rev: %s\n", m.DependencyName, m.NodeKey, m.InstalledRev)
-				logInfo("      Mitigation: %s\n", m.Mitigation)
-			}
-		}
+		flakeMatches = runFlakeAudit(*flakePath, feed, logInfo, logErr)
 	}
 
-	// 2. Audit Kubernetes Manifests if --k8s is provided
+	// 2. Audit Kubernetes Manifests
 	if *k8sPath != "" {
-		logInfo("[+] Auditing Kubernetes Manifests: %s\n", *k8sPath)
-		manifestScanner := k8s.NewManifestScanner(feed)
-
-		fileInfo, err := os.Stat(*k8sPath)
-		if err != nil {
-			logErr("[-] Failed to inspect manifest path: %v\n", err)
-			os.Exit(1)
-		}
-
-		if fileInfo.IsDir() {
-			k8sReport, err = manifestScanner.ScanDirectory(*k8sPath)
-		} else {
-			k8sReport, err = manifestScanner.ScanFile(*k8sPath)
-		}
-
-		if err != nil {
-			logErr("[-] Failed to audit Kubernetes manifest: %v\n", err)
-			os.Exit(1)
-		}
-
-		logInfo("[+] Scanned %d files across %d declarative resources.\n", k8sReport.TotalFiles, k8sReport.TotalResources)
-		if len(k8sReport.Violations) == 0 {
-			logInfo("[+] Zero security violations detected in Kubernetes manifests.\n")
-		} else {
-			logInfo("[-] WARNING: %d security violations identified!\n", len(k8sReport.Violations))
-			for i, v := range k8sReport.Violations {
-				cveTag := ""
-				if v.MatchedCVE != "" {
-					cveTag = fmt.Sprintf(" [%s]", v.MatchedCVE)
-				}
-				logInfo("  [%d] [%s] %s (%s)%s [CVSS: %.1f]\n", i+1, v.RuleID, v.Title, v.Severity, cveTag, v.CVSSScore)
-				logInfo("      Target: %s/%s (Namespace: %s)\n", v.ResourceKind, v.ResourceName, v.Namespace)
-				logInfo("      Details: %s\n", v.Description)
-				logInfo("      Remediation: %s\n", v.Remediation)
-			}
-		}
+		k8sReport = runK8sAudit(*k8sPath, feed, logInfo, logErr)
 	}
 
-	// 3. Synthesize Security Policies if --policy-out is specified
+	// 3. Synthesize Security Policies
 	if *policyOut != "" {
-		logInfo("[+] Synthesizing Declarative Security Policies (Engine: %s, Action: %s)...\n", *policyEngine, *enforceAction)
-		var violations []k8s.Violation
-		if k8sReport != nil {
-			violations = k8sReport.Violations
-		}
-
-		policyOpts := policy.DefaultSynthesisOptions()
-		policyOpts.EnforcementAction = *enforceAction
-		policyOpts.TargetEngines = []string{*policyEngine}
-
-		policySet, err := policy.SynthesizePolicies(feed, violations, policyOpts)
-		if err != nil {
-			logErr("[-] Failed to synthesize security policies: %v\n", err)
-			os.Exit(1)
-		}
-
-		written, err := policy.WritePoliciesToDir(policySet, *policyOut)
-		if err != nil {
-			logErr("[-] Failed to write security policies: %v\n", err)
-			os.Exit(1)
-		}
-
-		logInfo("[+] Policy Synthesis Complete (Total: %d Falco Rules, %d Gatekeeper Templates, %d Constraints)\n",
-			policySet.TotalFalcoRules, policySet.TotalOPAConstraintTemplates, policySet.TotalOPAConstraints)
-		for engine, p := range written {
-			logInfo("    -> [%s] Policy Exported: %s\n", engine, p)
-		}
+		runPolicySynthesis(*policyOut, *policyEngine, *enforceAction, feed, k8sReport, logInfo, logErr)
 	}
 
-	// 4. Run Bare-Metal eBPF Telemetry Probes if --probe is provided
+	// 4. Run Bare-Metal eBPF Telemetry Probes
 	if *probeFlag {
 		probeSnapshots = runProbeTelemetry(*probeNodes, *probeFixture, feed, logInfo, logErr)
 	}
@@ -274,7 +191,7 @@ func main() {
 		wireguardViolations, wireguardReconciliation = runWireGuardAudit(*wgPath, *wgTelemetry, feed, logInfo, logErr)
 	}
 
-	// 7. Audit CIS Kubernetes Benchmark if --cis is provided
+	// 7. Audit CIS Kubernetes Benchmark
 	if *cisPath != "" {
 		cisViolations, cisSummary = runCISAudit(*cisPath, feed, logInfo, logErr)
 		if *remediationOut != "" && len(cisViolations) > 0 {
@@ -290,27 +207,32 @@ func main() {
 		}
 	}
 
-	// 8. Audit Kubernetes Gateway API & EnvoyFilter if --gateway is provided
+	// 8. Audit Kubernetes Gateway API & EnvoyFilter
 	if *gwPath != "" {
 		gatewayViolations, gatewaySummary = runGatewayAudit(*gwPath, feed, logInfo, logErr)
 	}
 
-	// 9. Audit Confidential Computing & Measured Boot if --attest or --attest-telemetry is provided
+	// 9. Audit Confidential Computing & Measured Boot
 	if *attestPath != "" || *attestTelemetry != "" {
 		attestViolations, attestSummary = runAttestAudit(*attestPath, *attestTelemetry, feed, logInfo, logErr)
 	}
 
-	// 10. Audit Multi-Cluster Fleet Synchronization & OIDC Token Radar if --fleet or --fleet-telemetry is provided
+	// 10. Audit Multi-Cluster Fleet Synchronization & OIDC Token Radar
 	if *fleetPath != "" || *fleetTelemetry != "" {
 		fleetViolations, fleetSummary = runFleetAudit(*fleetPath, *fleetTelemetry, feed, logInfo, logErr)
 	}
 
-	// 11. Audit Zero-Trust Microsegmentation & SPIFFE/SPIRE Workload Attestation if --spiffe, --svid-telemetry, or --spiffe-policy-out is provided
+	// 11. Audit Zero-Trust Microsegmentation & SPIFFE/SPIRE Workload Attestation
 	if *spiffePath != "" || *svidTelemetry != "" || *spiffePolicyOut != "" {
 		spiffeViolations, spiffeSummary = runSPIFFEAudit(*spiffePath, *svidTelemetry, *spiffePolicyOut, feed, logInfo, logErr)
 	}
 
-	// 12. Generate Threat Briefing if --briefing is requested
+	// 12. Audit Software Bill of Materials (SBOM) & In-Toto Supply Chain Attestation
+	if *sbomPath != "" || *attestFile != "" || *runtimePath != "" {
+		sbomViolations, sbomSummary, sbomDelta = runSBOMAudit(*sbomPath, *attestFile, *runtimePath, feed, logInfo, logErr)
+	}
+
+	// 13. Generate Threat Briefing if --briefing is requested
 	if *briefing {
 		logInfo("[+] Synthesizing Threat Intelligence Briefing...\n")
 		briefingOpts := report.BriefingOptions{
@@ -333,6 +255,9 @@ func main() {
 			FleetSummary:            fleetSummary,
 			SPIFFEViolations:        spiffeViolations,
 			SPIFFESummary:           spiffeSummary,
+			SBOMViolations:          sbomViolations,
+			SBOMSummary:             sbomSummary,
+			SBOMDelta:               sbomDelta,
 			OutputDir:               *briefingDir,
 			CustomFilename:          *briefingFile,
 		}
@@ -361,7 +286,7 @@ func main() {
 		return
 	}
 
-	// 13. Handle Structured Formats (SARIF / JSON)
+	// 14. Handle Structured Formats (SARIF / JSON)
 	if *format == "sarif" || *format == "json" {
 		reportOpts := report.ReportOptions{
 			Version:                 version,
@@ -383,6 +308,9 @@ func main() {
 			FleetSummary:            fleetSummary,
 			SPIFFEViolations:        spiffeViolations,
 			SPIFFESummary:           spiffeSummary,
+			SBOMViolations:          sbomViolations,
+			SBOMSummary:             sbomSummary,
+			SBOMDelta:               sbomDelta,
 			FlakePath:               *flakePath,
 			K8sPath:                 *k8sPath,
 			StoragePath:             *cephPath,
@@ -395,6 +323,9 @@ func main() {
 			FleetTelemetryPath:      *fleetTelemetry,
 			SPIFFEPath:              *spiffePath,
 			SPIFFETelemetryPath:     *svidTelemetry,
+			SBOMPath:                *sbomPath,
+			SBOMAttestPath:          *attestFile,
+			SBOMRuntimePath:         *runtimePath,
 			TargetFilter:            *targetFilter,
 			Pretty:                  true,
 		}
@@ -448,8 +379,8 @@ func main() {
 		}
 	}
 
-	// 14. Default feed summary (when no specific audit target was requested)
-	if *flakePath == "" && *k8sPath == "" && *policyOut == "" && !*probeFlag && *cephPath == "" && *cephTelemetry == "" && *wgPath == "" && *wgTelemetry == "" && *cisPath == "" && *gwPath == "" && *attestPath == "" && *attestTelemetry == "" && *fleetPath == "" && *fleetTelemetry == "" && *spiffePath == "" && *svidTelemetry == "" && *spiffePolicyOut == "" {
+	// 15. Default feed summary (when no specific audit target was requested)
+	if *flakePath == "" && *k8sPath == "" && *policyOut == "" && !*probeFlag && *cephPath == "" && *cephTelemetry == "" && *wgPath == "" && *wgTelemetry == "" && *cisPath == "" && *gwPath == "" && *attestPath == "" && *attestTelemetry == "" && *fleetPath == "" && *fleetTelemetry == "" && *spiffePath == "" && *svidTelemetry == "" && *spiffePolicyOut == "" && *sbomPath == "" && *attestFile == "" && *runtimePath == "" {
 		items := feed.Items
 		if *targetFilter != "" {
 			items = feed.FilterByTarget(*targetFilter)

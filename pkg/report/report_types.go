@@ -12,6 +12,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/k8s"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nix"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/probe"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/sbom"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/spiffe"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/storage"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/wireguard"
@@ -50,6 +51,9 @@ type ReportOptions struct {
 	FleetSummary            *fleet.FleetSummary
 	SPIFFEViolations        []spiffe.SPIFFEViolation
 	SPIFFESummary           *spiffe.SPIFFESummary
+	SBOMViolations          []sbom.SBOMViolation
+	SBOMSummary             *sbom.SBOMSummary
+	SBOMDelta               []sbom.SBOMDeltaItem
 	FlakePath               string
 	K8sPath                 string
 	StoragePath             string
@@ -62,6 +66,9 @@ type ReportOptions struct {
 	FleetTelemetryPath      string
 	SPIFFEPath              string
 	SPIFFETelemetryPath     string
+	SBOMPath                string
+	SBOMAttestPath          string
+	SBOMRuntimePath         string
 	TargetFilter            string
 	Pretty                  bool
 }

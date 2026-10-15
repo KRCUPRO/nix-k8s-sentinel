@@ -765,8 +765,66 @@ func BuildSARIFReport(opts ReportOptions) (*SARIFLog, error) {
 		}
 	}
 
-	// 11. Process Standalone Feed Advisories (if no specific audit targets yielded findings)
-	if (opts.K8sReport == nil || len(opts.K8sReport.Violations) == 0) && len(opts.FlakeMatches) == 0 && len(opts.ProbeEvents) == 0 && len(opts.StorageViolations) == 0 && len(opts.WireGuardViolations) == 0 && len(opts.CISViolations) == 0 && len(opts.GatewayViolations) == 0 && len(opts.AttestViolations) == 0 && len(opts.FleetViolations) == 0 && len(opts.SPIFFEViolations) == 0 && opts.Feed != nil {
+	// 11. Process SBOM & In-Toto Supply Chain Attestation Violations
+	if len(opts.SBOMViolations) > 0 {
+		for _, sbv := range opts.SBOMViolations {
+			tags := []string{"security", "sbom", "supply-chain", "slsa"}
+			if sbv.MatchedCVE != "" {
+				tags = append(tags, sbv.MatchedCVE)
+			}
+			ruleIdx := getOrCreateRule(sbv.RuleID, sbv.Title, sbv.Description, sbv.Remediation, sbv.Severity, sbv.CVSSScore, tags)
+			level := SeverityToSARIFLevel(string(sbv.Severity), sbv.CVSSScore)
+
+			locURI := sbv.ResourceURI
+			if locURI == "" {
+				locURI = opts.SBOMPath
+			}
+			if locURI == "" {
+				locURI = "sbom/bom.json"
+			}
+			line := sbv.LineNumber
+			if line <= 0 {
+				line = 1
+			}
+
+			cveTag := ""
+			if sbv.MatchedCVE != "" {
+				cveTag = fmt.Sprintf(" [%s]", sbv.MatchedCVE)
+			}
+			resMsg := fmt.Sprintf("[%s] %s%s: %s (Remediation: %s)", sbv.RuleID, sbv.Title, cveTag, sbv.Description, sbv.Remediation)
+
+			results = append(results, SARIFResult{
+				RuleID:    sbv.RuleID,
+				RuleIndex: ruleIdx,
+				Level:     level,
+				Message:   SARIFMessage{Text: resMsg},
+				Locations: []SARIFLocation{
+					{
+						PhysicalLocation: &PhysicalLocation{
+							ArtifactLocation: ArtifactLocation{
+								URI:       locURI,
+								URIBaseID: "%SRCROOT%",
+							},
+							Region: &Region{
+								StartLine:   line,
+								StartColumn: 1,
+							},
+						},
+						LogicalLocations: []LogicalLocation{
+							{
+								Name:               sbv.RuleID,
+								Kind:               "SBOMComponent",
+								FullyQualifiedName: fmt.Sprintf("sbom/%s", sbv.PackageName),
+							},
+						},
+					},
+				},
+			})
+		}
+	}
+
+	// 12. Process Standalone Feed Advisories (if no specific audit targets yielded findings)
+	if (opts.K8sReport == nil || len(opts.K8sReport.Violations) == 0) && len(opts.FlakeMatches) == 0 && len(opts.ProbeEvents) == 0 && len(opts.StorageViolations) == 0 && len(opts.WireGuardViolations) == 0 && len(opts.CISViolations) == 0 && len(opts.GatewayViolations) == 0 && len(opts.AttestViolations) == 0 && len(opts.FleetViolations) == 0 && len(opts.SPIFFEViolations) == 0 && len(opts.SBOMViolations) == 0 && opts.Feed != nil {
 		feedItems := opts.Feed.Items
 		if opts.TargetFilter != "" {
 			feedItems = opts.Feed.FilterByTarget(opts.TargetFilter)
