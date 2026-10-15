@@ -19,7 +19,7 @@
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](../../LICENSE)
 [![Go Report Card](https://goreportcard.com/badge/github.com/KRCUPRO/nix-k8s-sentinel)](https://goreportcard.com/report/github.com/KRCUPRO/nix-k8s-sentinel)
-[![Version](https://img.shields.io/badge/Release-v0.7.0-emerald.svg)](https://github.com/KRCUPRO/nix-k8s-sentinel/releases)
+[![Version](https://img.shields.io/badge/Release-v0.13.0-emerald.svg)](https://github.com/KRCUPRO/nix-k8s-sentinel/releases)
 [![Architecture](https://img.shields.io/badge/Architecture-Bare--Metal_NixOS_+_K8s-8b5cf6.svg)](#-architecture-overview)
 [![Security](https://img.shields.io/badge/Security-Declarative_Audit-38bdf8.svg)](../../SECURITY.md)
 
@@ -31,13 +31,14 @@
 
 `nix-k8s-sentinel`은 베어메탈 NixOS 클러스터 및 Kubernetes 인프라에 최적화된 고성능 선언적 취약점 스캐너이자 지속적 위협 인텔리전스 동기화 엔진입니다.
 
-배포 후 컨테이너 레이어를 수동적으로 검사하는 기존 런타임 스캐너와 달리, `nix-k8s-sentinel`은 선언적 구성 명세(NixOS Flakes, Kubernetes CNI 정책, Ingress 컨트롤러)를 실시간 정규화된 CVSS 위협 피드와 대조하여 워크로드가 스케줄링되기 전에 사전 대응할 수 있도록 지원합니다.
+배포 후 컨테이너 레이어를 수동적으로 검사하는 기존 런타임 스캐너와 달리, `nix-k8s-sentinel`은 선언적 구성 명세(NixOS Flakes, Kubernetes CNI 정책, Ingress 컨트롤러, Gateway API, Rook Ceph, WireGuard, CIS 벤치마크, 기밀 컴퓨팅 및 멀티 클러스터 GitOps 플릿)를 실시간 정규화된 CVSS 위협 피드와 대조하여 워크로드가 스케줄링되기 전에 사전 대응할 수 있도록 지원합니다.
 
 ---
 
 ## 🏛️ 핵심 역량
 
 - **🔍 선언적 인프라 감사**: NixOS Flake 입력 락, Kubernetes 매니페스트 명세, CNI 네트워크 정책에 대한 패턴 매칭 및 의존성 추적.
+- **🛰️ 멀티 클러스터 플릿 동기화 & OIDC 토큰 레이더**: 지리적으로 분산된 다중 Kubernetes 클러스터 전반의 RBAC 와일드카드(`*`), `bind`/`escalate` 권한 상승, `system:authenticated` 광범위 바인딩 및 비인가 시크릿 접근 차단. 취약한 OIDC 알고리즘(`none`, `HS256`) 및 24시간 초과 토큰 탐지. ArgoCD/Flux GitOps 선언의 자동 자가 치유(`selfHeal`, `prune`), 부동 브랜치, 와일드카드 대상 클러스터 감사 및 실시간 동기화 드리프트 포렌식 탐지(CVE-2026-60114).
 - **🌐 Kubernetes Ingress 보안 검증**: 커스텀 스니펫 인젝션(CVE-2023-5044 / CVE-2026-21801), URI rewrite 캡처 그룹 불일치, 경로 탐색(`../`), 평문 HTTP 비인가 허용, 와일드카드 CORS 자격증명 노출 자동 탐지.
 - **🔌 CNI 네트워크 정책 검증**: 표준 Kubernetes NetworkPolicy, Calico GlobalNetworkPolicy, CiliumNetworkPolicy 전수 감사. 기본 거부(Default-Deny) 제로 트러스트 격리, 0.0.0.0/0 무제한 외부 송신 데이터 유출, 민감 인프라 포트(etcd, kubelet) 노출, L7 와일드카드 우회 차단.
 - **🔬 베어메탈 eBPF 텔레메트리 프로브**: 다중 노드 베어메탈 클러스터 전반에서 커널 수준 소켓(`connect`), 시스템 콜(`execve`, `ptrace`, `bpf`), 스토리지 무결성 감시 및 이상 징후 자동 탐지.

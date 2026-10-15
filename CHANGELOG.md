@@ -5,6 +5,38 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.13.0] - 2026-10-15
+
+### Added
+- **Multi-Cluster Fleet Synchronization & OIDC Token Radar Engine** (`pkg/fleet/scanner.go`): Native audit engine designed for multi-tenant, geographically distributed Kubernetes clusters. Coordinates static manifest audits and runtime telemetry reconciliation across cluster fleets.
+- **Multi-Tenant RBAC & Federated OIDC Identity Auditor** (`pkg/fleet/rbac_oidc.go`): Deep security inspector for Kubernetes RBAC resources (`ClusterRole`, `Role`, `ClusterRoleBinding`, `RoleBinding`) and federated OIDC authentication tokens:
+  - Intercepts wildcard verbs, API groups, and resources (`*`) granting uncontained cluster privileges (`FLEET-RBAC-001`).
+  - Detects dangerous privilege escalation permissions (`bind`, `escalate`) enabling non-admin service accounts to grant themselves higher roles (`FLEET-RBAC-002`).
+  - Intercepts broad group bindings where `cluster-admin` is bound to `system:authenticated`, `system:unauthenticated`, or `system:anonymous` (`FLEET-RBAC-003`, mapped to CVE-2026-60114).
+  - Detects unrestricted user, group, and service account impersonation (`impersonate`) lacking explicit `resourceNames` whitelists (`FLEET-RBAC-004`).
+  - Blocks cluster-wide reading of `secrets` across all namespaces without tenant partition boundaries (`FLEET-RBAC-005`).
+  - Audits federated OIDC identity tokens, flagging insecure algorithms (`none`, symmetric HMAC `HS256`), excessive lifetimes (> 24 hours), missing audience/issuer claims, and stale signing keys (> 90 days) (`FLEET-OIDC-001` through `FLEET-OIDC-004`).
+- **Declarative GitOps Drift & Reconciler Engine** (`pkg/fleet/gitops.go`): Dedicated auditor for ArgoCD (`Application`, `ApplicationSet`) and Flux (`Kustomization`, `GitRepository`, `OCIRepository`, `HelmRelease`) resources:
+  - Detects automated self-healing disabled (`syncPolicy.automated.selfHeal: false` or `prune: false`), permitting silent configuration drift (`FLEET-GITOPS-001`).
+  - Detects unpinned GitOps source revisions tracking floating branches (`HEAD`, `main`, `master`) without immutable commit hashes or signed tags (`FLEET-GITOPS-002`).
+  - Identifies unauthenticated Git/OCI repositories lacking Kubernetes Secret references (`FLEET-GITOPS-003`).
+  - Flags wildcard destination cluster dispatch (`server: "*"`) permitting workload execution across untrusted fleet members (`FLEET-GITOPS-004`).
+  - Identifies runtime cluster state desynchronization, revision divergences, and degraded application health across geographically distributed fleet members (`FLEET-DRIFT-001`, mapped to CVE-2026-60114).
+- **Canonical Fleet & OIDC Threat Catalog** (`pkg/fleet/rules.go`): Authoritative suite of 14 canonical rules with CVSS v3.1 scores, detailed technical impact analysis, and remediation playbooks.
+- **Dedicated CLI Fleet Runner & Modularization** (`cmd/sentinel/fleet_runner.go`): High-performance runner keeping `cmd/sentinel/main.go` under 400 LOC and strictly adhering to the 300~500 LOC soft ceiling. Adds `--fleet=<path>`, `--gitops=<path>`, and `--fleet-telemetry=<path>` flags.
+- **Threat Feed Expansion** (`intel/cve-feed.json`): Added `CVE-2026-60114` (Multi-Cluster GitOps Reconciliation Drift & OIDC Token Replay in ArgoCD / Kubernetes RBAC, CVSS 9.4).
+- **Unified Exporter Integration**: Fleet findings, cluster synchronization summaries, and OIDC token audits seamlessly exported to OASIS SARIF v2.1.0, structured JSON audit telemetry, and hourly Markdown threat briefings.
+- **Production Fixtures**: Added realistic declarative fixture (`fixtures/fleet-manifests.yaml`) and runtime multi-cluster telemetry payload (`fixtures/fleet-telemetry.json`).
+- **Comprehensive Unit Test Suites** (`pkg/fleet/fleet_test.go`, `pkg/report/fleet_report_test.go`): 100% test coverage for rule catalog lookups, RBAC wildcard detection, broad subject group bindings, OIDC token algorithm/TTL checks, GitOps drift detection, report serialization, and defensive bounds checks.
+
+### Changed
+- Bumped engine release to `v0.13.0`.
+- Updated `SECURITY.md` establishing Multi-Cluster Fleet Synchronization & OIDC Federated Token security invariants.
+- Updated `ROADMAP.md` marking Milestone M13 as completed and scheduling M14 (Zero-Trust Microsegmentation & SPIFFE/SPIRE Workload Attestation).
+- Updated `scripts/ARCHITECTURE_MAP.md` documenting new fleet modules and O(1) symbols.
+
+---
+
 ## [0.12.0] - 2026-10-15
 
 ### Added

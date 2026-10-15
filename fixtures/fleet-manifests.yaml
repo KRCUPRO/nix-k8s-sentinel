@@ -1,0 +1,103 @@
+# Production-grade multi-cluster fleet manifests fixture
+# Demonstrating compliant and vulnerable RBAC and GitOps declarations
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: fleet-wildcard-operator
+rules:
+- apiGroups: ["*"]
+  resources: ["*"]
+  verbs: ["*"]
+- apiGroups: ["rbac.authorization.k8s.io"]
+  resources: ["clusterroles", "clusterrolebindings"]
+  verbs: ["bind", "escalate"]
+- apiGroups: [""]
+  resources: ["users", "groups"]
+  verbs: ["impersonate"]
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: fleet-broad-admin-binding
+subjects:
+- kind: Group
+  name: system:authenticated
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: cluster-admin
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: edge-api-gateway
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/example-org/edge-services.git
+    targetRevision: main
+    path: k8s/production
+  destination:
+    server: "*"
+    namespace: production
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: false
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: platform-observability
+  namespace: flux-system
+spec:
+  interval: 10m0s
+  path: ./clusters/production
+  prune: false
+  sourceRef:
+    kind: GitRepository
+    name: platform-git
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: platform-git
+  namespace: flux-system
+spec:
+  interval: 5m0s
+  url: https://github.com/example-org/platform-infra.git
+  ref:
+    branch: main
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: app-developer-scoped
+  namespace: tenant-finance
+rules:
+- apiGroups: ["apps"]
+  resources: ["deployments", "statefulsets"]
+  verbs: ["get", "list", "watch", "update"]
+- apiGroups: [""]
+  resources: ["pods", "services", "configmaps"]
+  verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: app-developer-binding
+  namespace: tenant-finance
+subjects:
+- kind: User
+  name: dev-finance-lead
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: app-developer-scoped
+  apiGroup: rbac.authorization.k8s.io

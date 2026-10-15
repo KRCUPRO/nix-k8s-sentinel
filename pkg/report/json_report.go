@@ -9,6 +9,7 @@ import (
 
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/attest"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/bench"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/fleet"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/gateway"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/intel"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/k8s"
@@ -40,6 +41,8 @@ type JSONAuditReport struct {
 	GatewaySummary          *gateway.GatewaySummary         `json:"gateway_summary,omitempty"`
 	AttestViolations        []attest.AttestationViolation   `json:"attest_violations,omitempty"`
 	AttestSummary           *attest.AttestationSummary      `json:"attest_summary,omitempty"`
+	FleetViolations         []fleet.FleetViolation          `json:"fleet_violations,omitempty"`
+	FleetSummary            *fleet.FleetSummary             `json:"fleet_summary,omitempty"`
 }
 
 // BuildJSONReport compiles the consolidated JSON audit report from provided audit data.
@@ -74,8 +77,14 @@ func BuildJSONReport(opts ReportOptions) (*JSONAuditReport, error) {
 	if opts.AttestTelemetryPath != "" {
 		scanned = append(scanned, opts.AttestTelemetryPath)
 	}
+	if opts.FleetPath != "" {
+		scanned = append(scanned, opts.FleetPath)
+	}
+	if opts.FleetTelemetryPath != "" {
+		scanned = append(scanned, opts.FleetTelemetryPath)
+	}
 
-	telemetry := ComputeTelemetryAttest(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations, opts.GatewayViolations, opts.AttestViolations)
+	telemetry := ComputeTelemetryFleet(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations, opts.GatewayViolations, opts.AttestViolations, opts.FleetViolations)
 
 	var advisories []intel.ThreatItem
 	if opts.Feed != nil {
@@ -107,6 +116,8 @@ func BuildJSONReport(opts ReportOptions) (*JSONAuditReport, error) {
 		GatewaySummary:          opts.GatewaySummary,
 		AttestViolations:        opts.AttestViolations,
 		AttestSummary:           opts.AttestSummary,
+		FleetViolations:         opts.FleetViolations,
+		FleetSummary:            opts.FleetSummary,
 	}
 
 	return rep, nil
