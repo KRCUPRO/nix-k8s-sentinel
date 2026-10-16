@@ -1012,8 +1012,69 @@ func BuildSARIFReport(opts ReportOptions) (*SARIFLog, error) {
 		}
 	}
 
-	// 15. Process Standalone Feed Advisories (if no specific audit targets yielded findings)
-	if (opts.K8sReport == nil || len(opts.K8sReport.Violations) == 0) && len(opts.FlakeMatches) == 0 && len(opts.ProbeEvents) == 0 && len(opts.StorageViolations) == 0 && len(opts.WireGuardViolations) == 0 && len(opts.CISViolations) == 0 && len(opts.GatewayViolations) == 0 && len(opts.AttestViolations) == 0 && len(opts.FleetViolations) == 0 && len(opts.SPIFFEViolations) == 0 && len(opts.SBOMViolations) == 0 && len(opts.HSMViolations) == 0 && len(opts.BPFViolations) == 0 && len(opts.PQCViolations) == 0 && opts.Feed != nil {
+	// 15. Process Ephemeral MicroVM Sandbox & Honeypot Detonation Violations
+	if len(opts.SandboxViolations) > 0 {
+		for _, sv := range opts.SandboxViolations {
+			tags := []string{"security", "microvm", "sandbox", "honeypot", "firecracker"}
+			if sv.MatchedCVE != "" {
+				tags = append(tags, sv.MatchedCVE)
+			}
+			ruleIdx := getOrCreateRule(sv.RuleID, sv.Title, sv.Description, sv.Remediation, intel.Severity(sv.Severity), sv.CVSSScore, tags)
+			level := SeverityToSARIFLevel(sv.Severity, sv.CVSSScore)
+
+			locURI := opts.SandboxPath
+			if locURI == "" {
+				locURI = opts.SandboxTelemetryPath
+			}
+			if locURI == "" {
+				locURI = "sandbox/microvm.nix"
+			}
+			locURI = filepath.ToSlash(locURI)
+
+			line := sv.LineNumber
+			if line <= 0 {
+				line = 1
+			}
+
+			cveTag := ""
+			if sv.MatchedCVE != "" {
+				cveTag = fmt.Sprintf(" [%s]", sv.MatchedCVE)
+			}
+			resMsg := fmt.Sprintf("[%s]%s %s: %s (Target: %s, Remediation: %s)",
+				sv.RuleID, cveTag, sv.Title, sv.Description, sv.Target, sv.Remediation)
+
+			results = append(results, SARIFResult{
+				RuleID:    sv.RuleID,
+				RuleIndex: ruleIdx,
+				Level:     level,
+				Message:   SARIFMessage{Text: resMsg},
+				Locations: []SARIFLocation{
+					{
+						PhysicalLocation: &PhysicalLocation{
+							ArtifactLocation: ArtifactLocation{
+								URI:       locURI,
+								URIBaseID: "%SRCROOT%",
+							},
+							Region: &Region{
+								StartLine:   line,
+								StartColumn: 1,
+							},
+						},
+						LogicalLocations: []LogicalLocation{
+							{
+								Name:               sv.RuleID,
+								Kind:               "MicroVMSandboxRule",
+								FullyQualifiedName: fmt.Sprintf("sandbox/%s", sv.RuleID),
+							},
+						},
+					},
+				},
+			})
+		}
+	}
+
+	// 16. Process Standalone Feed Advisories (if no specific audit targets yielded findings)
+	if (opts.K8sReport == nil || len(opts.K8sReport.Violations) == 0) && len(opts.FlakeMatches) == 0 && len(opts.ProbeEvents) == 0 && len(opts.StorageViolations) == 0 && len(opts.WireGuardViolations) == 0 && len(opts.CISViolations) == 0 && len(opts.GatewayViolations) == 0 && len(opts.AttestViolations) == 0 && len(opts.FleetViolations) == 0 && len(opts.SPIFFEViolations) == 0 && len(opts.SBOMViolations) == 0 && len(opts.HSMViolations) == 0 && len(opts.BPFViolations) == 0 && len(opts.PQCViolations) == 0 && len(opts.SandboxViolations) == 0 && opts.Feed != nil {
 		feedItems := opts.Feed.Items
 		if opts.TargetFilter != "" {
 			feedItems = opts.Feed.FilterByTarget(opts.TargetFilter)

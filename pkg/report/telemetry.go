@@ -15,6 +15,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/k8s"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nix"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/pqc"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/sandbox"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/sbom"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/spiffe"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/storage"
@@ -45,6 +46,7 @@ type TelemetrySummary struct {
 	TotalHSMViolations        int            `json:"total_hsm_violations"`
 	TotalBPFViolations        int            `json:"total_bpf_violations"`
 	TotalPQCViolations        int            `json:"total_pqc_violations"`
+	TotalSandboxViolations    int            `json:"total_sandbox_violations"`
 }
 
 // ComputeTelemetry aggregates CVSS metrics from the threat feed, K8s violations, and Nix flake matches.
@@ -104,6 +106,11 @@ func ComputeTelemetryBPF(feed *intel.Feed, k8sReport *k8s.ManifestAuditReport, f
 
 // ComputeTelemetryPQC aggregates CVSS metrics across all domains including Post-Quantum Cryptography & CNSA 2.0 violations.
 func ComputeTelemetryPQC(feed *intel.Feed, k8sReport *k8s.ManifestAuditReport, flakeMatches []nix.FlakeVulnerabilityMatch, storageViolations []storage.StorageViolation, wireguardViolations []wireguard.WireGuardViolation, cisViolations []bench.CISViolation, gatewayViolations []gateway.GatewayViolation, attestViolations []attest.AttestationViolation, fleetViolations []fleet.FleetViolation, spiffeViolations []spiffe.SPIFFEViolation, sbomViolations []sbom.SBOMViolation, hsmViolations []hsm.HSMViolation, bpfViolations []bpf.BPFViolation, pqcViolations []pqc.PQCViolation) TelemetrySummary {
+	return ComputeTelemetrySandbox(feed, k8sReport, flakeMatches, storageViolations, wireguardViolations, cisViolations, gatewayViolations, attestViolations, fleetViolations, spiffeViolations, sbomViolations, hsmViolations, bpfViolations, pqcViolations, nil)
+}
+
+// ComputeTelemetrySandbox aggregates CVSS metrics across all domains including Ephemeral MicroVM Sandbox & Honeypot violations.
+func ComputeTelemetrySandbox(feed *intel.Feed, k8sReport *k8s.ManifestAuditReport, flakeMatches []nix.FlakeVulnerabilityMatch, storageViolations []storage.StorageViolation, wireguardViolations []wireguard.WireGuardViolation, cisViolations []bench.CISViolation, gatewayViolations []gateway.GatewayViolation, attestViolations []attest.AttestationViolation, fleetViolations []fleet.FleetViolation, spiffeViolations []spiffe.SPIFFEViolation, sbomViolations []sbom.SBOMViolation, hsmViolations []hsm.HSMViolation, bpfViolations []bpf.BPFViolation, pqcViolations []pqc.PQCViolation, sandboxViolations []sandbox.SandboxViolation) TelemetrySummary {
 	summary := TelemetrySummary{
 		TargetDistribution:    make(map[string]int),
 		ComponentDistribution: make(map[string]int),
@@ -203,6 +210,10 @@ func ComputeTelemetryPQC(feed *intel.Feed, k8sReport *k8s.ManifestAuditReport, f
 
 	if len(pqcViolations) > 0 {
 		summary.TotalPQCViolations = len(pqcViolations)
+	}
+
+	if len(sandboxViolations) > 0 {
+		summary.TotalSandboxViolations = len(sandboxViolations)
 	}
 
 	return summary

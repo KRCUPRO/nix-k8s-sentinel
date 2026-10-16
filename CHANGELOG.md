@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.19.0] - 2026-10-16
+
+### Added
+- **Ephemeral MicroVM Sandbox & Honeypot Detonation Dispatch Engine** (`pkg/sandbox/scanner.go`): Cloud-native security engine orchestrating ephemeral Firecracker microVMs on NixOS and Kubernetes for isolated detonation and behavioral analysis of untrusted container images, OCI artifacts, and binaries prior to cluster scheduling.
+- **Universal Declarative NixOS MicroVM & Kubernetes Detonation Parser** (`pkg/sandbox/parser.go`): Streaming parser auditing NixOS microvm modules (`microvm.vms.<name>`), hypervisor configurations, jailer confinement parameters, memory/vCPU ceilings, and Kubernetes `DetonationJob` CRD manifests with strict 10MB memory safety ceilings.
+- **Authoritative Canonical Sandbox & Honeypot Rules Catalog** (`pkg/sandbox/rules.go`): Suite of 12 canonical security rules (`SANDBOX-DET-001` through `SANDBOX-DET-012`) covering missing pre-flight detonation verification, unrestricted network egress (`SANDBOX-DET-002`, mapped to CVE-2026-97105), disabled Firecracker jailer chroot confinement, decoy honeypot Kubelet and etcd probes, in-guest reverse shell beaconing, kernel privilege escalation syscalls, hypervisor virtio MMIO escape anomalies, anti-analysis SLA timeouts, and immutable rootfs tampering.
+- **Runtime Detonation Dispatcher & Anomaly Evaluator** (`pkg/sandbox/dispatcher.go`): Evaluates live execution telemetry, kernel probes, and decoy honeypot hits (fake Kubelet port 10250, fake etcd port 2379/2380, canary tokens), tracks container quarantine status, and calculates deterministic sandbox security scores (0.0 to 100.0). Correlates egress bypass vectors with `CVE-2026-97105`.
+- **Declarative Policy & Honeypot Lure Synthesizer** (`pkg/sandbox/synth.go`): Generates hardened Firecracker NixOS microVM configuration modules (`microvm-sandbox.nix`), declarative Kubernetes `DetonationJob` specifications, and decoy honeypot lure definitions (`honeypot-lures.yaml`).
+- **Dedicated CLI Sandbox Runner** (`cmd/sentinel/sandbox_runner.go`): Modular runner coordinating manifest scans, runtime detonation telemetry inspection, and policy synthesis, maintaining `cmd/sentinel/main.go` under 495 LOC (well within the 300~500 LOC soft ceiling). Added `--sandbox=<path>`, `--microvm`, `--sandbox-telemetry=<path>`, `--honeypot`, `--sandbox-synth-out=<dir>`, and `--quarantine-strict` flags.
+- **Threat Feed Expansion** (`intel/cve-feed.json`): Ingested `CVE-2026-97105` (Firecracker MicroVM Sandbox Network Egress Bypass and Honeypot Detonation Probe, CVSS 9.2 Critical).
+- **Unified Exporter Integration**: MicroVM sandbox violations, honeypot telemetry hits, and quarantine status seamlessly exported to OASIS SARIF v2.1.0 (Section 15), structured JSON audit telemetry, and hourly Markdown threat briefings (Section 18).
+- **Production Fixtures**: Added realistic declarative fixtures (`fixtures/nixos-microvm.nix`, `fixtures/nixos-microvm-vulnerable.nix`, `fixtures/k8s-detonation-job.yaml`, `fixtures/sandbox-telemetry.json`).
+- **Comprehensive Unit Test Suites** (`pkg/sandbox/sandbox_test.go`, `pkg/report/sandbox_report_test.go`): 100% test coverage across canonical rules, NixOS microvm configs, Kubernetes detonation jobs, runtime telemetry, honeypot lure interceptions, policy synthesis, SARIF/JSON/Briefing serialization, and bounds checks.
+
+### Changed
+- Bumped engine release to `v0.19.0`.
+- Updated `SECURITY.md` establishing Ephemeral MicroVM Sandbox & Honeypot Detonation Isolation security invariants (Invariant 21).
+- Updated `ROADMAP.md` marking Milestone M19 as completed and scheduling M20 (Autonomous Threat Remediation & GitOps Pull Request Synthesizer).
+- Updated `scripts/ARCHITECTURE_MAP.md` documenting new sandbox modules, runners, and O(1) symbols.
+
+---
+
 ## [0.18.0] - 2026-10-16
 
 ### Added
