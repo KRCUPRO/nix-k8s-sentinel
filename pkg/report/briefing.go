@@ -12,6 +12,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/bench"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/fleet"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/gateway"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/hsm"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/intel"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/k8s"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nix"
@@ -48,6 +49,8 @@ type BriefingOptions struct {
 	SBOMViolations          []sbom.SBOMViolation
 	SBOMSummary             *sbom.SBOMSummary
 	SBOMDelta               []sbom.SBOMDeltaItem
+	HSMViolations           []hsm.HSMViolation
+	HSMSummary              *hsm.HSMSummary
 	OutputDir               string
 	CustomFilename          string
 }
@@ -473,7 +476,38 @@ func GenerateBriefing(opts BriefingOptions) (*BriefingReport, error) {
 		buf.WriteString("---\n\n")
 	}
 
-	// 15. Action Items Checklist
+	// 15. Hardware Security Module (HSM) & PKCS#11 Envelope Encryption Posture
+	if opts.HSMSummary != nil || len(opts.HSMViolations) > 0 {
+		buf.WriteString("## 🔐 Hardware Security Module (HSM) & PKCS#11 Envelope Encryption\n\n")
+		if opts.HSMSummary != nil {
+			sum := opts.HSMSummary
+			buf.WriteString(fmt.Sprintf("**Compliance Score:** `%.1f%%` | **Configs Scanned:** %d | **Keys Audited:** %d | **Status:** `%s`\n",
+				sum.ComplianceScore, sum.TotalConfigsScanned, sum.TotalKeysAudited, sum.AuditStatus))
+			buf.WriteString(fmt.Sprintf("**Severity Breakdown:** %d Critical | %d High | %d Medium | %d Low\n\n",
+				sum.CriticalCount, sum.HighCount, sum.MediumCount, sum.LowCount))
+		}
+		if len(opts.HSMViolations) > 0 {
+			buf.WriteString(fmt.Sprintf("⚠️ **%d HSM, PKCS#11, and KMS v2 envelope encryption violations identified:**\n\n", len(opts.HSMViolations)))
+			buf.WriteString("| Rule ID | Provider / Resource | Severity | CVSS | Finding & Threat Impact | Remediation Action |\n")
+			buf.WriteString("| :--- | :--- | :---: | :---: | :--- | :--- |\n")
+			for _, hv := range opts.HSMViolations {
+				cveTag := ""
+				if hv.MatchedCVE != "" {
+					cveTag = fmt.Sprintf(" (`%s`)", hv.MatchedCVE)
+				}
+				targetTag := hv.ProviderName
+				if targetTag == "" {
+					targetTag = filepath.Base(hv.ResourceURI)
+				}
+				buf.WriteString(fmt.Sprintf("| `%s` | `%s` | **%s** | %.1f | %s%s | %s |\n",
+					hv.RuleID, targetTag, hv.Severity, hv.CVSSScore, hv.Description, cveTag, hv.Remediation))
+			}
+			buf.WriteString("\n")
+		}
+		buf.WriteString("---\n\n")
+	}
+
+	// 16. Action Items Checklist
 	buf.WriteString("## 📋 SecOps & SRE Operational Checklist\n\n")
 	buf.WriteString("- [ ] Review high and critical severity advisories against production deployment manifests.\n")
 	buf.WriteString("- [ ] Verify that ingress controllers enforce URI path normalization and snippet guards.\n")
@@ -487,6 +521,7 @@ func GenerateBriefing(opts BriefingOptions) (*BriefingReport, error) {
 	buf.WriteString("- [ ] Reconcile multi-cluster GitOps synchronization drift and rotate federated OIDC identity tokens exceeding 24 hours.\n")
 	buf.WriteString("- [ ] Validate SPIFFE/SPIRE X.509 SVID renewal windows and enforce mutual TLS with attested workload identities in CiliumNetworkPolicies.\n")
 	buf.WriteString("- [ ] Ingest SPDX v3.0 / CycloneDX v1.6 SBOMs, verify In-Toto SLSA Level 3 attestations, and reconcile cluster runtime package deltas.\n")
+	buf.WriteString("- [ ] Enforce hardware-backed KMS v2 envelope encryption for etcd, eliminate plaintext PKCS#11 PINs, and rotate KEKs under 90 days.\n")
 	buf.WriteString("- [ ] Archive this briefing record into security audit ledger.\n")
 
 	report := &BriefingReport{

@@ -10,6 +10,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/bench"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/fleet"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/gateway"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/hsm"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/intel"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/k8s"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nix"
@@ -22,7 +23,7 @@ import (
 )
 
 var (
-	version = "0.15.0"
+	version = "0.16.0"
 )
 
 func main() {
@@ -58,6 +59,10 @@ func main() {
 	intotoShort := flag.String("intoto", "", "Alias for --attestation")
 	runtimePath := flag.String("sbom-runtime", "", "Path to cluster runtime package state JSON for SBOM delta audit")
 	deltaShort := flag.String("sbom-delta", "", "Alias for --sbom-runtime")
+	hsmPath := flag.String("hsm", "", "Path to Kubernetes EncryptionConfiguration or NixOS HSM config to audit")
+	kmsShort := flag.String("kms", "", "Alias for --hsm")
+	hsmTelemetry := flag.String("hsm-telemetry", "", "Path to runtime HSM, PKCS#11, and KMS plugin telemetry JSON to inspect")
+	nitroShort := flag.String("nitro", "", "Alias for --hsm-telemetry")
 	briefing := flag.Bool("briefing", false, "Generate automated Markdown threat intelligence briefing")
 	briefingDir := flag.String("briefing-dir", "intel/briefings", "Output directory for threat briefings")
 	briefingFile := flag.String("briefing-file", "", "Custom filename for threat briefing markdown")
@@ -102,6 +107,12 @@ func main() {
 	}
 	if *runtimePath == "" && *deltaShort != "" {
 		*runtimePath = *deltaShort
+	}
+	if *hsmPath == "" && *kmsShort != "" {
+		*hsmPath = *kmsShort
+	}
+	if *hsmTelemetry == "" && *nitroShort != "" {
+		*hsmTelemetry = *nitroShort
 	}
 	if *outFile == "" && *outShort != "" {
 		*outFile = *outShort
@@ -160,6 +171,8 @@ func main() {
 	var sbomViolations []sbom.SBOMViolation
 	var sbomSummary *sbom.SBOMSummary
 	var sbomDelta []sbom.SBOMDeltaItem
+	var hsmViolations []hsm.HSMViolation
+	var hsmSummary *hsm.HSMSummary
 
 	// 1. Audit Nix Flake
 	if *flakePath != "" {
@@ -232,7 +245,12 @@ func main() {
 		sbomViolations, sbomSummary, sbomDelta = runSBOMAudit(*sbomPath, *attestFile, *runtimePath, feed, logInfo, logErr)
 	}
 
-	// 13. Generate Threat Briefing if --briefing is requested
+	// 13. Audit Hardware Security Module (HSM) & PKCS#11 Envelope Encryption
+	if *hsmPath != "" || *hsmTelemetry != "" {
+		hsmViolations, hsmSummary = runHSMAudit(*hsmPath, *hsmTelemetry, feed, logInfo, logErr)
+	}
+
+	// 14. Generate Threat Briefing if --briefing is requested
 	if *briefing {
 		logInfo("[+] Synthesizing Threat Intelligence Briefing...\n")
 		briefingOpts := report.BriefingOptions{
@@ -258,6 +276,8 @@ func main() {
 			SBOMViolations:          sbomViolations,
 			SBOMSummary:             sbomSummary,
 			SBOMDelta:               sbomDelta,
+			HSMViolations:           hsmViolations,
+			HSMSummary:              hsmSummary,
 			OutputDir:               *briefingDir,
 			CustomFilename:          *briefingFile,
 		}
@@ -311,6 +331,8 @@ func main() {
 			SBOMViolations:          sbomViolations,
 			SBOMSummary:             sbomSummary,
 			SBOMDelta:               sbomDelta,
+			HSMViolations:           hsmViolations,
+			HSMSummary:              hsmSummary,
 			FlakePath:               *flakePath,
 			K8sPath:                 *k8sPath,
 			StoragePath:             *cephPath,
@@ -326,6 +348,8 @@ func main() {
 			SBOMPath:                *sbomPath,
 			SBOMAttestPath:          *attestFile,
 			SBOMRuntimePath:         *runtimePath,
+			HSMPath:                 *hsmPath,
+			HSMTelemetryPath:        *hsmTelemetry,
 			TargetFilter:            *targetFilter,
 			Pretty:                  true,
 		}
@@ -380,7 +404,7 @@ func main() {
 	}
 
 	// 15. Default feed summary (when no specific audit target was requested)
-	if *flakePath == "" && *k8sPath == "" && *policyOut == "" && !*probeFlag && *cephPath == "" && *cephTelemetry == "" && *wgPath == "" && *wgTelemetry == "" && *cisPath == "" && *gwPath == "" && *attestPath == "" && *attestTelemetry == "" && *fleetPath == "" && *fleetTelemetry == "" && *spiffePath == "" && *svidTelemetry == "" && *spiffePolicyOut == "" && *sbomPath == "" && *attestFile == "" && *runtimePath == "" {
+	if *flakePath == "" && *k8sPath == "" && *policyOut == "" && !*probeFlag && *cephPath == "" && *cephTelemetry == "" && *wgPath == "" && *wgTelemetry == "" && *cisPath == "" && *gwPath == "" && *attestPath == "" && *attestTelemetry == "" && *fleetPath == "" && *fleetTelemetry == "" && *spiffePath == "" && *svidTelemetry == "" && *spiffePolicyOut == "" && *sbomPath == "" && *attestFile == "" && *runtimePath == "" && *hsmPath == "" && *hsmTelemetry == "" {
 		items := feed.Items
 		if *targetFilter != "" {
 			items = feed.FilterByTarget(*targetFilter)

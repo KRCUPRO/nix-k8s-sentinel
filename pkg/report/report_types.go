@@ -8,6 +8,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/bench"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/fleet"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/gateway"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/hsm"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/intel"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/k8s"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nix"
@@ -54,6 +55,8 @@ type ReportOptions struct {
 	SBOMViolations          []sbom.SBOMViolation
 	SBOMSummary             *sbom.SBOMSummary
 	SBOMDelta               []sbom.SBOMDeltaItem
+	HSMViolations           []hsm.HSMViolation
+	HSMSummary              *hsm.HSMSummary
 	FlakePath               string
 	K8sPath                 string
 	StoragePath             string
@@ -69,6 +72,8 @@ type ReportOptions struct {
 	SBOMPath                string
 	SBOMAttestPath          string
 	SBOMRuntimePath         string
+	HSMPath                 string
+	HSMTelemetryPath        string
 	TargetFilter            string
 	Pretty                  bool
 }

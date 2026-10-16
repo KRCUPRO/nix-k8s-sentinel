@@ -9,6 +9,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/bench"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/fleet"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/gateway"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/hsm"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/intel"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/k8s"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nix"
@@ -39,6 +40,7 @@ type TelemetrySummary struct {
 	TotalFleetViolations      int            `json:"total_fleet_violations"`
 	TotalSPIFFEViolations     int            `json:"total_spiffe_violations"`
 	TotalSBOMViolations       int            `json:"total_sbom_violations"`
+	TotalHSMViolations        int            `json:"total_hsm_violations"`
 }
 
 // ComputeTelemetry aggregates CVSS metrics from the threat feed, K8s violations, and Nix flake matches.
@@ -83,6 +85,11 @@ func ComputeTelemetrySPIFFE(feed *intel.Feed, k8sReport *k8s.ManifestAuditReport
 
 // ComputeTelemetrySBOM aggregates CVSS metrics across all domains including Software Bill of Materials & In-Toto Supply Chain Attestation violations.
 func ComputeTelemetrySBOM(feed *intel.Feed, k8sReport *k8s.ManifestAuditReport, flakeMatches []nix.FlakeVulnerabilityMatch, storageViolations []storage.StorageViolation, wireguardViolations []wireguard.WireGuardViolation, cisViolations []bench.CISViolation, gatewayViolations []gateway.GatewayViolation, attestViolations []attest.AttestationViolation, fleetViolations []fleet.FleetViolation, spiffeViolations []spiffe.SPIFFEViolation, sbomViolations []sbom.SBOMViolation) TelemetrySummary {
+	return ComputeTelemetryHSM(feed, k8sReport, flakeMatches, storageViolations, wireguardViolations, cisViolations, gatewayViolations, attestViolations, fleetViolations, spiffeViolations, sbomViolations, nil)
+}
+
+// ComputeTelemetryHSM aggregates CVSS metrics across all domains including Hardware Security Module (HSM) & PKCS#11 Envelope Encryption violations.
+func ComputeTelemetryHSM(feed *intel.Feed, k8sReport *k8s.ManifestAuditReport, flakeMatches []nix.FlakeVulnerabilityMatch, storageViolations []storage.StorageViolation, wireguardViolations []wireguard.WireGuardViolation, cisViolations []bench.CISViolation, gatewayViolations []gateway.GatewayViolation, attestViolations []attest.AttestationViolation, fleetViolations []fleet.FleetViolation, spiffeViolations []spiffe.SPIFFEViolation, sbomViolations []sbom.SBOMViolation, hsmViolations []hsm.HSMViolation) TelemetrySummary {
 	summary := TelemetrySummary{
 		TargetDistribution:    make(map[string]int),
 		ComponentDistribution: make(map[string]int),
@@ -170,6 +177,10 @@ func ComputeTelemetrySBOM(feed *intel.Feed, k8sReport *k8s.ManifestAuditReport, 
 
 	if len(sbomViolations) > 0 {
 		summary.TotalSBOMViolations = len(sbomViolations)
+	}
+
+	if len(hsmViolations) > 0 {
+		summary.TotalHSMViolations = len(hsmViolations)
 	}
 
 	return summary

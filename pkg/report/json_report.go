@@ -11,6 +11,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/bench"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/fleet"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/gateway"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/hsm"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/intel"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/k8s"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nix"
@@ -50,6 +51,8 @@ type JSONAuditReport struct {
 	SBOMViolations          []sbom.SBOMViolation            `json:"sbom_violations,omitempty"`
 	SBOMSummary             *sbom.SBOMSummary               `json:"sbom_summary,omitempty"`
 	SBOMDelta               []sbom.SBOMDeltaItem            `json:"sbom_delta,omitempty"`
+	HSMViolations           []hsm.HSMViolation              `json:"hsm_violations,omitempty"`
+	HSMSummary              *hsm.HSMSummary                 `json:"hsm_summary,omitempty"`
 }
 
 // BuildJSONReport compiles the consolidated JSON audit report from provided audit data.
@@ -105,8 +108,14 @@ func BuildJSONReport(opts ReportOptions) (*JSONAuditReport, error) {
 	if opts.SBOMRuntimePath != "" {
 		scanned = append(scanned, opts.SBOMRuntimePath)
 	}
+	if opts.HSMPath != "" {
+		scanned = append(scanned, opts.HSMPath)
+	}
+	if opts.HSMTelemetryPath != "" {
+		scanned = append(scanned, opts.HSMTelemetryPath)
+	}
 
-	telemetry := ComputeTelemetrySBOM(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations, opts.GatewayViolations, opts.AttestViolations, opts.FleetViolations, opts.SPIFFEViolations, opts.SBOMViolations)
+	telemetry := ComputeTelemetryHSM(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations, opts.GatewayViolations, opts.AttestViolations, opts.FleetViolations, opts.SPIFFEViolations, opts.SBOMViolations, opts.HSMViolations)
 
 	var advisories []intel.ThreatItem
 	if opts.Feed != nil {
@@ -145,6 +154,8 @@ func BuildJSONReport(opts ReportOptions) (*JSONAuditReport, error) {
 		SBOMViolations:          opts.SBOMViolations,
 		SBOMSummary:             opts.SBOMSummary,
 		SBOMDelta:               opts.SBOMDelta,
+		HSMViolations:           opts.HSMViolations,
+		HSMSummary:              opts.HSMSummary,
 	}
 
 	return rep, nil

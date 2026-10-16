@@ -1,0 +1,65 @@
+[
+  {
+    "cluster_id": "prod-k8s-us-east-1",
+    "node_name": "control-plane-hsm-01",
+    "provider_type": "PKCS11",
+    "plugin_status": "HEALTHY",
+    "current_key_id": "kek-nitro-v2-2026-08",
+    "average_latency_ms": 14.8,
+    "cache_hit_ratio": 0.94,
+    "total_operations": 84200,
+    "failed_operations": 0,
+    "nitro_enclave_ok": true,
+    "observed_at": "2026-10-16T08:30:00Z",
+    "active_keys": [
+      {
+        "key_id": "kek-nitro-v2-2026-08",
+        "key_label": "etcd-envelope-master-active",
+        "provider_type": "PKCS11",
+        "algorithm": "AES-GCM-256",
+        "created_at": "2026-08-01T00:00:00Z",
+        "last_rotated": "2026-08-01T00:00:00Z",
+        "age_days": 76.0,
+        "is_rotated": true,
+        "is_compromised": false
+      },
+      {
+        "key_id": "kek-nitro-v2-2026-05",
+        "key_label": "etcd-envelope-master-retired",
+        "provider_type": "PKCS11",
+        "algorithm": "AES-GCM-256",
+        "created_at": "2026-05-01T00:00:00Z",
+        "last_rotated": "2026-08-01T00:00:00Z",
+        "age_days": 168.0,
+        "is_rotated": true,
+        "is_compromised": false
+      }
+    ]
+  },
+  {
+    "cluster_id": "staging-k8s-eu-west-1",
+    "node_name": "worker-enclave-03",
+    "provider_type": "NitroEnclave",
+    "plugin_status": "DEGRADED",
+    "current_key_id": "kek-nitro-legacy-01",
+    "average_latency_ms": 115.4,
+    "cache_hit_ratio": 0.02,
+    "total_operations": 15400,
+    "failed_operations": 12,
+    "nitro_enclave_ok": false,
+    "observed_at": "2026-10-16T08:35:00Z",
+    "active_keys": [
+      {
+        "key_id": "kek-nitro-legacy-01",
+        "key_label": "unrotated-master-kek",
+        "provider_type": "NitroEnclave",
+        "algorithm": "AES-CBC-128",
+        "created_at": "2026-02-15T00:00:00Z",
+        "last_rotated": "2026-02-15T00:00:00Z",
+        "age_days": 243.0,
+        "is_rotated": false,
+        "is_compromised": true
+      }
+    ]
+  }
+]

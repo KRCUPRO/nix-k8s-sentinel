@@ -19,7 +19,7 @@
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](./LICENSE)
 [![Go Report Card](https://goreportcard.com/badge/github.com/KRCUPRO/nix-k8s-sentinel)](https://goreportcard.com/report/github.com/KRCUPRO/nix-k8s-sentinel)
-[![Version](https://img.shields.io/badge/Release-v0.15.0-emerald.svg)](https://github.com/KRCUPRO/nix-k8s-sentinel/releases)
+[![Version](https://img.shields.io/badge/Release-v0.16.0-emerald.svg)](https://github.com/KRCUPRO/nix-k8s-sentinel/releases)
 [![Architecture](https://img.shields.io/badge/Architecture-Bare--Metal_NixOS_+_K8s-8b5cf6.svg)](#-architecture-overview)
 [![Security](https://img.shields.io/badge/Security-Declarative_Audit-38bdf8.svg)](./SECURITY.md)
 
@@ -31,13 +31,14 @@
 
 `nix-k8s-sentinel` is a high-performance declarative vulnerability scanner and continuous threat intelligence engine designed specifically for bare-metal NixOS clusters and Kubernetes infrastructure.
 
-Unlike ephemeral container scanners, `nix-k8s-sentinel` audits declarative configuration matrices (NixOS Flakes, Kubernetes CNI policies, Ingress controllers, Gateway API routes, Istio EnvoyFilters, Rook Ceph storage clusters, WireGuard mesh networks, CIS Kubernetes Benchmarks, Confidential Computing measured boot chains, Multi-Cluster GitOps fleet topologies, SPIFFE/SPIRE Zero-Trust microsegmentation, and Software Bill of Materials with In-Toto SLSA Level 3 supply chain attestations) against real-time normalized CVSS threat intelligence feeds, enabling automated mitigation before workloads are scheduled.
+Unlike ephemeral container scanners, `nix-k8s-sentinel` audits declarative configuration matrices (NixOS Flakes, Kubernetes CNI policies, Ingress controllers, Gateway API routes, Istio EnvoyFilters, Rook Ceph storage clusters, WireGuard mesh networks, CIS Kubernetes Benchmarks, Confidential Computing measured boot chains, Multi-Cluster GitOps fleet topologies, SPIFFE/SPIRE Zero-Trust microsegmentation, Software Bill of Materials with In-Toto SLSA Level 3 supply chain attestations, and Hardware Security Module envelope encryption) against real-time normalized CVSS threat intelligence feeds, enabling automated mitigation before workloads are scheduled.
 
 ---
 
 ## 🏛️ Core Capabilities
 
 - **🔍 Declarative Infrastructure Auditing**: Pattern matching and input tracking for NixOS Flake inputs, Kubernetes manifests, and CNI policies.
+- **🔐 Hardware Security Module (HSM) & PKCS#11 Envelope Encryption Pipeline**: Enterprise-grade cryptographic security inspection and auditing engine for Kubernetes etcd encryption at rest, KMS v2 plugins, PKCS#11 tokens, and AWS Nitro Enclaves. Streaming parser for `apiserver.config.k8s.io/v1` EncryptionConfiguration manifests, RFC 7512 PKCS#11 URIs, and NixOS host security modules (`services.p11-kit`, `hardware.nitro-enclaves`). Reconciles runtime KMS plugin health, flags unrotated Key Encryption Keys (> 90 days), detects exposed plaintext PINs in manifests, and prevents Nitro Enclave session leakage / unsealed attestation attacks (CVE-2026-83190).
 - **📦 Software Bill of Materials (SBOM) & In-Toto Supply Chain Attestation**: Universal multi-format ingestion of SPDX v3.0, SPDX v2.3, CycloneDX v1.6, and Nix store closures. Enforces In-Toto cryptographic statement verification (`_type: https://in-toto.io/Statement/v1`), matches Subject SHA256 digests against build artifacts to detect tampering (CVE-2026-71044), mandates SLSA Level 3 hermetic sandboxing and immutable pinned materials, and reconciles declarative SBOMs against live cluster package telemetry (`--sbom`, `--attestation`, `--sbom-runtime`) to identify version drift, missing dependencies, and shadow container binary injections.
 - **🔒 Zero-Trust Microsegmentation & SPIFFE/SPIRE Workload Attestation**: Native audit engine for SPIFFE/SPIRE workload identities and Cilium eBPF network microsegmentation. Validates RFC-compliant SPIFFE IDs against trusted domain allowlists, enforces mandatory Cilium mTLS (`authentication.mode: required`), flags weak crypto keys (RSA-1024/2048), detects dangerous wildcard selectors (`k8s:ns:*`), identifies expiring or desynchronized SVIDs (< 15 min remaining) to prevent active workload disconnections (CVE-2026-67210), and autonomously synthesizes zero-trust `CiliumNetworkPolicy` manifests (`--spiffe-policy-out`).
 - **🛰️ Multi-Cluster Fleet Synchronization & OIDC Token Radar**: Fleet-wide synchronization and federated identity auditing for geographically distributed Kubernetes clusters. Audits multi-tenant RBAC permissions to eliminate wildcard verbs/resources (`*`), block dangerous privilege escalations (`bind`/`escalate`), prevent impersonation without resourceNames whitelists, disallow cluster-wide secret reading across tenant boundaries, and block `cluster-admin` bindings to broad groups (`system:authenticated`). Intercepts insecure OIDC signing algorithms (`none`, `HS256`), excessive token lifetimes (> 24 hours), and missing audience/issuer claims. Statically audits ArgoCD Applications and Flux Kustomizations for automated self-healing (`selfHeal: true`, `prune: true`), floating branch tracking, and wildcard target clusters (`server: "*"`), while reconciling live cluster telemetry to detect configuration drift and degraded health postures (CVE-2026-60114).
@@ -103,6 +104,13 @@ go run cmd/sentinel/main.go --sbom=fixtures/spdx-v3-sbom.json --attestation=fixt
 
 # Reconcile Declarative SBOM Against Cluster Runtime State Delta
 go run cmd/sentinel/main.go --sbom=fixtures/spdx-v3-sbom.json --sbom-runtime=fixtures/sbom-runtime-state.json --format=sarif --output=sbom-results.sarif
+
+# Audit Kubernetes EncryptionConfiguration & NixOS Hardware Security Module configs
+go run cmd/sentinel/main.go --hsm=fixtures/k8s-encryption-config.yaml
+go run cmd/sentinel/main.go --hsm=fixtures/nixos-hsm.nix
+
+# Reconcile runtime HSM, PKCS#11, and KMS v2 plugin telemetry
+go run cmd/sentinel/main.go --hsm=fixtures/k8s-encryption-config.yaml --hsm-telemetry=fixtures/hsm-telemetry.json --format=sarif --output=hsm-results.sarif
 
 # Audit Multi-Cluster fleet manifests (RBAC, ArgoCD, Flux)
 go run cmd/sentinel/main.go --fleet=fixtures/fleet-manifests.yaml
