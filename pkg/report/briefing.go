@@ -10,6 +10,7 @@ import (
 
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/attest"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/bench"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/bpf"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/fleet"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/gateway"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/hsm"
@@ -51,6 +52,8 @@ type BriefingOptions struct {
 	SBOMDelta               []sbom.SBOMDeltaItem
 	HSMViolations           []hsm.HSMViolation
 	HSMSummary              *hsm.HSMSummary
+	BPFViolations           []bpf.BPFViolation
+	BPFSummary              *bpf.BPFSummary
 	OutputDir               string
 	CustomFilename          string
 }
@@ -80,10 +83,10 @@ func GenerateBriefing(opts BriefingOptions) (*BriefingReport, error) {
 
 	version := opts.Version
 	if version == "" {
-		version = "0.4.0"
+		version = "0.17.0"
 	}
 
-	telemetry := ComputeTelemetrySBOM(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations, opts.GatewayViolations, opts.AttestViolations, opts.FleetViolations, opts.SPIFFEViolations, opts.SBOMViolations)
+	telemetry := ComputeTelemetryBPF(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations, opts.GatewayViolations, opts.AttestViolations, opts.FleetViolations, opts.SPIFFEViolations, opts.SBOMViolations, opts.HSMViolations, opts.BPFViolations)
 
 	var buf bytes.Buffer
 
@@ -507,7 +510,38 @@ func GenerateBriefing(opts BriefingOptions) (*BriefingReport, error) {
 		buf.WriteString("---\n\n")
 	}
 
-	// 16. Action Items Checklist
+	// 16. Dynamic Kernel Runtime Threat Profiler & Syscall BPF Filter Posture
+	if opts.BPFSummary != nil || len(opts.BPFViolations) > 0 {
+		buf.WriteString("## 🛡️ Dynamic Kernel Runtime Threat Profiler & Syscall BPF Filter\n\n")
+		if opts.BPFSummary != nil {
+			sum := opts.BPFSummary
+			buf.WriteString(fmt.Sprintf("**Compliance Score:** `%.1f%%` | **Profiles Scanned:** %d | **Telemetry Events:** %d | **Status:** `%s`\n",
+				sum.ComplianceScore, sum.TotalProfilesScanned, sum.TotalTelemetryEvents, sum.AuditStatus))
+			buf.WriteString(fmt.Sprintf("**Severity Breakdown:** %d Critical | %d High | %d Medium | %d Low\n\n",
+				sum.CriticalCount, sum.HighCount, sum.MediumCount, sum.LowCount))
+		}
+		if len(opts.BPFViolations) > 0 {
+			buf.WriteString(fmt.Sprintf("⚠️ **%d Kernel runtime threat profiling and seccomp violations identified:**\n\n", len(opts.BPFViolations)))
+			buf.WriteString("| Rule ID | Workload / Resource | Severity | CVSS | Finding & Threat Impact | Remediation Action |\n")
+			buf.WriteString("| :--- | :--- | :---: | :---: | :--- | :--- |\n")
+			for _, bv := range opts.BPFViolations {
+				cveTag := ""
+				if bv.MatchedCVE != "" {
+					cveTag = fmt.Sprintf(" (`%s`)", bv.MatchedCVE)
+				}
+				targetTag := bv.WorkloadName
+				if targetTag == "" {
+					targetTag = filepath.Base(bv.ResourceURI)
+				}
+				buf.WriteString(fmt.Sprintf("| `%s` | `%s` | **%s** | %.1f | %s%s | %s |\n",
+					bv.RuleID, targetTag, bv.Severity, bv.CVSSScore, bv.Description, cveTag, bv.Remediation))
+			}
+			buf.WriteString("\n")
+		}
+		buf.WriteString("---\n\n")
+	}
+
+	// 17. Action Items Checklist
 	buf.WriteString("## 📋 SecOps & SRE Operational Checklist\n\n")
 	buf.WriteString("- [ ] Review high and critical severity advisories against production deployment manifests.\n")
 	buf.WriteString("- [ ] Verify that ingress controllers enforce URI path normalization and snippet guards.\n")
@@ -522,6 +556,7 @@ func GenerateBriefing(opts BriefingOptions) (*BriefingReport, error) {
 	buf.WriteString("- [ ] Validate SPIFFE/SPIRE X.509 SVID renewal windows and enforce mutual TLS with attested workload identities in CiliumNetworkPolicies.\n")
 	buf.WriteString("- [ ] Ingest SPDX v3.0 / CycloneDX v1.6 SBOMs, verify In-Toto SLSA Level 3 attestations, and reconcile cluster runtime package deltas.\n")
 	buf.WriteString("- [ ] Enforce hardware-backed KMS v2 envelope encryption for etcd, eliminate plaintext PKCS#11 PINs, and rotate KEKs under 90 days.\n")
+	buf.WriteString("- [ ] Enforce declarative seccomp profiles, attach eBPF LSM socket_create filters, and restrict unprivileged BPF access.\n")
 	buf.WriteString("- [ ] Archive this briefing record into security audit ledger.\n")
 
 	report := &BriefingReport{

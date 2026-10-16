@@ -9,6 +9,7 @@ import (
 
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/attest"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/bench"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/bpf"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/fleet"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/gateway"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/hsm"
@@ -53,6 +54,8 @@ type JSONAuditReport struct {
 	SBOMDelta               []sbom.SBOMDeltaItem            `json:"sbom_delta,omitempty"`
 	HSMViolations           []hsm.HSMViolation              `json:"hsm_violations,omitempty"`
 	HSMSummary              *hsm.HSMSummary                 `json:"hsm_summary,omitempty"`
+	BPFViolations           []bpf.BPFViolation              `json:"bpf_violations,omitempty"`
+	BPFSummary              *bpf.BPFSummary                 `json:"bpf_summary,omitempty"`
 }
 
 // BuildJSONReport compiles the consolidated JSON audit report from provided audit data.
@@ -114,8 +117,14 @@ func BuildJSONReport(opts ReportOptions) (*JSONAuditReport, error) {
 	if opts.HSMTelemetryPath != "" {
 		scanned = append(scanned, opts.HSMTelemetryPath)
 	}
+	if opts.BPFPath != "" {
+		scanned = append(scanned, opts.BPFPath)
+	}
+	if opts.BPFTelemetryPath != "" {
+		scanned = append(scanned, opts.BPFTelemetryPath)
+	}
 
-	telemetry := ComputeTelemetryHSM(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations, opts.GatewayViolations, opts.AttestViolations, opts.FleetViolations, opts.SPIFFEViolations, opts.SBOMViolations, opts.HSMViolations)
+	telemetry := ComputeTelemetryBPF(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations, opts.GatewayViolations, opts.AttestViolations, opts.FleetViolations, opts.SPIFFEViolations, opts.SBOMViolations, opts.HSMViolations, opts.BPFViolations)
 
 	var advisories []intel.ThreatItem
 	if opts.Feed != nil {
@@ -156,6 +165,8 @@ func BuildJSONReport(opts ReportOptions) (*JSONAuditReport, error) {
 		SBOMDelta:               opts.SBOMDelta,
 		HSMViolations:           opts.HSMViolations,
 		HSMSummary:              opts.HSMSummary,
+		BPFViolations:           opts.BPFViolations,
+		BPFSummary:              opts.BPFSummary,
 	}
 
 	return rep, nil
