@@ -19,7 +19,7 @@
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](../../LICENSE)
 [![Go Report Card](https://goreportcard.com/badge/github.com/KRCUPRO/nix-k8s-sentinel)](https://goreportcard.com/report/github.com/KRCUPRO/nix-k8s-sentinel)
-[![Version](https://img.shields.io/badge/Release-v0.17.0-emerald.svg)](https://github.com/KRCUPRO/nix-k8s-sentinel/releases)
+[![Version](https://img.shields.io/badge/Release-v0.18.0-emerald.svg)](https://github.com/KRCUPRO/nix-k8s-sentinel/releases)
 [![Architecture](https://img.shields.io/badge/Architecture-Bare--Metal_NixOS_+_K8s-8b5cf6.svg)](#-architecture-overview)
 [![Security](https://img.shields.io/badge/Security-Declarative_Audit-38bdf8.svg)](../../SECURITY.md)
 
@@ -31,13 +31,14 @@
 
 `nix-k8s-sentinel`은 베어메탈 NixOS 클러스터 및 Kubernetes 인프라에 최적화된 고성능 선언적 취약점 스캐너이자 지속적 위협 인텔리전스 동기화 엔진입니다.
 
-배포 후 컨테이너 레이어를 수동적으로 검사하는 기존 런타임 스캐너와 달리, `nix-k8s-sentinel`은 선언적 구성 명세(NixOS Flakes, Kubernetes CNI 정책, Ingress 컨트롤러, Gateway API, Rook Ceph, WireGuard, CIS 벤치마크, 기밀 컴퓨팅, 멀티 클러스터 GitOps 플릿, SPIFFE/SPIRE 제로 트러스트 마이크로세그멘테이션, 소프트웨어 자재명세서 및 In-Toto SLSA Level 3 공급망 증명, 하드웨어 보안 모듈 봉투 암호화, 동적 커널 위협 프로파일링 및 시스템 콜 BPF 필터)를 실시간 정규화된 CVSS 위협 피드와 대조하여 워크로드가 스케줄링되기 전에 사전 대응할 수 있도록 지원합니다.
+배포 후 컨테이너 레이어를 수동적으로 검사하는 기존 런타임 스캐너와 달리, `nix-k8s-sentinel`은 선언적 구성 명세(NixOS Flakes, Kubernetes CNI 정책, Ingress 컨트롤러, Gateway API, Rook Ceph, WireGuard, CIS 벤치마크, 기밀 컴퓨팅, 멀티 클러스터 GitOps 플릿, SPIFFE/SPIRE 제로 트러스트 마이크로세그멘테이션, 소프트웨어 자재명세서 및 In-Toto SLSA Level 3 공급망 증명, 하드웨어 보안 모듈 봉투 암호화, 동적 커널 위협 프로파일링, 시스템 콜 BPF 필터, 양자 내성 암호(PQC) 및 NSA CNSA 2.0 TLS 감사 엔진)를 실시간 정규화된 CVSS 위협 피드와 대조하여 워크로드가 스케줄링되기 전에 사전 대응할 수 있도록 지원합니다.
 
 ---
 
 ## 🏛️ 핵심 역량
 
 - **🔍 선언적 인프라 감사**: NixOS Flake 입력 락, Kubernetes 매니페스트 명세, CNI 네트워크 정책에 대한 패턴 매칭 및 의존성 추적.
+- **⚛️ 양자 내성 암호(PQC) & NSA CNSA 2.0 TLS 감사 엔진**: Kubernetes 컨트롤 플레인 컴포넌트(kube-apiserver, etcd, kubelet)와 NixOS 호스트 암호화 구성을 위한 엔터프라이즈 PQC 보안 감사 엔진. TLS 1.3 미만 취약 프로토콜, 하이브리드 포스트 퀀텀 키 캡슐화(NIST FIPS 203 ML-KEM-768/1024) 누락으로 인한 수확 후 복호화(Harvest-Now-Decrypt-Later) 위협(CVE-2026-94301), 취약 고전 암호(CBC/3DES/정적 RSA), 256비트 미만 대칭키, 고전 전용 인증서 서명 차단. NixOS OpenSSL `oqsprovider` 활성화 및 GnuTLS 우선순위 정책 감사, NSA CNSA 2.0 전환 일정(2025/2030/2033) 추적 및 양자 내성 강화 모듈 선언적 합성(`--pqc-synth-out`).
 - **🛡️ 동적 커널 런타임 위협 프로파일러 & 시스템 콜 BPF 필터**: Kubernetes 클러스터 전반에서 선언적 seccomp 프로필, NixOS 호스트 커널 매개변수 및 런타임 eBPF 텔레메트리를 분석하는 심층 커널 보안 감사 엔진. 무격리 컨테이너 seccomp 프로필(`type: Unconfined`), 위험 관리자 시스템 콜(`ptrace`, `process_vm_writev`, `kexec_load`), NixOS 호스트 eBPF LSM 모듈 누락(`security.lsm = [ ... "bpf" ... ]`), 호스트 네임스페이스 공유(`hostPID`/`hostIPC`), 비인가 BPF 접근 차단. 런타임 소켓 생성 버스트(초당 250개 초과), raw 소켓 할당(`SOCK_RAW`, `AF_PACKET`) 탐지 및 강화된 Kubernetes Seccomp 프로필, 드롭인 NixOS systemd 샌드박싱 모듈, 선언적 eBPF LSM 정책 매니페스트 자동 합성(CVE-2026-90412).
 - **🔐 하드웨어 보안 모듈(HSM) & PKCS#11 봉투 암호화 파이프라인**: Kubernetes etcd 저장 데이터 암호화, KMS v2 플러그인, PKCS#11 토큰 및 AWS Nitro Enclaves를 위한 엔터프라이즈급 암호화 보안 감사 엔진. `apiserver.config.k8s.io/v1` EncryptionConfiguration 매니페스트, RFC 7512 PKCS#11 URI 및 NixOS 호스트 모듈(`services.p11-kit`, `hardware.nitro-enclaves`) 스트리밍 파싱. 런타임 KMS 플러그인 상태 점검, 90일 초과 미회전 마스터 키(KEK) 탐지, 매니페스트 내 평문 PIN 노출 차단 및 Nitro Enclave 세션 누수/비봉인 증명 공격 방어(CVE-2026-83190).
 - **📦 소프트웨어 자재명세서(SBOM) & In-Toto 공급망 증명**: SPDX v3.0, SPDX v2.3, CycloneDX v1.6, Nix 스토어 클로저 통합 수집. In-Toto 성명서(`_type: https://in-toto.io/Statement/v1`) 암호학적 서명 검증, 빌드 산출물 SHA256 다이제스트 변조 감지(CVE-2026-71044), SLSA Level 3 밀폐(Hermetic) 샌드박스 및 불변 의존성 강제, 선언적 SBOM과 런타임 클러스터 패키지 간 버전 드리프트 및 미인가 섀도우 바이너리 주입 자동 조정(`--sbom`, `--attestation`, `--sbom-runtime`).
@@ -90,6 +91,16 @@ go run cmd/sentinel/main.go --hsm=fixtures/nixos-hsm.nix
 
 # 런타임 HSM, PKCS#11 및 KMS v2 플러그인 텔레메트리 실시간 조정 및 SARIF 출력
 go run cmd/sentinel/main.go --hsm=fixtures/k8s-encryption-config.yaml --hsm-telemetry=fixtures/hsm-telemetry.json --format=sarif --output=hsm-results.sarif
+
+# Kubernetes 컨트롤 플레인 및 NixOS OpenSSL/GnuTLS 양자 내성 암호(PQC) 감사
+go run cmd/sentinel/main.go --pqc=fixtures/k8s-pqc-vulnerable.yaml
+go run cmd/sentinel/main.go --pqc=fixtures/nixos-pqc.nix
+
+# 런타임 TLS 악수 텔레메트리 조정 및 NSA CNSA 2.0 규격 준수 평가
+go run cmd/sentinel/main.go --pqc=fixtures/k8s-pqc-vulnerable.yaml --pqc-telemetry=fixtures/pqc-telemetry.json --format=sarif --output=pqc-results.sarif
+
+# 강화된 NixOS 및 Kubernetes PQC 구성 정책 자동 합성
+go run cmd/sentinel/main.go --pqc-synth-out=policies/generated/pqc
 
 # 베어메탈 eBPF 커널 텔레메트리 다중 노드 실시간 분석 실행
 go run cmd/sentinel/main.go --probe

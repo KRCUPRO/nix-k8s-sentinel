@@ -951,8 +951,69 @@ func BuildSARIFReport(opts ReportOptions) (*SARIFLog, error) {
 		}
 	}
 
-	// 14. Process Standalone Feed Advisories (if no specific audit targets yielded findings)
-	if (opts.K8sReport == nil || len(opts.K8sReport.Violations) == 0) && len(opts.FlakeMatches) == 0 && len(opts.ProbeEvents) == 0 && len(opts.StorageViolations) == 0 && len(opts.WireGuardViolations) == 0 && len(opts.CISViolations) == 0 && len(opts.GatewayViolations) == 0 && len(opts.AttestViolations) == 0 && len(opts.FleetViolations) == 0 && len(opts.SPIFFEViolations) == 0 && len(opts.SBOMViolations) == 0 && len(opts.HSMViolations) == 0 && len(opts.BPFViolations) == 0 && opts.Feed != nil {
+	// 14. Process Post-Quantum Cryptography & CNSA 2.0 Violations
+	if len(opts.PQCViolations) > 0 {
+		for _, pv := range opts.PQCViolations {
+			tags := []string{"security", "cryptography", "pqc", "cnsa-2.0", "tls"}
+			if pv.MatchedCVE != "" {
+				tags = append(tags, pv.MatchedCVE)
+			}
+			ruleIdx := getOrCreateRule(pv.RuleID, pv.Title, pv.Description, pv.Remediation, pv.Severity, pv.CVSSScore, tags)
+			level := SeverityToSARIFLevel(string(pv.Severity), pv.CVSSScore)
+
+			locURI := pv.Location
+			if locURI == "" {
+				locURI = opts.PQCPath
+			}
+			if locURI == "" {
+				locURI = "pkg/pqc/tls-policy"
+			}
+			locURI = filepath.ToSlash(locURI)
+
+			line := pv.LineNumber
+			if line <= 0 {
+				line = 1
+			}
+
+			cveTag := ""
+			if pv.MatchedCVE != "" {
+				cveTag = fmt.Sprintf(" [%s]", pv.MatchedCVE)
+			}
+			resMsg := fmt.Sprintf("[%s]%s %s (Resource: %s): %s (Remediation: %s)",
+				pv.RuleID, cveTag, pv.Title, pv.Resource, pv.Description, pv.Remediation)
+
+			results = append(results, SARIFResult{
+				RuleID:    pv.RuleID,
+				RuleIndex: ruleIdx,
+				Level:     level,
+				Message:   SARIFMessage{Text: resMsg},
+				Locations: []SARIFLocation{
+					{
+						PhysicalLocation: &PhysicalLocation{
+							ArtifactLocation: ArtifactLocation{
+								URI:       locURI,
+								URIBaseID: "%SRCROOT%",
+							},
+							Region: &Region{
+								StartLine:   line,
+								StartColumn: 1,
+							},
+						},
+						LogicalLocations: []LogicalLocation{
+							{
+								Name:               pv.RuleID,
+								Kind:               "PostQuantumTLSRule",
+								FullyQualifiedName: fmt.Sprintf("pqc/%s", pv.RuleID),
+							},
+						},
+					},
+				},
+			})
+		}
+	}
+
+	// 15. Process Standalone Feed Advisories (if no specific audit targets yielded findings)
+	if (opts.K8sReport == nil || len(opts.K8sReport.Violations) == 0) && len(opts.FlakeMatches) == 0 && len(opts.ProbeEvents) == 0 && len(opts.StorageViolations) == 0 && len(opts.WireGuardViolations) == 0 && len(opts.CISViolations) == 0 && len(opts.GatewayViolations) == 0 && len(opts.AttestViolations) == 0 && len(opts.FleetViolations) == 0 && len(opts.SPIFFEViolations) == 0 && len(opts.SBOMViolations) == 0 && len(opts.HSMViolations) == 0 && len(opts.BPFViolations) == 0 && len(opts.PQCViolations) == 0 && opts.Feed != nil {
 		feedItems := opts.Feed.Items
 		if opts.TargetFilter != "" {
 			feedItems = opts.Feed.FilterByTarget(opts.TargetFilter)

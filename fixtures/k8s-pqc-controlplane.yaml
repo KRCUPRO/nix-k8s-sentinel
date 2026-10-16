@@ -1,0 +1,44 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kube-apiserver
+  namespace: kube-system
+  labels:
+    component: kube-apiserver
+    tier: control-plane
+spec:
+  containers:
+  - name: kube-apiserver
+    image: registry.k8s.io/kube-apiserver:v1.31.0
+    command:
+    - kube-apiserver
+    - --tls-min-version=VersionTLS13
+    - --tls-cipher-suites=TLS_AES_256_GCM_SHA384,TLS_CHACHA20_POLY1305_SHA256
+    - --tls-key-exchange-groups=X25519MLKEM768,SecP384r1MLKEM1024
+    - --etcd-tls-min-version=VersionTLS13
+    - --etcd-tls-cipher-suites=TLS_AES_256_GCM_SHA384
+    - --client-ca-file=/etc/kubernetes/pki/ca.crt
+    - --tls-cert-file=/etc/kubernetes/pki/apiserver.crt
+    - --tls-private-key-file=/etc/kubernetes/pki/apiserver.key
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: etcd
+  namespace: kube-system
+  labels:
+    component: etcd
+    tier: control-plane
+spec:
+  containers:
+  - name: etcd
+    image: registry.k8s.io/etcd:3.5.15-0
+    command:
+    - etcd
+    - --tls-min-version=VersionTLS13
+    - --tls-cipher-suites=TLS_AES_256_GCM_SHA384,TLS_CHACHA20_POLY1305_SHA256
+    - --peer-tls-min-version=VersionTLS13
+    - --peer-tls-cipher-suites=TLS_AES_256_GCM_SHA384,TLS_CHACHA20_POLY1305_SHA256
+    - --tls-key-exchange-groups=X25519MLKEM768,SecP384r1MLKEM1024
+    - --client-cert-auth=true
+    - --peer-client-cert-auth=true

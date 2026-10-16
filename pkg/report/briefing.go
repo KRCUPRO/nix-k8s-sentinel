@@ -17,6 +17,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/intel"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/k8s"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nix"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/pqc"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/probe"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/sbom"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/spiffe"
@@ -54,6 +55,8 @@ type BriefingOptions struct {
 	HSMSummary              *hsm.HSMSummary
 	BPFViolations           []bpf.BPFViolation
 	BPFSummary              *bpf.BPFSummary
+	PQCViolations           []pqc.PQCViolation
+	PQCSummary              *pqc.PQCSummary
 	OutputDir               string
 	CustomFilename          string
 }
@@ -86,7 +89,7 @@ func GenerateBriefing(opts BriefingOptions) (*BriefingReport, error) {
 		version = "0.17.0"
 	}
 
-	telemetry := ComputeTelemetryBPF(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations, opts.GatewayViolations, opts.AttestViolations, opts.FleetViolations, opts.SPIFFEViolations, opts.SBOMViolations, opts.HSMViolations, opts.BPFViolations)
+	telemetry := ComputeTelemetryPQC(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations, opts.GatewayViolations, opts.AttestViolations, opts.FleetViolations, opts.SPIFFEViolations, opts.SBOMViolations, opts.HSMViolations, opts.BPFViolations, opts.PQCViolations)
 
 	var buf bytes.Buffer
 
@@ -541,7 +544,34 @@ func GenerateBriefing(opts BriefingOptions) (*BriefingReport, error) {
 		buf.WriteString("---\n\n")
 	}
 
-	// 17. Action Items Checklist
+	// 17. Post-Quantum Cryptography (PQC) & CNSA 2.0 Cryptographic Readiness
+	if len(opts.PQCViolations) > 0 || opts.PQCSummary != nil {
+		buf.WriteString("## ⚛️ Post-Quantum Cryptography (PQC) & CNSA 2.0 Cryptographic Readiness\n\n")
+		if opts.PQCSummary != nil {
+			sum := opts.PQCSummary
+			buf.WriteString(fmt.Sprintf("**Compliance Score:** `%.1f%%` | **Status:** `%s` | **Hybrid KEM Handshakes:** `%.1f%%` | **TLS 1.3:** `%.1f%%`\n",
+				sum.CNSAComplianceScore, sum.AuditStatus, sum.HybridKEMPercentage, sum.TLS13Percentage))
+			buf.WriteString(fmt.Sprintf("**Severity Breakdown:** %d Critical | %d High | %d Medium | %d Low\n\n",
+				sum.CriticalCount, sum.HighCount, sum.MediumCount, sum.LowCount))
+		}
+		if len(opts.PQCViolations) > 0 {
+			buf.WriteString(fmt.Sprintf("⚠️ **%d Post-Quantum cryptography and TLS protocol violations identified:**\n\n", len(opts.PQCViolations)))
+			buf.WriteString("| Rule ID | Component | Resource | Severity | CVSS | Finding & Threat Impact | Remediation Action |\n")
+			buf.WriteString("| :--- | :--- | :--- | :---: | :---: | :--- | :--- |\n")
+			for _, pv := range opts.PQCViolations {
+				cveTag := ""
+				if pv.MatchedCVE != "" {
+					cveTag = fmt.Sprintf(" (`%s`)", pv.MatchedCVE)
+				}
+				buf.WriteString(fmt.Sprintf("| `%s` | `%s` | `%s` | **%s** | %.1f | %s%s | %s |\n",
+					pv.RuleID, pv.Component, pv.Resource, pv.Severity, pv.CVSSScore, pv.Description, cveTag, pv.Remediation))
+			}
+			buf.WriteString("\n")
+		}
+		buf.WriteString("---\n\n")
+	}
+
+	// 18. Action Items Checklist
 	buf.WriteString("## 📋 SecOps & SRE Operational Checklist\n\n")
 	buf.WriteString("- [ ] Review high and critical severity advisories against production deployment manifests.\n")
 	buf.WriteString("- [ ] Verify that ingress controllers enforce URI path normalization and snippet guards.\n")
@@ -557,6 +587,7 @@ func GenerateBriefing(opts BriefingOptions) (*BriefingReport, error) {
 	buf.WriteString("- [ ] Ingest SPDX v3.0 / CycloneDX v1.6 SBOMs, verify In-Toto SLSA Level 3 attestations, and reconcile cluster runtime package deltas.\n")
 	buf.WriteString("- [ ] Enforce hardware-backed KMS v2 envelope encryption for etcd, eliminate plaintext PKCS#11 PINs, and rotate KEKs under 90 days.\n")
 	buf.WriteString("- [ ] Enforce declarative seccomp profiles, attach eBPF LSM socket_create filters, and restrict unprivileged BPF access.\n")
+	buf.WriteString("- [ ] Enforce hybrid post-quantum key encapsulation (ML-KEM/Kyber) and CNSA 2.0 cipher suites across cluster control plane.\n")
 	buf.WriteString("- [ ] Archive this briefing record into security audit ledger.\n")
 
 	report := &BriefingReport{

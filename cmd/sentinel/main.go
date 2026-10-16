@@ -15,6 +15,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/intel"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/k8s"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nix"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/pqc"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/probe"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/report"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/sbom"
@@ -24,7 +25,7 @@ import (
 )
 
 var (
-	version = "0.17.0"
+	version = "0.18.0"
 )
 
 func main() {
@@ -69,6 +70,11 @@ func main() {
 	bpfTelemetry := flag.String("bpf-telemetry", "", "Path to runtime kernel BPF & syscall telemetry JSON to inspect")
 	bpfSynthOut := flag.String("bpf-synth-out", "", "Output directory to export synthesized hardened Seccomp and eBPF LSM policies")
 	bpfService := flag.String("bpf-service", "k8s-workload", "Target systemd service name for synthesized NixOS seccomp module")
+	pqcPath := flag.String("pqc", "", "Path to Kubernetes control plane or NixOS crypto manifest file or directory to audit")
+	cnsaShort := flag.String("cnsa", "", "Alias for --pqc")
+	pqcTelemetry := flag.String("pqc-telemetry", "", "Path to runtime PQC TLS handshake telemetry JSON to inspect")
+	pqcSynthOut := flag.String("pqc-synth-out", "", "Output directory to export synthesized hardened PQC and CNSA 2.0 policies")
+	cnsaStrict := flag.Bool("cnsa-strict", false, "Enforce strict CNSA 2.0 2030/2033 cryptographic timeline compliance")
 	briefing := flag.Bool("briefing", false, "Generate automated Markdown threat intelligence briefing")
 	briefingDir := flag.String("briefing-dir", "intel/briefings", "Output directory for threat briefings")
 	briefingFile := flag.String("briefing-file", "", "Custom filename for threat briefing markdown")
@@ -122,6 +128,9 @@ func main() {
 	}
 	if *bpfPath == "" && *seccompShort != "" {
 		*bpfPath = *seccompShort
+	}
+	if *pqcPath == "" && *cnsaShort != "" {
+		*pqcPath = *cnsaShort
 	}
 	if *outFile == "" && *outShort != "" {
 		*outFile = *outShort
@@ -184,6 +193,8 @@ func main() {
 	var hsmSummary *hsm.HSMSummary
 	var bpfViolations []bpf.BPFViolation
 	var bpfSummary *bpf.BPFSummary
+	var pqcViolations []pqc.PQCViolation
+	var pqcSummary *pqc.PQCSummary
 
 	// 1. Audit Nix Flake
 	if *flakePath != "" {
@@ -266,7 +277,12 @@ func main() {
 		bpfViolations, bpfSummary = runBPFAudit(*bpfPath, *bpfTelemetry, *bpfSynthOut, *bpfService, feed, logInfo, logErr)
 	}
 
-	// 15. Generate Threat Briefing if --briefing is requested
+	// 15. Audit Post-Quantum Cryptography (PQC) & CNSA 2.0 TLS
+	if *pqcPath != "" || *pqcTelemetry != "" || *pqcSynthOut != "" {
+		pqcViolations, pqcSummary = runPQCAudit(*pqcPath, *pqcTelemetry, *pqcSynthOut, *cnsaStrict, feed, logInfo, logErr)
+	}
+
+	// 16. Generate Threat Briefing if --briefing is requested
 	if *briefing {
 		logInfo("[+] Synthesizing Threat Intelligence Briefing...\n")
 		briefingOpts := report.BriefingOptions{
@@ -296,6 +312,8 @@ func main() {
 			HSMSummary:              hsmSummary,
 			BPFViolations:           bpfViolations,
 			BPFSummary:              bpfSummary,
+			PQCViolations:           pqcViolations,
+			PQCSummary:              pqcSummary,
 			OutputDir:               *briefingDir,
 			CustomFilename:          *briefingFile,
 		}
@@ -353,6 +371,8 @@ func main() {
 			HSMSummary:              hsmSummary,
 			BPFViolations:           bpfViolations,
 			BPFSummary:              bpfSummary,
+			PQCViolations:           pqcViolations,
+			PQCSummary:              pqcSummary,
 			FlakePath:               *flakePath,
 			K8sPath:                 *k8sPath,
 			StoragePath:             *cephPath,
@@ -372,6 +392,8 @@ func main() {
 			HSMTelemetryPath:        *hsmTelemetry,
 			BPFPath:                 *bpfPath,
 			BPFTelemetryPath:        *bpfTelemetry,
+			PQCPath:                 *pqcPath,
+			PQCTelemetryPath:        *pqcTelemetry,
 			TargetFilter:            *targetFilter,
 			Pretty:                  true,
 		}

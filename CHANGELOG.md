@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.18.0] - 2026-10-16
+
+### Added
+- **Post-Quantum Cryptography (PQC) & NSA CNSA 2.0 TLS Audit Engine** (`pkg/pqc/scanner.go`): Enterprise cryptographic scanner auditing Kubernetes control plane components, etcd peer clusters, and NixOS host configurations for post-quantum key encapsulation readiness and NSA CNSA 2.0 transition conformance.
+- **Universal Kubernetes Control Plane & NixOS Crypto Parser** (`pkg/pqc/parser.go`): Streaming parser auditing kube-apiserver, etcd, and kubelet flags (`--tls-min-version`, `--tls-cipher-suites`, `--tls-key-exchange-groups`, `--peer-tls-min-version`), NixOS OpenSSL configuration (`environment.etc."ssl/openssl.cnf"`, `oqsprovider` activation, default groups), and system-wide GnuTLS priority strings with strict 10MB memory safety ceilings.
+- **Authoritative Canonical PQC & CNSA 2.0 Rules Catalog** (`pkg/pqc/rules.go`): Suite of 12 canonical rules (`PQC-TLS-001` through `PQC-TLS-012`) covering insecure TLS versions (< TLS 1.3), missing hybrid post-quantum key encapsulation (NIST FIPS 203 ML-KEM-768/1024), deprecated classical ciphers (CBC/3DES/static RSA), non-compliant symmetric key lengths (< 256-bit AES), weak hash algorithms, classical-only certificate signatures, missing NixOS `oqsprovider`, and unhardened etcd peer transports.
+- **Static & Runtime Cryptographic Evaluator** (`pkg/pqc/auditor.go`): Evaluates live and declarative TLS connections, calculates hybrid KEM adoption percentages, TLS 1.3 compliance, and evaluates NSA CNSA 2.0 readiness milestones (2025/2030/2033 timelines). Correlates Harvest-Now-Decrypt-Later (HNDL) quantum cryptanalysis threats with `CVE-2026-94301`.
+- **Declarative Policy Synthesizer** (`pkg/pqc/synth.go`): Generates quantum-hardened NixOS configuration modules enabling OpenSSL 3.4+ `oqsprovider` with `X25519MLKEM768` and `SecP384r1MLKEM1024`, GnuTLS priority strings, and hardened static pod manifests for `kube-apiserver` and `etcd`.
+- **Dedicated CLI PQC Runner** (`cmd/sentinel/pqc_runner.go`): Modular runner coordinating manifest scans, runtime TLS telemetry analysis, and policy synthesis, keeping `cmd/sentinel/main.go` under 465 LOC (well within the 300~500 LOC soft ceiling). Added `--pqc=<path>`, `--cnsa`, `--pqc-telemetry=<path>`, `--pqc-synth-out=<dir>`, and `--cnsa-strict` flags.
+- **Threat Feed Expansion** (`intel/cve-feed.json`): Ingested `CVE-2026-94301` (Kubernetes API Server & etcd Classical TLS Key Exchange Vulnerable to Harvest-Now-Decrypt-Later Quantum Cryptanalysis, CVSS 8.8).
+- **Unified Exporter Integration**: PQC findings, hybrid KEM adoption percentages, and CNSA 2.0 compliance scores seamlessly exported to OASIS SARIF v2.1.0 (Section 14), structured JSON audit telemetry, and hourly Markdown threat briefings (Section 17).
+- **Production Fixtures**: Added realistic declarative fixtures (`fixtures/k8s-pqc-controlplane.yaml`, `fixtures/k8s-pqc-vulnerable.yaml`, `fixtures/nixos-pqc.nix`, `fixtures/nixos-pqc-vulnerable.nix`, `fixtures/pqc-telemetry.json`).
+- **Comprehensive Unit Test Suites** (`pkg/pqc/pqc_test.go`, `pkg/report/pqc_report_test.go`): 100% test coverage across canonical rules, control plane manifests, NixOS configs, runtime handshake telemetry, policy synthesis, SARIF/JSON/Briefing serialization, and bounds checks.
+
+### Changed
+- Bumped engine release to `v0.18.0`.
+- Updated `SECURITY.md` establishing Post-Quantum Cryptography & CNSA 2.0 Cryptographic Readiness security invariants (Invariant 20).
+- Updated `ROADMAP.md` marking Milestone M18 as completed and scheduling M19 (Ephemeral MicroVM Sandbox & Honeypot Detonation Dispatch).
+- Updated `scripts/ARCHITECTURE_MAP.md` documenting new PQC modules, runners, and O(1) symbols.
+
+---
+
 ## [0.17.0] - 2026-10-16
 
 ### Added

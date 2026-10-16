@@ -16,6 +16,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/intel"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/k8s"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nix"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/pqc"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/probe"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/sbom"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/spiffe"
@@ -56,6 +57,8 @@ type JSONAuditReport struct {
 	HSMSummary              *hsm.HSMSummary                 `json:"hsm_summary,omitempty"`
 	BPFViolations           []bpf.BPFViolation              `json:"bpf_violations,omitempty"`
 	BPFSummary              *bpf.BPFSummary                 `json:"bpf_summary,omitempty"`
+	PQCViolations           []pqc.PQCViolation              `json:"pqc_violations,omitempty"`
+	PQCSummary              *pqc.PQCSummary                 `json:"pqc_summary,omitempty"`
 }
 
 // BuildJSONReport compiles the consolidated JSON audit report from provided audit data.
@@ -123,8 +126,14 @@ func BuildJSONReport(opts ReportOptions) (*JSONAuditReport, error) {
 	if opts.BPFTelemetryPath != "" {
 		scanned = append(scanned, opts.BPFTelemetryPath)
 	}
+	if opts.PQCPath != "" {
+		scanned = append(scanned, opts.PQCPath)
+	}
+	if opts.PQCTelemetryPath != "" {
+		scanned = append(scanned, opts.PQCTelemetryPath)
+	}
 
-	telemetry := ComputeTelemetryBPF(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations, opts.GatewayViolations, opts.AttestViolations, opts.FleetViolations, opts.SPIFFEViolations, opts.SBOMViolations, opts.HSMViolations, opts.BPFViolations)
+	telemetry := ComputeTelemetryPQC(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations, opts.GatewayViolations, opts.AttestViolations, opts.FleetViolations, opts.SPIFFEViolations, opts.SBOMViolations, opts.HSMViolations, opts.BPFViolations, opts.PQCViolations)
 
 	var advisories []intel.ThreatItem
 	if opts.Feed != nil {
@@ -167,6 +176,8 @@ func BuildJSONReport(opts ReportOptions) (*JSONAuditReport, error) {
 		HSMSummary:              opts.HSMSummary,
 		BPFViolations:           opts.BPFViolations,
 		BPFSummary:              opts.BPFSummary,
+		PQCViolations:           opts.PQCViolations,
+		PQCSummary:              opts.PQCSummary,
 	}
 
 	return rep, nil
