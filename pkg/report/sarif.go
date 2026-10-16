@@ -823,8 +823,71 @@ func BuildSARIFReport(opts ReportOptions) (*SARIFLog, error) {
 		}
 	}
 
-	// 12. Process Standalone Feed Advisories (if no specific audit targets yielded findings)
-	if (opts.K8sReport == nil || len(opts.K8sReport.Violations) == 0) && len(opts.FlakeMatches) == 0 && len(opts.ProbeEvents) == 0 && len(opts.StorageViolations) == 0 && len(opts.WireGuardViolations) == 0 && len(opts.CISViolations) == 0 && len(opts.GatewayViolations) == 0 && len(opts.AttestViolations) == 0 && len(opts.FleetViolations) == 0 && len(opts.SPIFFEViolations) == 0 && len(opts.SBOMViolations) == 0 && opts.Feed != nil {
+	// 12. Process Hardware Security Module (HSM) & PKCS#11 Envelope Encryption Violations
+	if len(opts.HSMViolations) > 0 {
+		for _, hv := range opts.HSMViolations {
+			tags := []string{"security", "hsm", "pkcs11", "kms", "encryption-at-rest"}
+			if hv.MatchedCVE != "" {
+				tags = append(tags, hv.MatchedCVE)
+			}
+			ruleIdx := getOrCreateRule(hv.RuleID, hv.Title, hv.Description, hv.Remediation, hv.Severity, hv.CVSSScore, tags)
+			level := SeverityToSARIFLevel(string(hv.Severity), hv.CVSSScore)
+
+			locURI := hv.ResourceURI
+			if locURI == "" {
+				locURI = opts.HSMPath
+			}
+			if locURI == "" {
+				locURI = opts.HSMTelemetryPath
+			}
+			if locURI == "" {
+				locURI = "hsm/encryption-config.yaml"
+			}
+			locURI = filepath.ToSlash(locURI)
+
+			line := hv.LineNumber
+			if line <= 0 {
+				line = 1
+			}
+
+			cveTag := ""
+			if hv.MatchedCVE != "" {
+				cveTag = fmt.Sprintf(" [%s]", hv.MatchedCVE)
+			}
+			resMsg := fmt.Sprintf("[%s] %s%s: %s (Remediation: %s)", hv.RuleID, hv.Title, cveTag, hv.Description, hv.Remediation)
+
+			results = append(results, SARIFResult{
+				RuleID:    hv.RuleID,
+				RuleIndex: ruleIdx,
+				Level:     level,
+				Message:   SARIFMessage{Text: resMsg},
+				Locations: []SARIFLocation{
+					{
+						PhysicalLocation: &PhysicalLocation{
+							ArtifactLocation: ArtifactLocation{
+								URI:       locURI,
+								URIBaseID: "%SRCROOT%",
+							},
+							Region: &Region{
+								StartLine:   line,
+								StartColumn: 1,
+							},
+						},
+						LogicalLocations: []LogicalLocation{
+							{
+								Name:               hv.RuleID,
+								Kind:               "HSMProvider",
+								FullyQualifiedName: fmt.Sprintf("hsm/%s", hv.ProviderName),
+							},
+						},
+					},
+				},
+			})
+		}
+	}
+
+	// 13. Process Standalone Feed Advisories (if no specific audit targets yielded findings)
+	if (opts.K8sReport == nil || len(opts.K8sReport.Violations) == 0) && len(opts.FlakeMatches) == 0 && len(opts.ProbeEvents) == 0 && len(opts.StorageViolations) == 0 && len(opts.WireGuardViolations) == 0 && len(opts.CISViolations) == 0 && len(opts.GatewayViolations) == 0 && len(opts.AttestViolations) == 0 && len(opts.FleetViolations) == 0 && len(opts.SPIFFEViolations) == 0 && len(opts.SBOMViolations) == 0 && len(opts.HSMViolations) == 0 && opts.Feed != nil {
 		feedItems := opts.Feed.Items
 		if opts.TargetFilter != "" {
 			feedItems = opts.Feed.FilterByTarget(opts.TargetFilter)

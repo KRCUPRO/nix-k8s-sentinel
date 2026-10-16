@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.16.0] - 2026-10-16
+
+### Added
+- **Hardware Security Module (HSM) & PKCS#11 Envelope Encryption Pipeline** (`pkg/hsm/scanner.go`): Enterprise-grade cryptographic security inspection and auditing engine for Kubernetes etcd encryption at rest, KMS v2 plugins, PKCS#11 tokens, and AWS Nitro Enclaves.
+- **Universal Kubernetes EncryptionConfiguration & PKCS#11 URI Parser** (`pkg/hsm/parser.go`): Streaming parser supporting `apiserver.config.k8s.io/v1` KMS v2 provider chains, RFC 7512 PKCS#11 URIs, and NixOS host security modules (`services.p11-kit`, `hardware.nitro-enclaves`), with strict 10MB manifest ceiling and memory-safe PIN sanitization (`SanitizePIN`).
+- **Cryptographic Envelope Auditor & Telemetry Reconciler** (`pkg/hsm/auditor.go`): Evaluates master Key Encryption Keys (KEK), detects unrotated keys exceeding 90-day compliance windows (`HSM-ENC-006`), identifies KMS v2 plugin gRPC socket degradation (`HSM-ENC-005`), detects Nitro Enclave session handle leaks and unsealed attestation quotes (`HSM-ENC-007`, mapped to CVE-2026-83190), and flags excessive latency or zero cache utilization (`HSM-ENC-010`).
+- **Authoritative Canonical HSM Security Catalog** (`pkg/hsm/rules.go`): Suite of 12 canonical rules (`HSM-ENC-001` through `HSM-ENC-012`) covering insecure plaintext identity providers, deprecated KMS v1 APIs, exposed PKCS#11 PINs, weak cryptographic suites (3DES, AES-CBC-128, RSA-1024), network socket transports, and missing host daemon modules.
+- **Dedicated CLI HSM Runner & Modularity** (`cmd/sentinel/hsm_runner.go`): High-performance modular runner keeping `cmd/sentinel/main.go` under 425 LOC, strictly adhering to the 300~500 LOC soft ceiling. Added `--hsm=<path>`, `--kms`, `--hsm-telemetry=<path>`, and `--nitro` CLI flags.
+- **Threat Feed Expansion** (`intel/cve-feed.json`): Added `CVE-2026-83190` (Kubernetes KMS v2 Provider PKCS#11 Session Leakage & Unrotated DEK Envelope Attack, CVSS 9.4).
+- **Unified Exporter Integration**: HSM findings, key rotation tallies, and envelope security ratings seamlessly exported to OASIS SARIF v2.1.0 (Section 12), structured JSON audit telemetry, and hourly Markdown threat briefings (Section 15).
+- **Production Fixtures**: Added realistic declarative fixtures (`fixtures/k8s-encryption-config.yaml`, `fixtures/k8s-encryption-config-vulnerable.yaml`), NixOS HSM host module (`fixtures/nixos-hsm.nix`), and runtime telemetry payload (`fixtures/hsm-telemetry.json`).
+- **Comprehensive Unit Test Suites** (`pkg/hsm/hsm_test.go`, `pkg/report/hsm_report_test.go`): 100% test coverage across rules catalog, compliant and vulnerable EncryptionConfigurations, PKCS#11 URI parsing, PIN redaction, runtime telemetry auditing, SARIF/JSON/Briefing serialization, and bounds checks.
+
+### Changed
+- Bumped engine release to `v0.16.0`.
+- Updated `SECURITY.md` establishing Hardware Security Module & PKCS#11 Envelope Encryption security invariants (Invariant 18).
+- Updated `ROADMAP.md` marking Milestone M16 as completed and scheduling M17 (Dynamic Kernel Runtime Threat Profiler & Syscall BPF Filter).
+- Updated `scripts/ARCHITECTURE_MAP.md` documenting new HSM modules, runners, and O(1) symbols.
+
+---
+
 ## [0.15.0] - 2026-10-15
 
 ### Added

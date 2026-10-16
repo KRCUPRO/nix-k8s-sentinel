@@ -19,7 +19,7 @@
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](../../LICENSE)
 [![Go Report Card](https://goreportcard.com/badge/github.com/KRCUPRO/nix-k8s-sentinel)](https://goreportcard.com/report/github.com/KRCUPRO/nix-k8s-sentinel)
-[![Version](https://img.shields.io/badge/Release-v0.15.0-emerald.svg)](https://github.com/KRCUPRO/nix-k8s-sentinel/releases)
+[![Version](https://img.shields.io/badge/Release-v0.16.0-emerald.svg)](https://github.com/KRCUPRO/nix-k8s-sentinel/releases)
 [![Architecture](https://img.shields.io/badge/Architecture-Bare--Metal_NixOS_+_K8s-8b5cf6.svg)](#-architecture-overview)
 [![Security](https://img.shields.io/badge/Security-Declarative_Audit-38bdf8.svg)](../../SECURITY.md)
 
@@ -31,13 +31,14 @@
 
 `nix-k8s-sentinel`은 베어메탈 NixOS 클러스터 및 Kubernetes 인프라에 최적화된 고성능 선언적 취약점 스캐너이자 지속적 위협 인텔리전스 동기화 엔진입니다.
 
-배포 후 컨테이너 레이어를 수동적으로 검사하는 기존 런타임 스캐너와 달리, `nix-k8s-sentinel`은 선언적 구성 명세(NixOS Flakes, Kubernetes CNI 정책, Ingress 컨트롤러, Gateway API, Rook Ceph, WireGuard, CIS 벤치마크, 기밀 컴퓨팅, 멀티 클러스터 GitOps 플릿, SPIFFE/SPIRE 제로 트러스트 마이크로세그멘테이션, 소프트웨어 자재명세서 및 In-Toto SLSA Level 3 공급망 증명)를 실시간 정규화된 CVSS 위협 피드와 대조하여 워크로드가 스케줄링되기 전에 사전 대응할 수 있도록 지원합니다.
+배포 후 컨테이너 레이어를 수동적으로 검사하는 기존 런타임 스캐너와 달리, `nix-k8s-sentinel`은 선언적 구성 명세(NixOS Flakes, Kubernetes CNI 정책, Ingress 컨트롤러, Gateway API, Rook Ceph, WireGuard, CIS 벤치마크, 기밀 컴퓨팅, 멀티 클러스터 GitOps 플릿, SPIFFE/SPIRE 제로 트러스트 마이크로세그멘테이션, 소프트웨어 자재명세서 및 In-Toto SLSA Level 3 공급망 증명, 하드웨어 보안 모듈 봉투 암호화)를 실시간 정규화된 CVSS 위협 피드와 대조하여 워크로드가 스케줄링되기 전에 사전 대응할 수 있도록 지원합니다.
 
 ---
 
 ## 🏛️ 핵심 역량
 
 - **🔍 선언적 인프라 감사**: NixOS Flake 입력 락, Kubernetes 매니페스트 명세, CNI 네트워크 정책에 대한 패턴 매칭 및 의존성 추적.
+- **🔐 하드웨어 보안 모듈(HSM) & PKCS#11 봉투 암호화 파이프라인**: Kubernetes etcd 저장 데이터 암호화, KMS v2 플러그인, PKCS#11 토큰 및 AWS Nitro Enclaves를 위한 엔터프라이즈급 암호화 보안 감사 엔진. `apiserver.config.k8s.io/v1` EncryptionConfiguration 매니페스트, RFC 7512 PKCS#11 URI 및 NixOS 호스트 모듈(`services.p11-kit`, `hardware.nitro-enclaves`) 스트리밍 파싱. 런타임 KMS 플러그인 상태 점검, 90일 초과 미회전 마스터 키(KEK) 탐지, 매니페스트 내 평문 PIN 노출 차단 및 Nitro Enclave 세션 누수/비봉인 증명 공격 방어(CVE-2026-83190).
 - **📦 소프트웨어 자재명세서(SBOM) & In-Toto 공급망 증명**: SPDX v3.0, SPDX v2.3, CycloneDX v1.6, Nix 스토어 클로저 통합 수집. In-Toto 성명서(`_type: https://in-toto.io/Statement/v1`) 암호학적 서명 검증, 빌드 산출물 SHA256 다이제스트 변조 감지(CVE-2026-71044), SLSA Level 3 밀폐(Hermetic) 샌드박스 및 불변 의존성 강제, 선언적 SBOM과 런타임 클러스터 패키지 간 버전 드리프트 및 미인가 섀도우 바이너리 주입 자동 조정(`--sbom`, `--attestation`, `--sbom-runtime`).
 - **🔒 제로 트러스트 마이크로세그멘테이션 & SPIFFE/SPIRE 워크로드 증명**: SPIFFE/SPIRE 워크로드 아이덴티티 및 Cilium eBPF 네트워크 마이크로세그멘테이션을 위한 네이티브 보안 감사 엔진. 신뢰 도메인 허용 목록 기반 RFC 규격 SPIFFE ID 검증, Cilium mTLS 강제 모드(`authentication.mode: required`) 검증, 취약 암호화 키(RSA-1024/2048) 탐지, 위험 와일드카드 셀렉터(`k8s:ns:*`) 차단, 만료 임박(< 15분) SVID 불일치로 인한 워크로드 단절 방지(CVE-2026-67210) 및 제로 트러스트 `CiliumNetworkPolicy` 자동 합성(`--spiffe-policy-out`).
 - **🛰️ 멀티 클러스터 플릿 동기화 & OIDC 토큰 레이더**: 지리적으로 분산된 다중 Kubernetes 클러스터 전반의 RBAC 와일드카드(`*`), `bind`/`escalate` 권한 상승, `system:authenticated` 광범위 바인딩 및 비인가 시크릿 접근 차단. 취약한 OIDC 알고리즘(`none`, `HS256`) 및 24시간 초과 토큰 탐지. ArgoCD/Flux GitOps 선언의 자동 자가 치유(`selfHeal`, `prune`), 부동 브랜치, 와일드카드 대상 클러스터 감사 및 실시간 동기화 드리프트 포렌식 탐지(CVE-2026-60114).
@@ -81,6 +82,13 @@ go run cmd/sentinel/main.go --spiffe=fixtures/spiffe-manifests.yaml
 
 # 런타임 SVID 텔레메트리 조정 및 경량화된 CiliumNetworkPolicy 자동 합성
 go run cmd/sentinel/main.go --spiffe=fixtures/spiffe-manifests.yaml --svid-telemetry=fixtures/spiffe-telemetry.json --spiffe-policy-out=policies/generated/cilium-spiffe-policies.yaml --format=sarif --output=spiffe-results.sarif
+
+# Kubernetes EncryptionConfiguration 및 NixOS 하드웨어 보안 모듈(HSM) 감사
+go run cmd/sentinel/main.go --hsm=fixtures/k8s-encryption-config.yaml
+go run cmd/sentinel/main.go --hsm=fixtures/nixos-hsm.nix
+
+# 런타임 HSM, PKCS#11 및 KMS v2 플러그인 텔레메트리 실시간 조정 및 SARIF 출력
+go run cmd/sentinel/main.go --hsm=fixtures/k8s-encryption-config.yaml --hsm-telemetry=fixtures/hsm-telemetry.json --format=sarif --output=hsm-results.sarif
 
 # 베어메탈 eBPF 커널 텔레메트리 다중 노드 실시간 분석 실행
 go run cmd/sentinel/main.go --probe

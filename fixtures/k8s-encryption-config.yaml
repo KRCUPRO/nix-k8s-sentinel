@@ -1,0 +1,20 @@
+apiVersion: apiserver.config.k8s.io/v1
+kind: EncryptionConfiguration
+resources:
+  - resources:
+      - secrets
+      - configmaps
+    providers:
+      - kms:
+          apiVersion: v2
+          name: nitro-pkcs11-hsm-primary
+          endpoint: unix:///var/run/kmsplugin/socket.sock
+          timeout: 3s
+          cachesize: 1000
+      - kms:
+          apiVersion: v2
+          name: nitro-enclave-secondary
+          endpoint: unix:///var/run/kmsplugin/nitro.sock
+          timeout: 3s
+          cachesize: 500
+      - identity: {}

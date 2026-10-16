@@ -124,10 +124,18 @@ Automated generation of defense-in-depth rules:
 - [x] Full CLI integration (`--sbom`, `--attestation`, `--intoto`, `--sbom-runtime`, `--sbom-delta`) with unified SARIF v2.1.0 code scanning, JSON audit telemetry, and Markdown briefing exports (`cmd/sentinel/sbom_runner.go`).
 - [x] Production sample fixtures (`fixtures/spdx-v3-sbom.json`, `fixtures/cyclonedx-v1.6-sbom.json`, `fixtures/intoto-slsa-attestation.json`, `fixtures/sbom-runtime-state.json`) and threat feed correlation with `CVE-2026-71044`.
 
-### Version 0.16.0 — Hardware Security Module (HSM) & PKCS#11 Envelope Encryption Pipeline (Planned)
-- [ ] Interface with hardware security modules and Nitro Enclaves for cluster master key wrapping.
-- [ ] Audit Kubernetes etcd encryption at rest posture and KMS v2 plugin health.
-- [ ] Automated detection of unrotated envelope keys and insecure cryptographic suites.
+### Version 0.16.0 — Hardware Security Module (HSM) & PKCS#11 Envelope Encryption Pipeline (Completed)
+- [x] Hardware Security Module (HSM), KMS v2, and PKCS#11 envelope encryption scanner (`pkg/hsm/scanner.go`).
+- [x] Universal parser for Kubernetes `EncryptionConfiguration` (`apiserver.config.k8s.io/v1`), RFC 7512 PKCS#11 URIs, and NixOS host security modules (`pkg/hsm/parser.go`).
+- [x] Canonical rule catalog `HSM-ENC-001` through `HSM-ENC-012` covering insecure plaintext identity providers, deprecated KMS v1 APIs, exposed PKCS#11 PINs, weak cryptographic suites (3DES, AES-CBC-128, RSA-1024), network socket transports, and missing host daemon modules (`pkg/hsm/rules.go`).
+- [x] Cryptographic envelope auditor and runtime telemetry reconciler evaluating master Key Encryption Keys (KEK), detecting unrotated keys exceeding 90 days, identifying KMS v2 plugin degradation, and detecting AWS Nitro Enclave session handle leaks (CVE-2026-83190) (`pkg/hsm/auditor.go`).
+- [x] Full CLI integration (`--hsm`, `--kms`, `--hsm-telemetry`, `--nitro`) with unified SARIF v2.1.0 code scanning, JSON audit telemetry, and Markdown briefing exports (`cmd/sentinel/hsm_runner.go`).
+- [x] Production sample fixtures (`fixtures/k8s-encryption-config.yaml`, `fixtures/k8s-encryption-config-vulnerable.yaml`, `fixtures/nixos-hsm.nix`, `fixtures/hsm-telemetry.json`) and threat feed correlation with `CVE-2026-83190`.
+
+### Version 0.17.0 — Dynamic Kernel Runtime Threat Profiler & Syscall BPF Filter (Planned)
+- [ ] Implement declarative seccomp and eBPF LSM policy synthesis for NixOS host workloads.
+- [ ] Correlate abnormal socket creation rates against live CVE attack patterns.
+- [ ] Automated detection of unconfined container namespaces and raw socket leaks.
 
 ### Version 1.0.0 — Supply Chain Attestation & Workload Identity (Planned)
 - [ ] Full end-to-end integration of SPIFFE/SPIRE workload attestation, In-Toto provenance, and HSM envelope encryption.
