@@ -1,0 +1,24 @@
+apiVersion: sentinel.io/v1alpha1
+kind: DetonationJob
+metadata:
+  name: k8s-sandbox-production-01
+  namespace: sentinel-sandbox
+  labels:
+    app.kubernetes.io/managed-by: nix-k8s-sentinel
+    security.sentinel.io/sandbox: firecracker
+spec:
+  hypervisor: firecracker
+  vcpus: 2
+  memoryMib: 2048
+  jailerEnabled: true
+  egressIsolated: true
+  readOnlyRootfs: true
+  timeoutSeconds: 30
+  payload:
+    targetType: container_image
+    payloadDigest: "sha256:7f83b1657ff1fc53b92dc18148a1d65dfc2d4b1fa3d677284addd200126d9069"
+    quarantineOnAnomaly: true
+  honeypotLures:
+    kubeletDecoy: true
+    etcdDecoy: true
+    canaryToken: true

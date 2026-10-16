@@ -19,6 +19,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nix"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/pqc"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/probe"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/sandbox"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/sbom"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/spiffe"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/storage"
@@ -57,6 +58,8 @@ type BriefingOptions struct {
 	BPFSummary              *bpf.BPFSummary
 	PQCViolations           []pqc.PQCViolation
 	PQCSummary              *pqc.PQCSummary
+	SandboxViolations       []sandbox.SandboxViolation
+	SandboxSummary          *sandbox.SandboxSummary
 	OutputDir               string
 	CustomFilename          string
 }
@@ -89,7 +92,7 @@ func GenerateBriefing(opts BriefingOptions) (*BriefingReport, error) {
 		version = "0.17.0"
 	}
 
-	telemetry := ComputeTelemetryPQC(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations, opts.GatewayViolations, opts.AttestViolations, opts.FleetViolations, opts.SPIFFEViolations, opts.SBOMViolations, opts.HSMViolations, opts.BPFViolations, opts.PQCViolations)
+	telemetry := ComputeTelemetrySandbox(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations, opts.GatewayViolations, opts.AttestViolations, opts.FleetViolations, opts.SPIFFEViolations, opts.SBOMViolations, opts.HSMViolations, opts.BPFViolations, opts.PQCViolations, opts.SandboxViolations)
 
 	var buf bytes.Buffer
 
@@ -571,7 +574,34 @@ func GenerateBriefing(opts BriefingOptions) (*BriefingReport, error) {
 		buf.WriteString("---\n\n")
 	}
 
-	// 18. Action Items Checklist
+	// 18. Ephemeral MicroVM Sandbox Detonation & Honeypot Telemetry (if applicable)
+	if len(opts.SandboxViolations) > 0 || opts.SandboxSummary != nil {
+		buf.WriteString("## 🔬 Ephemeral MicroVM Sandbox Detonation & Honeypot Telemetry\n\n")
+		if opts.SandboxSummary != nil {
+			sum := opts.SandboxSummary
+			buf.WriteString(fmt.Sprintf("**Sandbox Security Score:** `%.1f%%` | **Status:** `%s` | **Detonations:** %d | **Honeypot Hits:** %d | **Quarantined:** %d\n",
+				sum.SandboxSecurityScore, sum.AuditStatus, sum.TotalDetonations, sum.TotalHoneypotHits, sum.QuarantinedCount))
+			buf.WriteString(fmt.Sprintf("**MicroVMs Scanned:** %d | **Clean:** %d | **Violations:** %d\n\n",
+				sum.TotalMicroVMsScanned, sum.CleanCount, sum.ViolationsCount))
+		}
+		if len(opts.SandboxViolations) > 0 {
+			buf.WriteString(fmt.Sprintf("⚠️ **%d Ephemeral MicroVM sandbox and honeypot detonation anomalies identified:**\n\n", len(opts.SandboxViolations)))
+			buf.WriteString("| Rule ID | Target | Severity | CVSS | Title & Description | Remediation Action |\n")
+			buf.WriteString("| :--- | :--- | :---: | :---: | :--- | :--- |\n")
+			for _, sv := range opts.SandboxViolations {
+				cveTag := ""
+				if sv.MatchedCVE != "" {
+					cveTag = fmt.Sprintf(" (`%s`)", sv.MatchedCVE)
+				}
+				buf.WriteString(fmt.Sprintf("| `%s` | `%s` | **%s** | %.1f | %s%s: %s | %s |\n",
+					sv.RuleID, sv.Target, sv.Severity, sv.CVSSScore, sv.Title, cveTag, sv.Description, sv.Remediation))
+			}
+			buf.WriteString("\n")
+		}
+		buf.WriteString("---\n\n")
+	}
+
+	// 19. Action Items Checklist
 	buf.WriteString("## 📋 SecOps & SRE Operational Checklist\n\n")
 	buf.WriteString("- [ ] Review high and critical severity advisories against production deployment manifests.\n")
 	buf.WriteString("- [ ] Verify that ingress controllers enforce URI path normalization and snippet guards.\n")
@@ -588,6 +618,7 @@ func GenerateBriefing(opts BriefingOptions) (*BriefingReport, error) {
 	buf.WriteString("- [ ] Enforce hardware-backed KMS v2 envelope encryption for etcd, eliminate plaintext PKCS#11 PINs, and rotate KEKs under 90 days.\n")
 	buf.WriteString("- [ ] Enforce declarative seccomp profiles, attach eBPF LSM socket_create filters, and restrict unprivileged BPF access.\n")
 	buf.WriteString("- [ ] Enforce hybrid post-quantum key encapsulation (ML-KEM/Kyber) and CNSA 2.0 cipher suites across cluster control plane.\n")
+	buf.WriteString("- [ ] Quarantine untrusted artifacts and isolate ephemeral microVM network egress to internal honeypot lures.\n")
 	buf.WriteString("- [ ] Archive this briefing record into security audit ledger.\n")
 
 	report := &BriefingReport{

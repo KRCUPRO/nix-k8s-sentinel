@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sentinel-honeypot-lures
+  namespace: sentinel-sandbox
+data:
+  honeypot.yaml: |
+    lures:
+      - name: kubelet-api-decoy
+        port: 10250
+        protocol: HTTP
+        responseType: UNATHORIZED_CHALLENGE
+        alertSeverity: HIGH
+      - name: etcd-peer-decoy
+        port: 2379
+        protocol: GRPC
+        responseType: CONNECTION_STALL
+        alertSeverity: CRITICAL
+      - name: canary-serviceaccount-token
+        path: /var/run/secrets/kubernetes.io/serviceaccount/token
+        canaryHash: 7f83b1657ff1fc53b92dc18148a1d65dfc2d4b1fa3d677284addd200126d9069
+        alertSeverity: HIGH

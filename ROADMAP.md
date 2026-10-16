@@ -150,15 +150,24 @@ Automated generation of defense-in-depth rules:
 - [x] Full CLI integration (`--pqc`, `--cnsa`, `--pqc-telemetry`, `--pqc-synth-out`, `--cnsa-strict`) with unified SARIF v2.1.0 code scanning, JSON audit telemetry, and Markdown briefing exports (`cmd/sentinel/pqc_runner.go`).
 - [x] Production sample fixtures (`fixtures/k8s-pqc-controlplane.yaml`, `fixtures/k8s-pqc-vulnerable.yaml`, `fixtures/nixos-pqc.nix`, `fixtures/nixos-pqc-vulnerable.nix`, `fixtures/pqc-telemetry.json`) and threat feed correlation with `CVE-2026-94301`.
 
-### Version 0.19.0 — Ephemeral MicroVM Sandbox & Honeypot Detonation Dispatch (Planned)
-- [ ] Dynamically orchestrate Firecracker microVM execution on NixOS for isolated detonating of suspicious container payloads.
-- [ ] Real-time kernel telemetry capture for unknown zero-day exploit artifacts before deployment.
-- [ ] Automated network isolation and honeypot interaction logging.
+### Version 0.19.0 — Ephemeral MicroVM Sandbox & Honeypot Detonation Dispatch (Completed)
+- [x] Ephemeral microVM sandbox orchestration and honeypot detonation dispatch engine (`pkg/sandbox`).
+- [x] Canonical rule catalog `SANDBOX-DET-001` through `SANDBOX-DET-012` detecting missing pre-flight detonation, unrestricted microVM network egress (CVE-2026-97105), disabled Firecracker jailer chroot confinement, decoy honeypot Kubelet and etcd probes, in-guest reverse shell beaconing, kernel privilege escalation sequences, hypervisor virtio MMIO escape anomalies, anti-analysis SLA timeouts, and immutable rootfs tampering (`pkg/sandbox/rules.go`).
+- [x] Streaming parser for declarative NixOS microvm specifications (`microvm.vms.<name>`), Kubernetes `DetonationJob` CRD manifests, and runtime detonation telemetry (`pkg/sandbox/parser.go`).
+- [x] Detonation dispatch evaluator and decoy honeypot reconciler tracking lure interactions, container quarantine status, and calculating deterministic sandbox security compliance scores (`pkg/sandbox/dispatcher.go`).
+- [x] Declarative policy synthesizer generating hardened NixOS microVM configurations, Kubernetes detonation jobs, and synthetic decoy honeypot lure definitions (`pkg/sandbox/synth.go`).
+- [x] Full CLI integration (`--sandbox`, `--microvm`, `--sandbox-telemetry`, `--honeypot`, `--sandbox-synth-out`, `--quarantine-strict`) with unified SARIF v2.1.0 code scanning, JSON audit telemetry, and Markdown briefing exports (`cmd/sentinel/sandbox_runner.go`).
+- [x] Production sample fixtures (`fixtures/nixos-microvm.nix`, `fixtures/nixos-microvm-vulnerable.nix`, `fixtures/k8s-detonation-job.yaml`, `fixtures/sandbox-telemetry.json`) and threat feed correlation with `CVE-2026-97105`.
 
-### Version 1.0.0 — Supply Chain Attestation & Workload Identity (Planned)
+### Version 0.20.0 — Autonomous Threat Remediation & GitOps Pull Request Synthesizer (Planned)
+- [ ] Declarative NixOS configuration patch synthesizer generating atomic Flake overrides for CVE mitigations.
+- [ ] Kubernetes GitOps Kustomize & Helm patch generator for automated security hardening.
+- [ ] Canary test validation runner verifying patch non-breaking changes prior to GitOps PR creation.
+
+### Version 1.0.0 — Enterprise Workload Identity & Ephemeral Detonation Pipeline (Planned)
 - [ ] Full end-to-end integration of SPIFFE/SPIRE workload attestation, In-Toto provenance, and HSM envelope encryption.
 - [ ] Enterprise continuous audit mode with asynchronous event streaming and webhook alerting.
 
-### Version 1.1.0 — Ephemeral Sandboxing & Autonomous Remediation (Vision)
-- [ ] Dynamic Firecracker microVM orchestration on NixOS for isolated detonating of suspicious container payloads.
+### Version 1.1.0 — Autonomous Self-Healing & Continuous Cloud Defense (Vision)
 - [ ] Autonomous GitOps Pull Request synthesizer generating declarative Kustomize and Flake patches for CVE mitigations.
+- [ ] Real-time eBPF LSM kernel hotpatching without node reboot or workload disruption.

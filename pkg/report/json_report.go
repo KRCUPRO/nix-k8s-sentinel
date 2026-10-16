@@ -18,6 +18,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nix"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/pqc"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/probe"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/sandbox"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/sbom"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/spiffe"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/storage"
@@ -59,6 +60,8 @@ type JSONAuditReport struct {
 	BPFSummary              *bpf.BPFSummary                 `json:"bpf_summary,omitempty"`
 	PQCViolations           []pqc.PQCViolation              `json:"pqc_violations,omitempty"`
 	PQCSummary              *pqc.PQCSummary                 `json:"pqc_summary,omitempty"`
+	SandboxViolations       []sandbox.SandboxViolation      `json:"sandbox_violations,omitempty"`
+	SandboxSummary          *sandbox.SandboxSummary         `json:"sandbox_summary,omitempty"`
 }
 
 // BuildJSONReport compiles the consolidated JSON audit report from provided audit data.
@@ -132,8 +135,14 @@ func BuildJSONReport(opts ReportOptions) (*JSONAuditReport, error) {
 	if opts.PQCTelemetryPath != "" {
 		scanned = append(scanned, opts.PQCTelemetryPath)
 	}
+	if opts.SandboxPath != "" {
+		scanned = append(scanned, opts.SandboxPath)
+	}
+	if opts.SandboxTelemetryPath != "" {
+		scanned = append(scanned, opts.SandboxTelemetryPath)
+	}
 
-	telemetry := ComputeTelemetryPQC(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations, opts.GatewayViolations, opts.AttestViolations, opts.FleetViolations, opts.SPIFFEViolations, opts.SBOMViolations, opts.HSMViolations, opts.BPFViolations, opts.PQCViolations)
+	telemetry := ComputeTelemetrySandbox(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations, opts.GatewayViolations, opts.AttestViolations, opts.FleetViolations, opts.SPIFFEViolations, opts.SBOMViolations, opts.HSMViolations, opts.BPFViolations, opts.PQCViolations, opts.SandboxViolations)
 
 	var advisories []intel.ThreatItem
 	if opts.Feed != nil {
@@ -178,6 +187,8 @@ func BuildJSONReport(opts ReportOptions) (*JSONAuditReport, error) {
 		BPFSummary:              opts.BPFSummary,
 		PQCViolations:           opts.PQCViolations,
 		PQCSummary:              opts.PQCSummary,
+		SandboxViolations:       opts.SandboxViolations,
+		SandboxSummary:          opts.SandboxSummary,
 	}
 
 	return rep, nil

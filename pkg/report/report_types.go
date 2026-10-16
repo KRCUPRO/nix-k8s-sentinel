@@ -15,6 +15,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nix"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/pqc"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/probe"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/sandbox"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/sbom"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/spiffe"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/storage"
@@ -63,6 +64,8 @@ type ReportOptions struct {
 	BPFSummary              *bpf.BPFSummary
 	PQCViolations           []pqc.PQCViolation
 	PQCSummary              *pqc.PQCSummary
+	SandboxViolations       []sandbox.SandboxViolation
+	SandboxSummary          *sandbox.SandboxSummary
 	FlakePath               string
 	K8sPath                 string
 	StoragePath             string
@@ -84,6 +87,8 @@ type ReportOptions struct {
 	BPFTelemetryPath        string
 	PQCPath                 string
 	PQCTelemetryPath        string
+	SandboxPath             string
+	SandboxTelemetryPath    string
 	TargetFilter            string
 	Pretty                  bool
 }

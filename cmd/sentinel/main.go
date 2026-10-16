@@ -18,6 +18,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/pqc"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/probe"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/report"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/sandbox"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/sbom"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/spiffe"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/storage"
@@ -25,7 +26,7 @@ import (
 )
 
 var (
-	version = "0.18.0"
+	version = "0.19.0"
 )
 
 func main() {
@@ -75,6 +76,12 @@ func main() {
 	pqcTelemetry := flag.String("pqc-telemetry", "", "Path to runtime PQC TLS handshake telemetry JSON to inspect")
 	pqcSynthOut := flag.String("pqc-synth-out", "", "Output directory to export synthesized hardened PQC and CNSA 2.0 policies")
 	cnsaStrict := flag.Bool("cnsa-strict", false, "Enforce strict CNSA 2.0 2030/2033 cryptographic timeline compliance")
+	sandboxPath := flag.String("sandbox", "", "Path to NixOS microvm or Kubernetes detonation manifest to audit")
+	microvmShort := flag.String("microvm", "", "Alias for --sandbox")
+	sandboxTelemetry := flag.String("sandbox-telemetry", "", "Path to runtime microVM detonation and honeypot telemetry JSON")
+	honeypotShort := flag.String("honeypot", "", "Alias for --sandbox-telemetry")
+	sandboxSynthOut := flag.String("sandbox-synth-out", "", "Output directory to export synthesized hardened MicroVM and honeypot manifests")
+	quarantineStrict := flag.Bool("quarantine-strict", false, "Enforce immediate hard quarantine on any honeypot lure hit or anomaly")
 	briefing := flag.Bool("briefing", false, "Generate automated Markdown threat intelligence briefing")
 	briefingDir := flag.String("briefing-dir", "intel/briefings", "Output directory for threat briefings")
 	briefingFile := flag.String("briefing-file", "", "Custom filename for threat briefing markdown")
@@ -131,6 +138,12 @@ func main() {
 	}
 	if *pqcPath == "" && *cnsaShort != "" {
 		*pqcPath = *cnsaShort
+	}
+	if *sandboxPath == "" && *microvmShort != "" {
+		*sandboxPath = *microvmShort
+	}
+	if *sandboxTelemetry == "" && *honeypotShort != "" {
+		*sandboxTelemetry = *honeypotShort
 	}
 	if *outFile == "" && *outShort != "" {
 		*outFile = *outShort
@@ -195,6 +208,8 @@ func main() {
 	var bpfSummary *bpf.BPFSummary
 	var pqcViolations []pqc.PQCViolation
 	var pqcSummary *pqc.PQCSummary
+	var sandboxViolations []sandbox.SandboxViolation
+	var sandboxSummary *sandbox.SandboxSummary
 
 	// 1. Audit Nix Flake
 	if *flakePath != "" {
@@ -282,7 +297,12 @@ func main() {
 		pqcViolations, pqcSummary = runPQCAudit(*pqcPath, *pqcTelemetry, *pqcSynthOut, *cnsaStrict, feed, logInfo, logErr)
 	}
 
-	// 16. Generate Threat Briefing if --briefing is requested
+	// 16. Audit Ephemeral MicroVM Sandbox & Honeypot Detonation
+	if *sandboxPath != "" || *sandboxTelemetry != "" || *sandboxSynthOut != "" {
+		sandboxViolations, sandboxSummary = runSandboxAudit(*sandboxPath, *sandboxTelemetry, *sandboxSynthOut, *quarantineStrict, feed, logInfo, logErr)
+	}
+
+	// 17. Generate Threat Briefing if --briefing is requested
 	if *briefing {
 		logInfo("[+] Synthesizing Threat Intelligence Briefing...\n")
 		briefingOpts := report.BriefingOptions{
@@ -314,6 +334,8 @@ func main() {
 			BPFSummary:              bpfSummary,
 			PQCViolations:           pqcViolations,
 			PQCSummary:              pqcSummary,
+			SandboxViolations:       sandboxViolations,
+			SandboxSummary:          sandboxSummary,
 			OutputDir:               *briefingDir,
 			CustomFilename:          *briefingFile,
 		}
@@ -373,6 +395,8 @@ func main() {
 			BPFSummary:              bpfSummary,
 			PQCViolations:           pqcViolations,
 			PQCSummary:              pqcSummary,
+			SandboxViolations:       sandboxViolations,
+			SandboxSummary:          sandboxSummary,
 			FlakePath:               *flakePath,
 			K8sPath:                 *k8sPath,
 			StoragePath:             *cephPath,
@@ -394,6 +418,8 @@ func main() {
 			BPFTelemetryPath:        *bpfTelemetry,
 			PQCPath:                 *pqcPath,
 			PQCTelemetryPath:        *pqcTelemetry,
+			SandboxPath:             *sandboxPath,
+			SandboxTelemetryPath:    *sandboxTelemetry,
 			TargetFilter:            *targetFilter,
 			Pretty:                  true,
 		}
@@ -447,8 +473,8 @@ func main() {
 		}
 	}
 
-	// 15. Default feed summary (when no specific audit target was requested)
-	if *flakePath == "" && *k8sPath == "" && *policyOut == "" && !*probeFlag && *cephPath == "" && *cephTelemetry == "" && *wgPath == "" && *wgTelemetry == "" && *cisPath == "" && *gwPath == "" && *attestPath == "" && *attestTelemetry == "" && *fleetPath == "" && *fleetTelemetry == "" && *spiffePath == "" && *svidTelemetry == "" && *spiffePolicyOut == "" && *sbomPath == "" && *attestFile == "" && *runtimePath == "" && *hsmPath == "" && *hsmTelemetry == "" && *bpfPath == "" && *bpfTelemetry == "" && *bpfSynthOut == "" {
+	// 18. Default feed summary (when no specific audit target was requested)
+	if *flakePath == "" && *k8sPath == "" && *policyOut == "" && !*probeFlag && *cephPath == "" && *cephTelemetry == "" && *wgPath == "" && *wgTelemetry == "" && *cisPath == "" && *gwPath == "" && *attestPath == "" && *attestTelemetry == "" && *fleetPath == "" && *fleetTelemetry == "" && *spiffePath == "" && *svidTelemetry == "" && *spiffePolicyOut == "" && *sbomPath == "" && *attestFile == "" && *runtimePath == "" && *hsmPath == "" && *hsmTelemetry == "" && *bpfPath == "" && *bpfTelemetry == "" && *bpfSynthOut == "" && *pqcPath == "" && *pqcTelemetry == "" && *pqcSynthOut == "" && *sandboxPath == "" && *sandboxTelemetry == "" && *sandboxSynthOut == "" {
 		items := feed.Items
 		if *targetFilter != "" {
 			items = feed.FilterByTarget(*targetFilter)
