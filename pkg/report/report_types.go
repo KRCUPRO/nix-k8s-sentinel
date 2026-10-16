@@ -13,6 +13,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/intel"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/k8s"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nix"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/pqc"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/probe"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/sbom"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/spiffe"
@@ -60,6 +61,8 @@ type ReportOptions struct {
 	HSMSummary              *hsm.HSMSummary
 	BPFViolations           []bpf.BPFViolation
 	BPFSummary              *bpf.BPFSummary
+	PQCViolations           []pqc.PQCViolation
+	PQCSummary              *pqc.PQCSummary
 	FlakePath               string
 	K8sPath                 string
 	StoragePath             string
@@ -79,6 +82,8 @@ type ReportOptions struct {
 	HSMTelemetryPath        string
 	BPFPath                 string
 	BPFTelemetryPath        string
+	PQCPath                 string
+	PQCTelemetryPath        string
 	TargetFilter            string
 	Pretty                  bool
 }

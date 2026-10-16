@@ -1,0 +1,36 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: kube-apiserver
+  namespace: kube-system
+  labels:
+    component: kube-apiserver
+    tier: control-plane
+spec:
+  containers:
+  - name: kube-apiserver
+    image: registry.k8s.io/kube-apiserver:v1.28.0
+    command:
+    - kube-apiserver
+    - --tls-min-version=VersionTLS12
+    - --tls-cipher-suites=TLS_RSA_WITH_AES_128_CBC_SHA,TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA
+    - --client-ca-file=/etc/kubernetes/pki/ca.crt
+    - --tls-cert-file=/etc/kubernetes/pki/apiserver.crt
+    - --tls-private-key-file=/etc/kubernetes/pki/apiserver.key
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: etcd
+  namespace: kube-system
+  labels:
+    component: etcd
+    tier: control-plane
+spec:
+  containers:
+  - name: etcd
+    image: registry.k8s.io/etcd:3.5.7-0
+    command:
+    - etcd
+    - --tls-min-version=VersionTLS12
+    - --peer-tls-min-version=VersionTLS12

@@ -141,10 +141,19 @@ Automated generation of defense-in-depth rules:
 - [x] Full CLI integration (`--bpf`, `--seccomp`, `--bpf-telemetry`, `--bpf-synth-out`, `--bpf-service`) with unified SARIF v2.1.0 code scanning, JSON audit telemetry, and Markdown briefing exports (`cmd/sentinel/bpf_runner.go`).
 - [x] Production sample fixtures (`fixtures/k8s-bpf-workload.yaml`, `fixtures/nixos-bpf-vulnerable.nix`, `fixtures/nixos-bpf-hardened.nix`, `fixtures/bpf-runtime-telemetry.json`) and threat feed correlation with `CVE-2026-90412`.
 
-### Version 0.18.0 — Post-Quantum Cryptography (PQC) & Kyber/Dilithium TLS Audit Engine (Planned)
-- [ ] Audit NixOS OpenSSL/GnuTLS configuration for hybrid post-quantum key encapsulation (ML-KEM/Kyber).
-- [ ] Verify Kubernetes etcd and API server cipher suites against CNSA 2.0 cryptographic timelines.
-- [ ] Detect legacy RSA/ECDSA certificates lacking post-quantum transition readiness.
+### Version 0.18.0 — Post-Quantum Cryptography (PQC) & CNSA 2.0 TLS Audit Engine (Completed)
+- [x] Post-quantum cryptography and NSA CNSA 2.0 readiness audit engine (`pkg/pqc`).
+- [x] Canonical rule catalog `PQC-TLS-001` through `PQC-TLS-012` detecting insecure TLS versions (< TLS 1.3), missing hybrid post-quantum key encapsulation (ML-KEM-768/1024, NIST FIPS 203), deprecated classical ciphers (CBC/3DES/static RSA), non-compliant symmetric key lengths (< 256-bit AES), weak hash algorithms, classical-only certificate signatures, missing NixOS `oqsprovider`, and unhardened etcd peer transports (`pkg/pqc/rules.go`).
+- [x] Streaming parser for Kubernetes control plane manifests (`kube-apiserver`, `etcd`, `kubelet`), NixOS OpenSSL (`environment.etc."ssl/openssl.cnf"`) and GnuTLS configurations, and runtime TLS handshake telemetry (`pkg/pqc/parser.go`).
+- [x] Static and runtime cryptographic evaluator tracking hybrid KEM adoption percentages, TLS 1.3 compliance, and NSA CNSA 2.0 transition milestones (2025/2030/2033) (`pkg/pqc/auditor.go`).
+- [x] Declarative policy synthesizer generating quantum-hardened NixOS modules and Kubernetes control plane static pod manifests (`pkg/pqc/synth.go`).
+- [x] Full CLI integration (`--pqc`, `--cnsa`, `--pqc-telemetry`, `--pqc-synth-out`, `--cnsa-strict`) with unified SARIF v2.1.0 code scanning, JSON audit telemetry, and Markdown briefing exports (`cmd/sentinel/pqc_runner.go`).
+- [x] Production sample fixtures (`fixtures/k8s-pqc-controlplane.yaml`, `fixtures/k8s-pqc-vulnerable.yaml`, `fixtures/nixos-pqc.nix`, `fixtures/nixos-pqc-vulnerable.nix`, `fixtures/pqc-telemetry.json`) and threat feed correlation with `CVE-2026-94301`.
+
+### Version 0.19.0 — Ephemeral MicroVM Sandbox & Honeypot Detonation Dispatch (Planned)
+- [ ] Dynamically orchestrate Firecracker microVM execution on NixOS for isolated detonating of suspicious container payloads.
+- [ ] Real-time kernel telemetry capture for unknown zero-day exploit artifacts before deployment.
+- [ ] Automated network isolation and honeypot interaction logging.
 
 ### Version 1.0.0 — Supply Chain Attestation & Workload Identity (Planned)
 - [ ] Full end-to-end integration of SPIFFE/SPIRE workload attestation, In-Toto provenance, and HSM envelope encryption.

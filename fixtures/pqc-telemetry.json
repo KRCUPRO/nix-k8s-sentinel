@@ -1,0 +1,58 @@
+{
+  "cluster_id": "sentinel-pqc-cluster-prod-01",
+  "captured_at": "2026-10-16T12:00:00Z",
+  "handshakes": [
+    {
+      "endpoint": "10.244.0.1:6443",
+      "component": "kube-apiserver",
+      "protocol_version": "TLSv1.3",
+      "cipher_suite": "TLS_AES_256_GCM_SHA384",
+      "key_exchange_group": "X25519MLKEM768",
+      "signature_algorithm": "ml-dsa-65",
+      "is_hybrid_pqc": true,
+      "peer_cert_subject": "CN=system:node:worker-01,O=system:nodes",
+      "peer_cert_issuer": "CN=kubernetes-ca",
+      "handshake_latency_ms": 14.2,
+      "timestamp": "2026-10-16T11:58:30Z"
+    },
+    {
+      "endpoint": "10.244.0.2:2379",
+      "component": "etcd",
+      "protocol_version": "TLSv1.3",
+      "cipher_suite": "TLS_AES_256_GCM_SHA384",
+      "key_exchange_group": "SecP384r1MLKEM1024",
+      "signature_algorithm": "ml-dsa-87",
+      "is_hybrid_pqc": true,
+      "peer_cert_subject": "CN=etcd-peer-02",
+      "peer_cert_issuer": "CN=etcd-ca",
+      "handshake_latency_ms": 9.5,
+      "timestamp": "2026-10-16T11:58:45Z"
+    },
+    {
+      "endpoint": "10.244.0.3:10250",
+      "component": "kubelet",
+      "protocol_version": "TLSv1.2",
+      "cipher_suite": "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256",
+      "key_exchange_group": "X25519",
+      "signature_algorithm": "rsa_pkcs1_sha256",
+      "is_hybrid_pqc": false,
+      "peer_cert_subject": "CN=kubelet-legacy-worker",
+      "peer_cert_issuer": "CN=kubernetes-ca",
+      "handshake_latency_ms": 6.8,
+      "timestamp": "2026-10-16T11:59:00Z"
+    },
+    {
+      "endpoint": "10.244.0.4:8443",
+      "component": "ingress-gateway",
+      "protocol_version": "TLSv1.3",
+      "cipher_suite": "TLS_AES_128_GCM_SHA256",
+      "key_exchange_group": "P-256",
+      "signature_algorithm": "ecdsa_secp256r1_sha256",
+      "is_hybrid_pqc": false,
+      "peer_cert_subject": "CN=ingress-gateway.cluster.local",
+      "peer_cert_issuer": "CN=cluster-issuer",
+      "handshake_latency_ms": 11.1,
+      "timestamp": "2026-10-16T11:59:15Z"
+    }
+  ]
+}
