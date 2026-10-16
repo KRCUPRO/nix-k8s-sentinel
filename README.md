@@ -19,7 +19,7 @@
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](./LICENSE)
 [![Go Report Card](https://goreportcard.com/badge/github.com/KRCUPRO/nix-k8s-sentinel)](https://goreportcard.com/report/github.com/KRCUPRO/nix-k8s-sentinel)
-[![Version](https://img.shields.io/badge/Release-v0.16.0-emerald.svg)](https://github.com/KRCUPRO/nix-k8s-sentinel/releases)
+[![Version](https://img.shields.io/badge/Release-v0.17.0-emerald.svg)](https://github.com/KRCUPRO/nix-k8s-sentinel/releases)
 [![Architecture](https://img.shields.io/badge/Architecture-Bare--Metal_NixOS_+_K8s-8b5cf6.svg)](#-architecture-overview)
 [![Security](https://img.shields.io/badge/Security-Declarative_Audit-38bdf8.svg)](./SECURITY.md)
 
@@ -31,13 +31,14 @@
 
 `nix-k8s-sentinel` is a high-performance declarative vulnerability scanner and continuous threat intelligence engine designed specifically for bare-metal NixOS clusters and Kubernetes infrastructure.
 
-Unlike ephemeral container scanners, `nix-k8s-sentinel` audits declarative configuration matrices (NixOS Flakes, Kubernetes CNI policies, Ingress controllers, Gateway API routes, Istio EnvoyFilters, Rook Ceph storage clusters, WireGuard mesh networks, CIS Kubernetes Benchmarks, Confidential Computing measured boot chains, Multi-Cluster GitOps fleet topologies, SPIFFE/SPIRE Zero-Trust microsegmentation, Software Bill of Materials with In-Toto SLSA Level 3 supply chain attestations, and Hardware Security Module envelope encryption) against real-time normalized CVSS threat intelligence feeds, enabling automated mitigation before workloads are scheduled.
+Unlike ephemeral container scanners, `nix-k8s-sentinel` audits declarative configuration matrices (NixOS Flakes, Kubernetes CNI policies, Ingress controllers, Gateway API routes, Istio EnvoyFilters, Rook Ceph storage clusters, WireGuard mesh networks, CIS Kubernetes Benchmarks, Confidential Computing measured boot chains, Multi-Cluster GitOps fleet topologies, SPIFFE/SPIRE Zero-Trust microsegmentation, Software Bill of Materials with In-Toto SLSA Level 3 supply chain attestations, Hardware Security Module envelope encryption, and Dynamic Kernel Threat Profiling with Syscall BPF Filters) against real-time normalized CVSS threat intelligence feeds, enabling automated mitigation before workloads are scheduled.
 
 ---
 
 ## 🏛️ Core Capabilities
 
 - **🔍 Declarative Infrastructure Auditing**: Pattern matching and input tracking for NixOS Flake inputs, Kubernetes manifests, and CNI policies.
+- **🛡️ Dynamic Kernel Runtime Threat Profiler & Syscall BPF Filter**: Deep kernel-level security inspection engine analyzing declarative seccomp profiles, NixOS host parameters, and runtime eBPF telemetry across Kubernetes clusters. Detects unconfined container seccomp profiles (`type: Unconfined`), unrestricted administrative syscalls (`ptrace`, `process_vm_writev`, `kexec_load`), missing host eBPF LSM hooks (`security.lsm = [ ... "bpf" ... ]`), host namespace sharing (`hostPID`/`hostIPC`), and unprivileged BPF access. Reconciles live socket creation rates, flags abnormal socket storms exceeding 250 sockets/sec, detects raw socket allocations (`SOCK_RAW`, `AF_PACKET`), and autonomously synthesizes hardened Kubernetes Seccomp profiles, drop-in NixOS systemd sandboxing modules, and declarative eBPF LSM policy manifests (CVE-2026-90412).
 - **🔐 Hardware Security Module (HSM) & PKCS#11 Envelope Encryption Pipeline**: Enterprise-grade cryptographic security inspection and auditing engine for Kubernetes etcd encryption at rest, KMS v2 plugins, PKCS#11 tokens, and AWS Nitro Enclaves. Streaming parser for `apiserver.config.k8s.io/v1` EncryptionConfiguration manifests, RFC 7512 PKCS#11 URIs, and NixOS host security modules (`services.p11-kit`, `hardware.nitro-enclaves`). Reconciles runtime KMS plugin health, flags unrotated Key Encryption Keys (> 90 days), detects exposed plaintext PINs in manifests, and prevents Nitro Enclave session leakage / unsealed attestation attacks (CVE-2026-83190).
 - **📦 Software Bill of Materials (SBOM) & In-Toto Supply Chain Attestation**: Universal multi-format ingestion of SPDX v3.0, SPDX v2.3, CycloneDX v1.6, and Nix store closures. Enforces In-Toto cryptographic statement verification (`_type: https://in-toto.io/Statement/v1`), matches Subject SHA256 digests against build artifacts to detect tampering (CVE-2026-71044), mandates SLSA Level 3 hermetic sandboxing and immutable pinned materials, and reconciles declarative SBOMs against live cluster package telemetry (`--sbom`, `--attestation`, `--sbom-runtime`) to identify version drift, missing dependencies, and shadow container binary injections.
 - **🔒 Zero-Trust Microsegmentation & SPIFFE/SPIRE Workload Attestation**: Native audit engine for SPIFFE/SPIRE workload identities and Cilium eBPF network microsegmentation. Validates RFC-compliant SPIFFE IDs against trusted domain allowlists, enforces mandatory Cilium mTLS (`authentication.mode: required`), flags weak crypto keys (RSA-1024/2048), detects dangerous wildcard selectors (`k8s:ns:*`), identifies expiring or desynchronized SVIDs (< 15 min remaining) to prevent active workload disconnections (CVE-2026-67210), and autonomously synthesizes zero-trust `CiliumNetworkPolicy` manifests (`--spiffe-policy-out`).
@@ -111,6 +112,16 @@ go run cmd/sentinel/main.go --hsm=fixtures/nixos-hsm.nix
 
 # Reconcile runtime HSM, PKCS#11, and KMS v2 plugin telemetry
 go run cmd/sentinel/main.go --hsm=fixtures/k8s-encryption-config.yaml --hsm-telemetry=fixtures/hsm-telemetry.json --format=sarif --output=hsm-results.sarif
+
+# Audit Kubernetes workload seccomp profiles & NixOS host BPF parameters
+go run cmd/sentinel/main.go --bpf=fixtures/k8s-bpf-workload.yaml
+go run cmd/sentinel/main.go --bpf=fixtures/nixos-bpf-vulnerable.nix
+
+# Reconcile runtime kernel socket creation telemetry and syscall activity
+go run cmd/sentinel/main.go --bpf=fixtures/k8s-bpf-workload.yaml --bpf-telemetry=fixtures/bpf-runtime-telemetry.json --format=sarif --output=bpf-results.sarif
+
+# Synthesize hardened Seccomp profiles and NixOS systemd sandboxing modules
+go run cmd/sentinel/main.go --bpf-synth-out=policies/generated/bpf
 
 # Audit Multi-Cluster fleet manifests (RBAC, ArgoCD, Flux)
 go run cmd/sentinel/main.go --fleet=fixtures/fleet-manifests.yaml

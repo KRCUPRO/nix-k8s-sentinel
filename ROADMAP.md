@@ -132,10 +132,19 @@ Automated generation of defense-in-depth rules:
 - [x] Full CLI integration (`--hsm`, `--kms`, `--hsm-telemetry`, `--nitro`) with unified SARIF v2.1.0 code scanning, JSON audit telemetry, and Markdown briefing exports (`cmd/sentinel/hsm_runner.go`).
 - [x] Production sample fixtures (`fixtures/k8s-encryption-config.yaml`, `fixtures/k8s-encryption-config-vulnerable.yaml`, `fixtures/nixos-hsm.nix`, `fixtures/hsm-telemetry.json`) and threat feed correlation with `CVE-2026-83190`.
 
-### Version 0.17.0 — Dynamic Kernel Runtime Threat Profiler & Syscall BPF Filter (Planned)
-- [ ] Implement declarative seccomp and eBPF LSM policy synthesis for NixOS host workloads.
-- [ ] Correlate abnormal socket creation rates against live CVE attack patterns.
-- [ ] Automated detection of unconfined container namespaces and raw socket leaks.
+### Version 0.17.0 — Dynamic Kernel Runtime Threat Profiler & Syscall BPF Filter (Completed)
+- [x] Dynamic kernel runtime threat profiling and syscall filtering engine (`pkg/bpf`).
+- [x] Canonical rule catalog `BPF-SEC-001` through `BPF-SEC-012` detecting unconfined container seccomp profiles, unrestricted administrative syscalls (`ptrace`, `process_vm_writev`, `kexec_load`), missing host eBPF LSM hooks, host namespace sharing (`hostPID`/`hostIPC`), and unprivileged BPF access (`pkg/bpf/rules.go`).
+- [x] Streaming parser for Kubernetes Pod/Deployment security contexts, NixOS kernel sysctls (`kernel.unprivileged_bpf_disabled`), and custom Seccomp profile JSON structures (`pkg/bpf/parser.go`).
+- [x] Kernel runtime telemetry reconciler evaluating socket creation bursts (> 250/sec), raw socket allocations (`SOCK_RAW`, `AF_PACKET`), blocked LSM denials, and container escape attempts (`pkg/bpf/profiler.go`).
+- [x] Declarative policy synthesizer generating hardened Kubernetes Seccomp profiles, drop-in NixOS systemd sandboxing modules, and declarative eBPF LSM policy manifests (`pkg/bpf/synth.go`).
+- [x] Full CLI integration (`--bpf`, `--seccomp`, `--bpf-telemetry`, `--bpf-synth-out`, `--bpf-service`) with unified SARIF v2.1.0 code scanning, JSON audit telemetry, and Markdown briefing exports (`cmd/sentinel/bpf_runner.go`).
+- [x] Production sample fixtures (`fixtures/k8s-bpf-workload.yaml`, `fixtures/nixos-bpf-vulnerable.nix`, `fixtures/nixos-bpf-hardened.nix`, `fixtures/bpf-runtime-telemetry.json`) and threat feed correlation with `CVE-2026-90412`.
+
+### Version 0.18.0 — Post-Quantum Cryptography (PQC) & Kyber/Dilithium TLS Audit Engine (Planned)
+- [ ] Audit NixOS OpenSSL/GnuTLS configuration for hybrid post-quantum key encapsulation (ML-KEM/Kyber).
+- [ ] Verify Kubernetes etcd and API server cipher suites against CNSA 2.0 cryptographic timelines.
+- [ ] Detect legacy RSA/ECDSA certificates lacking post-quantum transition readiness.
 
 ### Version 1.0.0 — Supply Chain Attestation & Workload Identity (Planned)
 - [ ] Full end-to-end integration of SPIFFE/SPIRE workload attestation, In-Toto provenance, and HSM envelope encryption.

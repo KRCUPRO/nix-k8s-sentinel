@@ -886,8 +886,73 @@ func BuildSARIFReport(opts ReportOptions) (*SARIFLog, error) {
 		}
 	}
 
-	// 13. Process Standalone Feed Advisories (if no specific audit targets yielded findings)
-	if (opts.K8sReport == nil || len(opts.K8sReport.Violations) == 0) && len(opts.FlakeMatches) == 0 && len(opts.ProbeEvents) == 0 && len(opts.StorageViolations) == 0 && len(opts.WireGuardViolations) == 0 && len(opts.CISViolations) == 0 && len(opts.GatewayViolations) == 0 && len(opts.AttestViolations) == 0 && len(opts.FleetViolations) == 0 && len(opts.SPIFFEViolations) == 0 && len(opts.SBOMViolations) == 0 && len(opts.HSMViolations) == 0 && opts.Feed != nil {
+	// 13. Process Dynamic Kernel Runtime Threat Profiler & Syscall BPF Filter Violations
+	if len(opts.BPFViolations) > 0 {
+		for _, bv := range opts.BPFViolations {
+			tags := []string{"security", "kernel", "bpf", "seccomp", "lsm"}
+			if bv.MatchedCVE != "" {
+				tags = append(tags, bv.MatchedCVE)
+			}
+			ruleIdx := getOrCreateRule(bv.RuleID, bv.Title, bv.Description, bv.Remediation, bv.Severity, bv.CVSSScore, tags)
+			level := SeverityToSARIFLevel(string(bv.Severity), bv.CVSSScore)
+
+			locURI := bv.ResourceURI
+			if locURI == "" {
+				locURI = opts.BPFPath
+			}
+			if locURI == "" {
+				locURI = "pkg/bpf/runtime"
+			}
+			locURI = filepath.ToSlash(locURI)
+
+			line := bv.StartLine
+			if line <= 0 {
+				line = 1
+			}
+
+			cveTag := ""
+			if bv.MatchedCVE != "" {
+				cveTag = fmt.Sprintf(" [%s]", bv.MatchedCVE)
+			}
+			workloadTag := ""
+			if bv.WorkloadName != "" {
+				workloadTag = fmt.Sprintf(" (Workload: %s)", bv.WorkloadName)
+			}
+			resMsg := fmt.Sprintf("[%s]%s %s%s: %s (Remediation: %s)",
+				bv.RuleID, cveTag, bv.Title, workloadTag, bv.Description, bv.Remediation)
+
+			results = append(results, SARIFResult{
+				RuleID:    bv.RuleID,
+				RuleIndex: ruleIdx,
+				Level:     level,
+				Message:   SARIFMessage{Text: resMsg},
+				Locations: []SARIFLocation{
+					{
+						PhysicalLocation: &PhysicalLocation{
+							ArtifactLocation: ArtifactLocation{
+								URI:       locURI,
+								URIBaseID: "%SRCROOT%",
+							},
+							Region: &Region{
+								StartLine:   line,
+								StartColumn: 1,
+							},
+						},
+						LogicalLocations: []LogicalLocation{
+							{
+								Name:               bv.RuleID,
+								Kind:               "KernelBPFRule",
+								FullyQualifiedName: fmt.Sprintf("bpf/%s", bv.RuleID),
+							},
+						},
+					},
+				},
+			})
+		}
+	}
+
+	// 14. Process Standalone Feed Advisories (if no specific audit targets yielded findings)
+	if (opts.K8sReport == nil || len(opts.K8sReport.Violations) == 0) && len(opts.FlakeMatches) == 0 && len(opts.ProbeEvents) == 0 && len(opts.StorageViolations) == 0 && len(opts.WireGuardViolations) == 0 && len(opts.CISViolations) == 0 && len(opts.GatewayViolations) == 0 && len(opts.AttestViolations) == 0 && len(opts.FleetViolations) == 0 && len(opts.SPIFFEViolations) == 0 && len(opts.SBOMViolations) == 0 && len(opts.HSMViolations) == 0 && len(opts.BPFViolations) == 0 && opts.Feed != nil {
 		feedItems := opts.Feed.Items
 		if opts.TargetFilter != "" {
 			feedItems = opts.Feed.FilterByTarget(opts.TargetFilter)

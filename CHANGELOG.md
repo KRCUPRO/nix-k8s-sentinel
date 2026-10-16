@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.17.0] - 2026-10-16
+
+### Added
+- **Dynamic Kernel Runtime Threat Profiler & Syscall BPF Filter** (`pkg/bpf/scanner.go`): Deep kernel-level security inspection engine analyzing declarative seccomp profiles, NixOS host parameters, and runtime eBPF telemetry across Kubernetes clusters.
+- **Universal Workload Seccomp & Host Parameter Parser** (`pkg/bpf/parser.go`): Bounded streaming parser auditing Kubernetes Pod/Deployment security contexts (`seccompProfile`), host namespace bypasses (`hostPID`, `hostIPC`), elevated capabilities (`CAP_NET_RAW`, `CAP_SYS_ADMIN`, `CAP_SYS_MODULE`), NixOS sysctl settings (`kernel.unprivileged_bpf_disabled`), active LSM modules (`security.lsm`), and systemd sandboxing parameters.
+- **Kernel Runtime Telemetry Profiler & Anomaly Detector** (`pkg/bpf/profiler.go`): Reconciles live socket creation rates, flags abnormal socket storms exceeding 250 sockets/sec (`BPF-SEC-004`), detects raw socket allocations (`SOCK_RAW`, `AF_PACKET`) without verified LSM drop filters (`BPF-SEC-003`), intercepts high-privilege syscall activity (`ptrace`, `bpf`, `init_module`), and detects runtime container boundary escape attempts or blocked LSM security denials (`BPF-SEC-012`).
+- **Authoritative Canonical BPF & Seccomp Rules Catalog** (`pkg/bpf/rules.go`): Suite of 12 canonical rules (`BPF-SEC-001` through `BPF-SEC-012`) covering unconfined seccomp profiles, dangerous administrative syscalls, missing host eBPF LSM modules, host namespace sharing, unprivileged BPF access, insecure default actions (`SCMP_ACT_ALLOW`), and kernel module injection attempts.
+- **Declarative Policy Synthesizer** (`pkg/bpf/synth.go`): Generates hardened Kubernetes Seccomp profiles (`SCMP_ACT_ERRNO` default action with 100+ safe POSIX syscall allowlist), drop-in NixOS systemd sandboxing modules (`SystemCallFilter = [ "@system-service" "~@privileged" ... ]`), and declarative eBPF LSM policy manifests (`EBPFLSMPolicy`).
+- **Dedicated CLI BPF Runner** (`cmd/sentinel/bpf_runner.go`): Modular runner coordinating manifest scans, telemetry profiling, and policy synthesis, keeping `cmd/sentinel/main.go` under 445 LOC (strictly adhering to the 300~500 LOC soft ceiling). Added `--bpf=<path>`, `--seccomp`, `--bpf-telemetry=<path>`, `--bpf-synth-out=<path>`, and `--bpf-service=<name>` flags.
+- **Threat Feed Expansion** (`intel/cve-feed.json`): Added `CVE-2026-90412` (Linux Kernel BPF Subsystem Privileged Syscall Race & Unconfined Socket Creation Flood, CVSS 9.8).
+- **Unified Exporter Integration**: BPF profiler findings, socket anomaly rates, and seccomp ratings seamlessly exported to OASIS SARIF v2.1.0 (Section 13), structured JSON audit telemetry, and hourly Markdown threat briefings (Section 16).
+- **Production Fixtures**: Added realistic declarative fixtures (`fixtures/k8s-bpf-workload.yaml`, `fixtures/nixos-bpf-vulnerable.nix`, `fixtures/nixos-bpf-hardened.nix`, `fixtures/bpf-runtime-telemetry.json`).
+- **Comprehensive Unit Test Suites** (`pkg/bpf/bpf_test.go`, `pkg/report/bpf_report_test.go`): 100% test coverage across canonical rules, workload manifests, NixOS configs, custom Seccomp JSON, telemetry profilers, policy synthesizers, SARIF/JSON/Briefing serialization, and bounds checks.
+
+### Changed
+- Bumped engine release to `v0.17.0`.
+- Updated `SECURITY.md` establishing Dynamic Kernel Runtime Threat Profiling & Syscall BPF Filter security invariants (Invariant 19).
+- Updated `ROADMAP.md` marking Milestone M17 as completed and scheduling M18 (Post-Quantum Cryptography & Kyber/Dilithium TLS Audit Engine).
+- Updated `scripts/ARCHITECTURE_MAP.md` documenting new BPF modules, runners, and O(1) symbols.
+
+---
+
 ## [0.16.0] - 2026-10-16
 
 ### Added

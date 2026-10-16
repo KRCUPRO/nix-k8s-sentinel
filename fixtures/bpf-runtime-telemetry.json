@@ -1,0 +1,86 @@
+{
+  "cluster_id": "k8s-prod-sentinel-01",
+  "node_name": "worker-baremetal-03.infra.internal",
+  "generated_at": "2026-10-16T10:15:00Z",
+  "active_lsm_hooks": [
+    "lsm/bprm_check_security",
+    "lsm/task_fix_setuid",
+    "lsm/file_open"
+  ],
+  "socket_events": [
+    {
+      "pid": 1142,
+      "process_name": "ingress-proxy",
+      "namespace": "ingress-system",
+      "pod_name": "ingress-nginx-controller-7f89d",
+      "domain": "AF_INET",
+      "type": "SOCK_STREAM",
+      "protocol": 6,
+      "creation_rate": 84.5,
+      "anomaly_flag": false,
+      "timestamp": "2026-10-16T10:14:50Z"
+    },
+    {
+      "pid": 3819,
+      "process_name": "packet-sniffer-bot",
+      "namespace": "untrusted-apps",
+      "pod_name": "data-crawler-66b9f",
+      "domain": "AF_PACKET",
+      "type": "SOCK_RAW",
+      "protocol": 3,
+      "creation_rate": 340.2,
+      "anomaly_flag": true,
+      "timestamp": "2026-10-16T10:14:55Z"
+    },
+    {
+      "pid": 4120,
+      "process_name": "metrics-exporter",
+      "namespace": "monitoring",
+      "pod_name": "prometheus-node-exporter-4z8k2",
+      "domain": "AF_UNIX",
+      "type": "SOCK_STREAM",
+      "protocol": 0,
+      "creation_rate": 12.0,
+      "anomaly_flag": false,
+      "timestamp": "2026-10-16T10:14:58Z"
+    }
+  ],
+  "syscall_events": [
+    {
+      "pid": 3819,
+      "process_name": "packet-sniffer-bot",
+      "namespace": "untrusted-apps",
+      "pod_name": "data-crawler-66b9f",
+      "syscall_name": "ptrace",
+      "call_count": 48,
+      "failure_count": 12,
+      "is_privileged": true,
+      "blocked_by_lsm": true,
+      "timestamp": "2026-10-16T10:14:55Z"
+    },
+    {
+      "pid": 3819,
+      "process_name": "packet-sniffer-bot",
+      "namespace": "untrusted-apps",
+      "pod_name": "data-crawler-66b9f",
+      "syscall_name": "bpf",
+      "call_count": 8,
+      "failure_count": 0,
+      "is_privileged": true,
+      "blocked_by_lsm": false,
+      "timestamp": "2026-10-16T10:14:56Z"
+    },
+    {
+      "pid": 1142,
+      "process_name": "ingress-proxy",
+      "namespace": "ingress-system",
+      "pod_name": "ingress-nginx-controller-7f89d",
+      "syscall_name": "epoll_wait",
+      "call_count": 12480,
+      "failure_count": 0,
+      "is_privileged": false,
+      "blocked_by_lsm": false,
+      "timestamp": "2026-10-16T10:14:59Z"
+    }
+  ]
+}
