@@ -1,0 +1,25 @@
+apiVersion: security.nix-k8s-sentinel.io/v1alpha1
+kind: ContainerMACProfile
+metadata:
+  name: mac-vulnerable-privileged-daemon
+  namespace: kube-system
+  labels:
+    security.sentinel/managed-by: "nix-k8s-sentinel"
+    security.sentinel/profile: "hardened-lsm"
+spec:
+  enforce: true
+  cgroupDriver: systemd
+  blockedHooks:
+    - bprm_check_security
+    - file_open
+    - socket_create
+    - task_fix_setuid
+    - bpf
+    - ptrace_access_check
+  protectedPaths:
+    - /proc/kcore
+    - /sys/kernel/debug
+    - /etc/shadow
+  disallowedDirectories:
+    - /tmp
+    - /dev/shm

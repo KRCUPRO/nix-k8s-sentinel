@@ -12,6 +12,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/hsm"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/intel"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/k8s"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/lsm"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nix"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/pqc"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/probe"
@@ -25,7 +26,7 @@ import (
 )
 
 var (
-	version = "0.20.0"
+	version = "0.21.0"
 )
 
 func main() {
@@ -84,6 +85,8 @@ func main() {
 	var remediateFindings []remediate.RemediationFinding
 	var remediatePRs []remediate.GitOpsPullRequest
 	var remediateSummary *remediate.RemediationSummary
+	var lsmViolations []lsm.LSMViolation
+	var lsmSummary *lsm.LSMSummary
 
 	// 1. Audit Nix Flake
 	if cfg.FlakePath != "" {
@@ -170,7 +173,12 @@ func main() {
 		remediateFindings, remediatePRs, remediateSummary = runRemediationAudit(cfg.RemediatePath, cfg.RemediateSynthOut, cfg.CanaryStrict, feed, logInfo, logErr)
 	}
 
-	// 18. Generate Threat Briefing if --briefing is requested
+	// 18. Audit eBPF Linux Security Module (LSM) & Kernel Mandatory Access Control
+	if cfg.LSMPath != "" || cfg.LSMTelemetry != "" || cfg.LSMSynthOut != "" {
+		lsmViolations, lsmSummary = runLSMAudit(cfg.LSMPath, cfg.LSMTelemetry, cfg.LSMSynthOut, cfg.LSMStrict, feed, logInfo, logErr)
+	}
+
+	// 19. Generate Threat Briefing if --briefing is requested
 	if cfg.Briefing {
 		logInfo("[+] Synthesizing Threat Intelligence Briefing...\n")
 		briefingOpts := report.BriefingOptions{
@@ -207,6 +215,8 @@ func main() {
 			RemediateFindings:       remediateFindings,
 			RemediatePullRequests:   remediatePRs,
 			RemediateSummary:        remediateSummary,
+			LSMViolations:           lsmViolations,
+			LSMSummary:              lsmSummary,
 			OutputDir:               cfg.BriefingDir,
 			CustomFilename:          cfg.BriefingFile,
 		}
@@ -271,6 +281,8 @@ func main() {
 			RemediateFindings:       remediateFindings,
 			RemediatePullRequests:   remediatePRs,
 			RemediateSummary:        remediateSummary,
+			LSMViolations:           lsmViolations,
+			LSMSummary:              lsmSummary,
 			FlakePath:               cfg.FlakePath,
 			K8sPath:                 cfg.K8sPath,
 			StoragePath:             cfg.CephPath,
@@ -296,6 +308,9 @@ func main() {
 			SandboxTelemetryPath:    cfg.SandboxTelemetry,
 			RemediatePath:           cfg.RemediatePath,
 			RemediateOutDir:         cfg.RemediateSynthOut,
+			LSMPath:                 cfg.LSMPath,
+			LSMTelemetryPath:        cfg.LSMTelemetry,
+			LSMSynthOut:             cfg.LSMSynthOut,
 			TargetFilter:            cfg.TargetFilter,
 			Pretty:                  true,
 		}
@@ -350,7 +365,7 @@ func main() {
 	}
 
 	// 20. Default feed summary (when no specific audit target was requested)
-	if cfg.FlakePath == "" && cfg.K8sPath == "" && cfg.PolicyOut == "" && !cfg.ProbeFlag && cfg.CephPath == "" && cfg.CephTelemetry == "" && cfg.WgPath == "" && cfg.WgTelemetry == "" && cfg.CISPath == "" && cfg.GwPath == "" && cfg.AttestPath == "" && cfg.AttestTelemetry == "" && cfg.FleetPath == "" && cfg.FleetTelemetry == "" && cfg.SpiffePath == "" && cfg.SvidTelemetry == "" && cfg.SpiffePolicyOut == "" && cfg.SbomPath == "" && cfg.AttestFile == "" && cfg.RuntimePath == "" && cfg.HsmPath == "" && cfg.HsmTelemetry == "" && cfg.BpfPath == "" && cfg.BpfTelemetry == "" && cfg.BpfSynthOut == "" && cfg.PqcPath == "" && cfg.PqcTelemetry == "" && cfg.PqcSynthOut == "" && cfg.SandboxPath == "" && cfg.SandboxTelemetry == "" && cfg.SandboxSynthOut == "" && cfg.RemediatePath == "" && cfg.RemediateSynthOut == "" {
+	if cfg.FlakePath == "" && cfg.K8sPath == "" && cfg.PolicyOut == "" && !cfg.ProbeFlag && cfg.CephPath == "" && cfg.CephTelemetry == "" && cfg.WgPath == "" && cfg.WgTelemetry == "" && cfg.CISPath == "" && cfg.GwPath == "" && cfg.AttestPath == "" && cfg.AttestTelemetry == "" && cfg.FleetPath == "" && cfg.FleetTelemetry == "" && cfg.SpiffePath == "" && cfg.SvidTelemetry == "" && cfg.SpiffePolicyOut == "" && cfg.SbomPath == "" && cfg.AttestFile == "" && cfg.RuntimePath == "" && cfg.HsmPath == "" && cfg.HsmTelemetry == "" && cfg.BpfPath == "" && cfg.BpfTelemetry == "" && cfg.BpfSynthOut == "" && cfg.PqcPath == "" && cfg.PqcTelemetry == "" && cfg.PqcSynthOut == "" && cfg.SandboxPath == "" && cfg.SandboxTelemetry == "" && cfg.SandboxSynthOut == "" && cfg.RemediatePath == "" && cfg.RemediateSynthOut == "" && cfg.LSMPath == "" && cfg.LSMTelemetry == "" && cfg.LSMSynthOut == "" {
 		items := feed.Items
 		if cfg.TargetFilter != "" {
 			items = feed.FilterByTarget(cfg.TargetFilter)

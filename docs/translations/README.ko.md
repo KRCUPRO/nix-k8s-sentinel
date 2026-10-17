@@ -19,7 +19,7 @@
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](../../LICENSE)
 [![Go Report Card](https://goreportcard.com/badge/github.com/KRCUPRO/nix-k8s-sentinel)](https://goreportcard.com/report/github.com/KRCUPRO/nix-k8s-sentinel)
-[![Version](https://img.shields.io/badge/Release-v0.20.0-emerald.svg)](https://github.com/KRCUPRO/nix-k8s-sentinel/releases)
+[![Version](https://img.shields.io/badge/Release-v0.21.0-emerald.svg)](https://github.com/KRCUPRO/nix-k8s-sentinel/releases)
 [![Architecture](https://img.shields.io/badge/Architecture-Bare--Metal_NixOS_+_K8s-8b5cf6.svg)](#-architecture-overview)
 [![Security](https://img.shields.io/badge/Security-Declarative_Audit-38bdf8.svg)](../../SECURITY.md)
 
@@ -31,13 +31,14 @@
 
 `nix-k8s-sentinel`은 베어메탈 NixOS 클러스터 및 Kubernetes 인프라에 최적화된 고성능 선언적 취약점 스캐너이자 지속적 위협 인텔리전스 동기화 엔진입니다.
 
-배포 후 컨테이너 레이어를 수동적으로 검사하는 기존 런타임 스캐너와 달리, `nix-k8s-sentinel`은 선언적 구성 명세(NixOS Flakes, Kubernetes CNI 정책, Ingress 컨트롤러, Gateway API, Rook Ceph, WireGuard, CIS 벤치마크, 기밀 컴퓨팅, 멀티 클러스터 GitOps 플릿, SPIFFE/SPIRE 제로 트러스트 마이크로세그멘테이션, 소프트웨어 자재명세서 및 In-Toto SLSA Level 3 공급망 증명, 하드웨어 보안 모듈 봉투 암호화, 동적 커널 위협 프로파일링, 시스템 콜 BPF 필터, 양자 내성 암호(PQC) 및 NSA CNSA 2.0 TLS 감사 엔진, 에페메럴 마이크로VM 샌드박스 및 허니팟 디토네이션 디스패치, 자율 위협 해결 및 카나리 검증 GitOps 풀 리퀘스트 합성 엔진)를 실시간 정규화된 CVSS 위협 피드와 대조하여 워크로드가 스케줄링되기 전에 사전 대응할 수 있도록 지원합니다.
+배포 후 컨테이너 레이어를 수동적으로 검사하는 기존 런타임 스캐너와 달리, `nix-k8s-sentinel`은 선언적 구성 명세(NixOS Flakes, Kubernetes CNI 정책, Ingress 컨트롤러, Gateway API, Rook Ceph, WireGuard, CIS 벤치마크, 기밀 컴퓨팅, 멀티 클러스터 GitOps 플릿, SPIFFE/SPIRE 제로 트러스트 마이크로세그멘테이션, 소프트웨어 자재명세서 및 In-Toto SLSA Level 3 공급망 증명, 하드웨어 보안 모듈 봉투 암호화, 동적 커널 위협 프로파일링, 시스템 콜 BPF 필터, 양자 내성 암호(PQC) 및 NSA CNSA 2.0 TLS 감사 엔진, 에페메럴 마이크로VM 샌드박스 및 허니팟 디토네이션 디스패치, 자율 위협 해결 및 카나리 검증 GitOps 풀 리퀘스트 합성 엔진, eBPF LSM 보안 모듈 및 커널 강제적 접근 제어)를 실시간 정규화된 CVSS 위협 피드와 대조하여 워크로드가 스케줄링되기 전에 사전 대응할 수 있도록 지원합니다.
 
 ---
 
 ## 🏛️ 핵심 역량
 
 - **🔍 선언적 인프라 감사**: NixOS Flake 입력 락, Kubernetes 매니페스트 명세, CNI 네트워크 정책에 대한 패턴 매칭 및 의존성 추적.
+- **🛡️ eBPF LSM 보안 모듈 & 커널 강제적 접근 제어(MAC) 엔진**: NixOS 컨테이너 호스트 및 Kubernetes 워크로드를 위한 커널 레벨 강제적 접근 제어(MAC) 및 선언적 eBPF Linux Security Module(LSM) 보안 엔진. 선언적 호스트 커널 매개변수(`boot.kernelParams`, `security.lsm = [ ... "bpf" ... ]`), 컨테이너 보안 컨텍스트 및 eBPF LSM 텔레메트리 훅(`bprm_check_security`, `file_open`, `socket_create`, `task_alloc`, `bpf`) 정밀 감사. seccomp를 우회하는 특권 컨테이너 탈출 취약점(CVE-2026-99103), 비인가 시스템 콜 호출, 미인가 BPF 맵 조작 및 커널 MAC 프로필 누락 탐지. 런타임 eBPF 거부 텔레메트리 실시간 분석 및 강화된 NixOS 선언적 모듈(`lsm-bpf-policy.nix`), 검증 가능한 eBPF C 프로그램(`lsm_container_mac.bpf.c`), Kubernetes `ContainerMACProfile` CRD 선언적 자동 합성(`--lsm`, `--lsm-mac`, `--lsm-telemetry`, `--lsm-synth-out`).
 - **🤖 자율 위협 해결 & GitOps 풀 리퀘스트 합성 엔진**: NixOS 모듈 및 Kubernetes 매니페스트를 전수 감사하여 조치 가능한 보안 취약점을 식별하고, 사람의 개입 없이 원자적 선언적 보안 강화 패치를 자동 합성하는 자율 보안 엔지니어링 엔진. GitOps 풀 리퀘스트 생성 전 시뮬레이션 기반의 NixOS pure flake 평가와 `kubectl kustomize` dry-run 스키마 검증을 수행하는 사전 카나리 테스트 엔진(`pkg/remediate/canary.go`)을 탑재하여 100% 비파괴적 안전성을 보장. 단일 diff 형식의 NixOS 구성 패치(`remediation-patches.nix`), Kubernetes Kustomize 전략적 머지 패치(`patch-<name>.yaml`), RFC 6902 JSONPatch(`jsonpatch-<name>.yaml`), 통합 `kustomization.yaml` 오버레이 매니페스트 및 브랜치 명명 규칙(`remediation/*`)과 Conventional Commit 메시지를 포함한 PR 요약문(`PR_SUMMARY.md`) 자동 생성(`--remediate`, `--remediate-synth-out`, CVE-2026-98402).
 - **🔬 에페메럴 마이크로VM 샌드박스 & 허니팟 디토네이션 디스패치 엔진**: 클러스터 배포 전 미검증 컨테이너 이미지, OCI 아티팩트 및 바이너리를 격리 분석하기 위해 NixOS 및 Kubernetes 상에서 에페메럴 Firecracker 마이크로VM을 동적 오케스트레이션하는 클라우드 네이티브 보안 엔진. NixOS microvm 모듈(`microvm.vms.<name>`), 하이퍼바이저 설정, jailer chroot 격리 매개변수 및 Kubernetes `DetonationJob` CRD 매니페스트 스트리밍 파싱. 런타임 실행 텔레메트리, 커널 프로브 및 디코이 허니팟 유인체 접촉(가짜 Kubelet 포트 10250, 가짜 etcd 포트 2379/2380, 카나리 토큰) 분석, 컨테이너 격리 쿼런틴(Quarantine) 제어, 게스트 내 리버스 쉘 비커닝, 권한 상승 시스템 콜, virtio MMIO 하이퍼바이저 탈출 이상 징후, 안티 샌드박스 지연 회피 탐지 및 강화된 마이크로VM 모듈/허니팟 유인체 선언적 합성(`--sandbox-synth-out`, CVE-2026-97105).
 - **⚛️ 양자 내성 암호(PQC) & NSA CNSA 2.0 TLS 감사 엔진**: Kubernetes 컨트롤 플레인 컴포넌트(kube-apiserver, etcd, kubelet)와 NixOS 호스트 암호화 구성을 위한 엔터프라이즈 PQC 보안 감사 엔진. TLS 1.3 미만 취약 프로토콜, 하이브리드 포스트 퀀텀 키 캡슐화(NIST FIPS 203 ML-KEM-768/1024) 누락으로 인한 수확 후 복호화(Harvest-Now-Decrypt-Later) 위협(CVE-2026-94301), 취약 고전 암호(CBC/3DES/정적 RSA), 256비트 미만 대칭키, 고전 전용 인증서 서명 차단. NixOS OpenSSL `oqsprovider` 활성화 및 GnuTLS 우선순위 정책 감사, NSA CNSA 2.0 전환 일정(2025/2030/2033) 추적 및 양자 내성 강화 모듈 선언적 합성(`--pqc-synth-out`).
@@ -118,6 +119,16 @@ go run cmd/sentinel/main.go --sandbox-synth-out=policies/generated/sandbox
 go run cmd/sentinel/main.go --remediate=fixtures/remediation
 go run cmd/sentinel/main.go --remediate=fixtures/remediation --remediate-synth-out=policies/generated/remediation
 go run cmd/sentinel/main.go --remediate=fixtures/remediation --format=sarif --output=remediation-results.sarif
+
+# 호스트 NixOS 및 Kubernetes 매니페스트 eBPF LSM 및 강제적 접근 제어(MAC) 감사
+go run cmd/sentinel/main.go --lsm=fixtures/nixos-lsm.nix
+go run cmd/sentinel/main.go --lsm=fixtures/nixos-lsm-vulnerable.nix --lsm-mac=fixtures/k8s-lsm-workload.yaml
+
+# 런타임 eBPF LSM 거부 텔레메트리 조정 및 컨테이너 MAC 강제성 평가
+go run cmd/sentinel/main.go --lsm=fixtures/nixos-lsm-vulnerable.nix --lsm-telemetry=fixtures/lsm-telemetry.json --format=sarif --output=lsm-results.sarif
+
+# 강화된 NixOS LSM 모듈, eBPF C 프로그램 및 Kubernetes ContainerMACProfile CRD 자동 합성
+go run cmd/sentinel/main.go --lsm-synth-out=policies/generated/lsm
 
 # 베어메탈 eBPF 커널 텔레메트리 다중 노드 실시간 분석 실행
 go run cmd/sentinel/main.go --probe

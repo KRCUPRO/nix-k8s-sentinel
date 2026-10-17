@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: vulnerable-privileged-daemon
+  namespace: kube-system
+spec:
+  hostPID: true
+  hostIPC: true
+  containers:
+  - name: telemetry-collector
+    image: custom-collector:v1.0.0
+    securityContext:
+      privileged: true
+      capabilities:
+        add:
+        - SYS_ADMIN
+        - NET_RAW
+        - BPF
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: hardened-mac-workload
+  namespace: prod-apps
+  annotations:
+    lsm.security.alpha.kubernetes.io/profile: "strict-mac"
+    mac.bpf.kubernetes.io/enforce: "true"
+spec:
+  containers:
+  - name: web-api
+    image: secure-web:v2.4.0
+    securityContext:
+      privileged: false
+      readOnlyRootFilesystem: true
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+        - ALL
