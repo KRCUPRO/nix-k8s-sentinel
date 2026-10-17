@@ -19,7 +19,7 @@
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](./LICENSE)
 [![Go Report Card](https://goreportcard.com/badge/github.com/KRCUPRO/nix-k8s-sentinel)](https://goreportcard.com/report/github.com/KRCUPRO/nix-k8s-sentinel)
-[![Version](https://img.shields.io/badge/Release-v0.19.0-emerald.svg)](https://github.com/KRCUPRO/nix-k8s-sentinel/releases)
+[![Version](https://img.shields.io/badge/Release-v0.20.0-emerald.svg)](https://github.com/KRCUPRO/nix-k8s-sentinel/releases)
 [![Architecture](https://img.shields.io/badge/Architecture-Bare--Metal_NixOS_+_K8s-8b5cf6.svg)](#-architecture-overview)
 [![Security](https://img.shields.io/badge/Security-Declarative_Audit-38bdf8.svg)](./SECURITY.md)
 
@@ -29,15 +29,16 @@
 
 ## ⚡ Overview
 
-`nix-k8s-sentinel` is a high-performance declarative vulnerability scanner and continuous threat intelligence engine designed specifically for bare-metal NixOS clusters and Kubernetes infrastructure.
+`nix-k8s-sentinel` is a high-performance declarative vulnerability scanner, autonomous threat remediation engine, and continuous threat intelligence system designed specifically for bare-metal NixOS clusters and Kubernetes infrastructure.
 
-Unlike ephemeral container scanners, `nix-k8s-sentinel` audits declarative configuration matrices (NixOS Flakes, Kubernetes CNI policies, Ingress controllers, Gateway API routes, Istio EnvoyFilters, Rook Ceph storage clusters, WireGuard mesh networks, CIS Kubernetes Benchmarks, Confidential Computing measured boot chains, Multi-Cluster GitOps fleet topologies, SPIFFE/SPIRE Zero-Trust microsegmentation, Software Bill of Materials with In-Toto SLSA Level 3 supply chain attestations, Hardware Security Module envelope encryption, Dynamic Kernel Threat Profiling with Syscall BPF Filters, Post-Quantum Cryptography with NSA CNSA 2.0 TLS audit engine, and Ephemeral MicroVM Sandbox with Honeypot Detonation Dispatch) against real-time normalized CVSS threat intelligence feeds, enabling automated mitigation before workloads are scheduled.
+Unlike ephemeral container scanners, `nix-k8s-sentinel` audits declarative configuration matrices (NixOS Flakes, Kubernetes CNI policies, Ingress controllers, Gateway API routes, Istio EnvoyFilters, Rook Ceph storage clusters, WireGuard mesh networks, CIS Kubernetes Benchmarks, Confidential Computing measured boot chains, Multi-Cluster GitOps fleet topologies, SPIFFE/SPIRE Zero-Trust microsegmentation, Software Bill of Materials with In-Toto SLSA Level 3 supply chain attestations, Hardware Security Module envelope encryption, Dynamic Kernel Threat Profiling with Syscall BPF Filters, Post-Quantum Cryptography with NSA CNSA 2.0 TLS audit engine, Ephemeral MicroVM Sandbox with Honeypot Detonation Dispatch, and Autonomous Threat Remediation with GitOps Pull Request Synthesis & Canary Validation) against real-time normalized CVSS threat intelligence feeds, enabling automated mitigation before workloads are scheduled.
 
 ---
 
 ## 🏛️ Core Capabilities
 
 - **🔍 Declarative Infrastructure Auditing**: Pattern matching and input tracking for NixOS Flake inputs, Kubernetes manifests, and CNI policies.
+- **🤖 Autonomous Threat Remediation & GitOps Pull Request Synthesizer**: Autonomous security engineering engine auditing NixOS modules and Kubernetes manifests, discovering remediable vulnerabilities, and synthesizing atomic declarative hardening patches without human intervention. Features automated pre-flight canary test validation (`pkg/remediate/canary.go`) executing simulated NixOS pure flake evaluations and `kubectl kustomize` dry-run schema validations to ensure patches are 100% non-breaking before opening GitOps pull requests. Generates unified diff NixOS configuration patches (`remediation-patches.nix`), Kubernetes Kustomize strategic merge patches (`patch-<name>.yaml`), RFC 6902 JSONPatches (`jsonpatch-<name>.yaml`), complete `kustomization.yaml` overlay manifests, and formatted pull request summaries (`PR_SUMMARY.md`) with branch conventions (`remediation/*`) and conventional commit messages (`--remediate`, `--remediate-synth-out`, CVE-2026-98402).
 - **🔬 Ephemeral MicroVM Sandbox & Honeypot Detonation Dispatch Engine**: Cloud-native security engine orchestrating ephemeral Firecracker microVMs on NixOS and Kubernetes for isolated detonation and behavioral analysis of untrusted container images, OCI artifacts, and binaries prior to cluster scheduling. Streaming parser for NixOS microvm modules (`microvm.vms.<name>`), hypervisor parameters, jailer confinement settings, and Kubernetes `DetonationJob` CRD manifests. Reconciles live execution telemetry, kernel probes, and decoy honeypot hits (fake Kubelet port 10250, fake etcd port 2379/2380, canary tokens), tracks container quarantine status, detects in-guest reverse shell beaconing, kernel privilege escalation sequences, hypervisor virtio MMIO escape anomalies, and anti-analysis SLA timeouts, and synthesizes hardened microVM modules and honeypot lures (`--sandbox-synth-out`, CVE-2026-97105).
 - **⚛️ Post-Quantum Cryptography (PQC) & NSA CNSA 2.0 TLS Audit Engine**: Enterprise cryptographic scanner auditing Kubernetes control plane components, etcd peer clusters, and NixOS host configurations for post-quantum key encapsulation readiness and NSA CNSA 2.0 transition conformance. Streaming parser for kube-apiserver, etcd, and kubelet flags (`--tls-min-version`, `--tls-cipher-suites`, `--tls-key-exchange-groups`, `--peer-tls-min-version`), NixOS OpenSSL configuration (`environment.etc."ssl/openssl.cnf"`, `oqsprovider` activation, default groups), and system-wide GnuTLS priority strings. Evaluates live and declarative TLS connections, calculates hybrid KEM adoption percentages, TLS 1.3 compliance, and evaluates NSA CNSA 2.0 readiness milestones (2025/2030/2033 timelines). Correlates Harvest-Now-Decrypt-Later (HNDL) quantum cryptanalysis threats with `CVE-2026-94301`, and synthesizes quantum-hardened NixOS modules and Kubernetes control plane static pod manifests (`--pqc-synth-out`).
 - **🛡️ Dynamic Kernel Runtime Threat Profiler & Syscall BPF Filter**: Deep kernel-level security inspection engine analyzing declarative seccomp profiles, NixOS host parameters, and runtime eBPF telemetry across Kubernetes clusters. Detects unconfined container seccomp profiles (`type: Unconfined`), unrestricted administrative syscalls (`ptrace`, `process_vm_writev`, `kexec_load`), missing host eBPF LSM hooks (`security.lsm = [ ... "bpf" ... ]`), host namespace sharing (`hostPID`/`hostIPC`), and unprivileged BPF access. Reconciles live socket creation rates, flags abnormal socket storms exceeding 250 sockets/sec, detects raw socket allocations (`SOCK_RAW`, `AF_PACKET`), and autonomously synthesizes hardened Kubernetes Seccomp profiles, drop-in NixOS systemd sandboxing modules, and declarative eBPF LSM policy manifests (CVE-2026-90412).
@@ -144,6 +145,11 @@ go run cmd/sentinel/main.go --sandbox=fixtures/nixos-microvm-vulnerable.nix --sa
 
 # Synthesize hardened NixOS microVM, DetonationJob, and honeypot decoy definitions
 go run cmd/sentinel/main.go --sandbox-synth-out=policies/generated/sandbox
+
+# Audit manifests for autonomous threat remediation and synthesize GitOps pull requests
+go run cmd/sentinel/main.go --remediate=fixtures/remediation
+go run cmd/sentinel/main.go --remediate=fixtures/remediation --remediate-synth-out=policies/generated/remediation
+go run cmd/sentinel/main.go --remediate=fixtures/remediation --format=sarif --output=remediation-results.sarif
 
 # Audit Multi-Cluster fleet manifests (RBAC, ArgoCD, Flux)
 go run cmd/sentinel/main.go --fleet=fixtures/fleet-manifests.yaml

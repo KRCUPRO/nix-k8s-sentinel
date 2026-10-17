@@ -15,6 +15,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nix"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/pqc"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/probe"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/remediate"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/sandbox"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/sbom"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/spiffe"
@@ -66,6 +67,9 @@ type ReportOptions struct {
 	PQCSummary              *pqc.PQCSummary
 	SandboxViolations       []sandbox.SandboxViolation
 	SandboxSummary          *sandbox.SandboxSummary
+	RemediateFindings       []remediate.RemediationFinding
+	RemediatePullRequests   []remediate.GitOpsPullRequest
+	RemediateSummary        *remediate.RemediationSummary
 	FlakePath               string
 	K8sPath                 string
 	StoragePath             string
@@ -89,6 +93,8 @@ type ReportOptions struct {
 	PQCTelemetryPath        string
 	SandboxPath             string
 	SandboxTelemetryPath    string
+	RemediatePath           string
+	RemediateOutDir         string
 	TargetFilter            string
 	Pretty                  bool
 }

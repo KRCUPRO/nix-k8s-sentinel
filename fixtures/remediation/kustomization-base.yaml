@@ -1,0 +1,9 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - k8s-workload.yaml
+
+commonLabels:
+  app.kubernetes.io/managed-by: gitops-sentinel
+  security.nix-k8s.io/hardened: "true"

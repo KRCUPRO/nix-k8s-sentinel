@@ -1,0 +1,28 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - ../base
+
+patches:
+  - path: patch-workload.yaml
+    target:
+      group: apps
+      version: v1
+      kind: Deployment
+      name: workload
+      namespace: default
+  - path: jsonpatch-ingress-route.yaml
+    target:
+      group: networking.k8s.io
+      version: v1
+      kind: Ingress
+      name: ingress-route
+      namespace: default
+  - path: patch-bpf-workload.yaml
+    target:
+      group: apps
+      version: v1
+      kind: Deployment
+      name: bpf-workload
+      namespace: default

@@ -159,10 +159,19 @@ Automated generation of defense-in-depth rules:
 - [x] Full CLI integration (`--sandbox`, `--microvm`, `--sandbox-telemetry`, `--honeypot`, `--sandbox-synth-out`, `--quarantine-strict`) with unified SARIF v2.1.0 code scanning, JSON audit telemetry, and Markdown briefing exports (`cmd/sentinel/sandbox_runner.go`).
 - [x] Production sample fixtures (`fixtures/nixos-microvm.nix`, `fixtures/nixos-microvm-vulnerable.nix`, `fixtures/k8s-detonation-job.yaml`, `fixtures/sandbox-telemetry.json`) and threat feed correlation with `CVE-2026-97105`.
 
-### Version 0.20.0 — Autonomous Threat Remediation & GitOps Pull Request Synthesizer (Planned)
-- [ ] Declarative NixOS configuration patch synthesizer generating atomic Flake overrides for CVE mitigations.
-- [ ] Kubernetes GitOps Kustomize & Helm patch generator for automated security hardening.
-- [ ] Canary test validation runner verifying patch non-breaking changes prior to GitOps PR creation.
+### Version 0.20.0 — Autonomous Threat Remediation & GitOps Pull Request Synthesizer (Completed)
+- [x] Autonomous threat remediation and declarative GitOps patch synthesis engine (`pkg/remediate/scanner.go`).
+- [x] Canonical rule catalog `REMEDIATE-AUTO-001` through `REMEDIATE-AUTO-012` covering unpinned flake inputs (`CVE-2026-19402`), unhardened container security contexts (`CVE-2026-20914`), Ingress custom snippet path traversals (`CVE-2026-21801`), permissive 0.0.0.0/0 CNI egress routes, Ceph storage lacking in-transit `msgr2` encryption (`CVE-2026-15509`), plaintext WireGuard private keys (`CVE-2026-31048`), CIS Kubernetes Benchmark control plane audit deviations (`CVE-2026-38102`), missing SPIFFE mTLS policies (`CVE-2026-67210`), insecure KMS v2 configurations (`CVE-2026-83190`), unconfined seccomp profiles (`CVE-2026-90412`), classical TLS 1.2 control planes (`CVE-2026-94301`), and unisolated microVM detonation sandboxes (`CVE-2026-97105`) (`pkg/remediate/rules.go`).
+- [x] Automated pre-flight canary test validation pipeline (`pkg/remediate/canary.go`) executing simulated NixOS pure flake evaluations and `kubectl kustomize` dry-run schema checks before GitOps PR synthesis.
+- [x] Declarative patch synthesizer generating unified diff NixOS configuration patches, Kubernetes Kustomize strategic merge patches, RFC 6902 JSONPatches, and complete `kustomization.yaml` overlay manifests (`pkg/remediate/synthesizer.go`).
+- [x] GitOps pull request bundle orchestrator generating branch names (`remediation/hardening-*`), conventional commit messages, structured Markdown summaries, and attached canary execution results (`pkg/remediate/types.go`).
+- [x] Full CLI integration (`--remediate`, `--auto-remediate`, `--remediate-synth-out`, `--canary-strict`) with unified SARIF v2.1.0 code scanning, JSON audit telemetry, and Markdown briefing exports (`cmd/sentinel/remediate_runner.go`, `cmd/sentinel/flags.go`).
+- [x] Production sample fixtures (`fixtures/remediation/nixos-vulnerable.nix`, `fixtures/remediation/k8s-workload.yaml`, `fixtures/remediation/kustomization-base.yaml`, `fixtures/remediation/canary-telemetry.json`) and threat feed correlation with `CVE-2026-98402`.
+
+### Version 0.21.0 — eBPF LSM Security Module & Kernel Mandatory Access Control (Planned)
+- [ ] Implement declarative eBPF Linux Security Module (LSM) hooks for NixOS container hosts.
+- [ ] Synthesize kernel-level mandatory access control (MAC) policies restricting privileged container syscalls.
+- [ ] Real-time kernel telemetry correlation for unconfined container runtime containment.
 
 ### Version 1.0.0 — Enterprise Workload Identity & Ephemeral Detonation Pipeline (Planned)
 - [ ] Full end-to-end integration of SPIFFE/SPIRE workload attestation, In-Toto provenance, and HSM envelope encryption.

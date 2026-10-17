@@ -1073,8 +1073,66 @@ func BuildSARIFReport(opts ReportOptions) (*SARIFLog, error) {
 		}
 	}
 
-	// 16. Process Standalone Feed Advisories (if no specific audit targets yielded findings)
-	if (opts.K8sReport == nil || len(opts.K8sReport.Violations) == 0) && len(opts.FlakeMatches) == 0 && len(opts.ProbeEvents) == 0 && len(opts.StorageViolations) == 0 && len(opts.WireGuardViolations) == 0 && len(opts.CISViolations) == 0 && len(opts.GatewayViolations) == 0 && len(opts.AttestViolations) == 0 && len(opts.FleetViolations) == 0 && len(opts.SPIFFEViolations) == 0 && len(opts.SBOMViolations) == 0 && len(opts.HSMViolations) == 0 && len(opts.BPFViolations) == 0 && len(opts.PQCViolations) == 0 && len(opts.SandboxViolations) == 0 && opts.Feed != nil {
+	// 16. Process Autonomous Threat Remediation Findings
+	if len(opts.RemediateFindings) > 0 {
+		for _, rf := range opts.RemediateFindings {
+			tags := []string{"security", rf.Target, "remediation", "gitops"}
+			ruleIdx := getOrCreateRule(rf.RuleID, rf.Title, rf.Description, rf.Remediation, intel.Severity(rf.Severity), rf.CVSSScore, tags)
+			level := SeverityToSARIFLevel(rf.Severity, rf.CVSSScore)
+
+			locURI := rf.SourceFile
+			if locURI == "" {
+				locURI = opts.RemediatePath
+			}
+			if locURI == "" {
+				locURI = "remediation/manifest.yaml"
+			}
+			locURI = filepath.ToSlash(locURI)
+
+			line := rf.LineNumber
+			if line <= 0 {
+				line = 1
+			}
+
+			cveTag := ""
+			if rf.MatchedCVE != "" {
+				cveTag = fmt.Sprintf(" [%s]", rf.MatchedCVE)
+			}
+			resMsg := fmt.Sprintf("[%s]%s %s: %s (Target: %s, Canary: %s, Remediation: %s)",
+				rf.RuleID, cveTag, rf.Title, rf.Description, rf.Target, rf.CanaryStatus, rf.Remediation)
+
+			results = append(results, SARIFResult{
+				RuleID:    rf.RuleID,
+				RuleIndex: ruleIdx,
+				Level:     level,
+				Message:   SARIFMessage{Text: resMsg},
+				Locations: []SARIFLocation{
+					{
+						PhysicalLocation: &PhysicalLocation{
+							ArtifactLocation: ArtifactLocation{
+								URI:       locURI,
+								URIBaseID: "%SRCROOT%",
+							},
+							Region: &Region{
+								StartLine:   line,
+								StartColumn: 1,
+							},
+						},
+						LogicalLocations: []LogicalLocation{
+							{
+								Name:               rf.RuleID,
+								Kind:               "RemediationRule",
+								FullyQualifiedName: fmt.Sprintf("remediation/%s", rf.RuleID),
+							},
+						},
+					},
+				},
+			})
+		}
+	}
+
+	// 17. Process Standalone Feed Advisories (if no specific audit targets yielded findings)
+	if (opts.K8sReport == nil || len(opts.K8sReport.Violations) == 0) && len(opts.FlakeMatches) == 0 && len(opts.ProbeEvents) == 0 && len(opts.StorageViolations) == 0 && len(opts.WireGuardViolations) == 0 && len(opts.CISViolations) == 0 && len(opts.GatewayViolations) == 0 && len(opts.AttestViolations) == 0 && len(opts.FleetViolations) == 0 && len(opts.SPIFFEViolations) == 0 && len(opts.SBOMViolations) == 0 && len(opts.HSMViolations) == 0 && len(opts.BPFViolations) == 0 && len(opts.PQCViolations) == 0 && len(opts.SandboxViolations) == 0 && len(opts.RemediateFindings) == 0 && opts.Feed != nil {
 		feedItems := opts.Feed.Items
 		if opts.TargetFilter != "" {
 			feedItems = opts.Feed.FilterByTarget(opts.TargetFilter)

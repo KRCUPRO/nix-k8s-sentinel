@@ -19,6 +19,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nix"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/pqc"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/probe"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/remediate"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/sandbox"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/sbom"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/spiffe"
@@ -60,6 +61,9 @@ type BriefingOptions struct {
 	PQCSummary              *pqc.PQCSummary
 	SandboxViolations       []sandbox.SandboxViolation
 	SandboxSummary          *sandbox.SandboxSummary
+	RemediateFindings       []remediate.RemediationFinding
+	RemediatePullRequests   []remediate.GitOpsPullRequest
+	RemediateSummary        *remediate.RemediationSummary
 	OutputDir               string
 	CustomFilename          string
 }
@@ -89,10 +93,10 @@ func GenerateBriefing(opts BriefingOptions) (*BriefingReport, error) {
 
 	version := opts.Version
 	if version == "" {
-		version = "0.17.0"
+		version = "0.20.0"
 	}
 
-	telemetry := ComputeTelemetrySandbox(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations, opts.GatewayViolations, opts.AttestViolations, opts.FleetViolations, opts.SPIFFEViolations, opts.SBOMViolations, opts.HSMViolations, opts.BPFViolations, opts.PQCViolations, opts.SandboxViolations)
+	telemetry := ComputeTelemetryRemediate(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations, opts.GatewayViolations, opts.AttestViolations, opts.FleetViolations, opts.SPIFFEViolations, opts.SBOMViolations, opts.HSMViolations, opts.BPFViolations, opts.PQCViolations, opts.SandboxViolations, opts.RemediateFindings)
 
 	var buf bytes.Buffer
 
@@ -601,7 +605,53 @@ func GenerateBriefing(opts BriefingOptions) (*BriefingReport, error) {
 		buf.WriteString("---\n\n")
 	}
 
-	// 19. Action Items Checklist
+	// 19. Autonomous Threat Remediation & GitOps Pull Request Posture (if applicable)
+	if len(opts.RemediateFindings) > 0 || opts.RemediateSummary != nil || len(opts.RemediatePullRequests) > 0 {
+		buf.WriteString("## 🤖 Autonomous Threat Remediation & GitOps Pull Request Posture\n\n")
+		if opts.RemediateSummary != nil {
+			sum := opts.RemediateSummary
+			buf.WriteString(fmt.Sprintf("**Remediation Score:** `%.1f%%` | **Status:** `%s` | **Findings Remediated:** %d\n",
+				sum.RemediationScore, sum.Status, sum.TotalFindings))
+			buf.WriteString(fmt.Sprintf("**NixOS Patches:** %d | **Kustomize Overlays:** %d | **Canary Checks:** %d (Passed: %d, Failed: %d) | **PRs Synthesized:** %d\n\n",
+				sum.NixOSPatchCount, sum.KustomizePatchCount, sum.CanaryChecksTotal, sum.CanaryPassedCount, sum.CanaryFailedCount, sum.PullRequestsSynthesized))
+		}
+		if len(opts.RemediateFindings) > 0 {
+			buf.WriteString(fmt.Sprintf("🛡️ **%d Autonomous remediation opportunities identified with synthesized declarative mitigations:**\n\n", len(opts.RemediateFindings)))
+			buf.WriteString("| Rule ID | Target | Resource | Severity | CVSS | Finding & Threat Impact | Canary Status | Mitigated CVE |\n")
+			buf.WriteString("| :--- | :--- | :--- | :---: | :---: | :--- | :---: | :---: |\n")
+			for _, rf := range opts.RemediateFindings {
+				cveTag := rf.MatchedCVE
+				if cveTag == "" {
+					cveTag = "N/A"
+				}
+				resName := rf.ResourceName
+				if rf.Namespace != "" {
+					resName = fmt.Sprintf("%s/%s", rf.Namespace, rf.ResourceName)
+				}
+				buf.WriteString(fmt.Sprintf("| `%s` | `%s` | `%s/%s` | **%s** | %.1f | %s: %s | `%s` | `%s` |\n",
+					rf.RuleID, rf.Target, rf.ResourceKind, resName, rf.Severity, rf.CVSSScore, rf.Title, rf.Description, rf.CanaryStatus, cveTag))
+			}
+			buf.WriteString("\n")
+		}
+		if len(opts.RemediatePullRequests) > 0 {
+			buf.WriteString(fmt.Sprintf("📦 **%d Synthesized GitOps Pull Request Bundles:**\n\n", len(opts.RemediatePullRequests)))
+			buf.WriteString("| PR # | Head Branch | Base Branch | Title | Patches | Canary Status |\n")
+			buf.WriteString("| :---: | :--- | :---: | :--- | :---: | :---: |\n")
+			for _, pr := range opts.RemediatePullRequests {
+				canaryBadge := "PASSED"
+				if !pr.CanaryPassed {
+					canaryBadge = "FAILED"
+				}
+				patchCount := len(pr.NixPatches) + len(pr.K8sPatches)
+				buf.WriteString(fmt.Sprintf("| #%d | `%s` | `%s` | %s | %d | **%s** |\n",
+					pr.PRNumber, pr.HeadBranch, pr.BaseBranch, pr.Title, patchCount, canaryBadge))
+			}
+			buf.WriteString("\n")
+		}
+		buf.WriteString("---\n\n")
+	}
+
+	// 20. Action Items Checklist
 	buf.WriteString("## 📋 SecOps & SRE Operational Checklist\n\n")
 	buf.WriteString("- [ ] Review high and critical severity advisories against production deployment manifests.\n")
 	buf.WriteString("- [ ] Verify that ingress controllers enforce URI path normalization and snippet guards.\n")
@@ -619,6 +669,7 @@ func GenerateBriefing(opts BriefingOptions) (*BriefingReport, error) {
 	buf.WriteString("- [ ] Enforce declarative seccomp profiles, attach eBPF LSM socket_create filters, and restrict unprivileged BPF access.\n")
 	buf.WriteString("- [ ] Enforce hybrid post-quantum key encapsulation (ML-KEM/Kyber) and CNSA 2.0 cipher suites across cluster control plane.\n")
 	buf.WriteString("- [ ] Quarantine untrusted artifacts and isolate ephemeral microVM network egress to internal honeypot lures.\n")
+	buf.WriteString("- [ ] Verify pre-flight canary test validation before applying declarative security hardening patches.\n")
 	buf.WriteString("- [ ] Archive this briefing record into security audit ledger.\n")
 
 	report := &BriefingReport{
