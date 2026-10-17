@@ -1193,8 +1193,70 @@ func BuildSARIFReport(opts ReportOptions) (*SARIFLog, error) {
 		}
 	}
 
-	// 18. Process Standalone Feed Advisories (if no specific audit targets yielded findings)
-	if (opts.K8sReport == nil || len(opts.K8sReport.Violations) == 0) && len(opts.FlakeMatches) == 0 && len(opts.ProbeEvents) == 0 && len(opts.StorageViolations) == 0 && len(opts.WireGuardViolations) == 0 && len(opts.CISViolations) == 0 && len(opts.GatewayViolations) == 0 && len(opts.AttestViolations) == 0 && len(opts.FleetViolations) == 0 && len(opts.SPIFFEViolations) == 0 && len(opts.SBOMViolations) == 0 && len(opts.HSMViolations) == 0 && len(opts.BPFViolations) == 0 && len(opts.PQCViolations) == 0 && len(opts.SandboxViolations) == 0 && len(opts.RemediateFindings) == 0 && len(opts.LSMViolations) == 0 && opts.Feed != nil {
+	// 18. Process CephFS Snapshot & Volume Replication DR Violations
+	if len(opts.ReplicationViolations) > 0 {
+		for _, rv := range opts.ReplicationViolations {
+			tags := []string{"security", "storage", "cephfs", "replication", "disaster-recovery"}
+			if rv.MatchedCVE != "" {
+				tags = append(tags, rv.MatchedCVE)
+			}
+
+			ruleIdx := getOrCreateRule(rv.RuleID, rv.Title, rv.Description, rv.Remediation, rv.Severity, rv.CVSSScore, tags)
+			level := SeverityToSARIFLevel(string(rv.Severity), rv.CVSSScore)
+
+			locURI := rv.File
+			if locURI == "" {
+				locURI = opts.DRManifestPath
+			}
+			if locURI == "" {
+				locURI = "storage/replication.yaml"
+			}
+			locURI = filepath.ToSlash(locURI)
+
+			line := rv.Line
+			if line <= 0 {
+				line = 1
+			}
+
+			cveTag := ""
+			if rv.MatchedCVE != "" {
+				cveTag = fmt.Sprintf(" [%s]", rv.MatchedCVE)
+			}
+			resMsg := fmt.Sprintf("[%s]%s %s (Resource: %s/%s, Remediation: %s)",
+				rv.RuleID, cveTag, rv.Description, rv.ResourceKind, rv.ResourceName, rv.Remediation)
+
+			results = append(results, SARIFResult{
+				RuleID:    rv.RuleID,
+				RuleIndex: ruleIdx,
+				Level:     level,
+				Message:   SARIFMessage{Text: resMsg},
+				Locations: []SARIFLocation{
+					{
+						PhysicalLocation: &PhysicalLocation{
+							ArtifactLocation: ArtifactLocation{
+								URI:       locURI,
+								URIBaseID: "%SRCROOT%",
+							},
+							Region: &Region{
+								StartLine:   line,
+								StartColumn: 1,
+							},
+						},
+						LogicalLocations: []LogicalLocation{
+							{
+								Name:               rv.RuleID,
+								Kind:               "ReplicationRule",
+								FullyQualifiedName: fmt.Sprintf("dr/%s", rv.RuleID),
+							},
+						},
+					},
+				},
+			})
+		}
+	}
+
+	// 19. Process Standalone Feed Advisories (if no specific audit targets yielded findings)
+	if (opts.K8sReport == nil || len(opts.K8sReport.Violations) == 0) && len(opts.FlakeMatches) == 0 && len(opts.ProbeEvents) == 0 && len(opts.StorageViolations) == 0 && len(opts.WireGuardViolations) == 0 && len(opts.CISViolations) == 0 && len(opts.GatewayViolations) == 0 && len(opts.AttestViolations) == 0 && len(opts.FleetViolations) == 0 && len(opts.SPIFFEViolations) == 0 && len(opts.SBOMViolations) == 0 && len(opts.HSMViolations) == 0 && len(opts.BPFViolations) == 0 && len(opts.PQCViolations) == 0 && len(opts.SandboxViolations) == 0 && len(opts.RemediateFindings) == 0 && len(opts.LSMViolations) == 0 && len(opts.ReplicationViolations) == 0 && opts.Feed != nil {
 		feedItems := opts.Feed.Items
 		if opts.TargetFilter != "" {
 			feedItems = opts.Feed.FilterByTarget(opts.TargetFilter)

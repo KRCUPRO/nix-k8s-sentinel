@@ -20,6 +20,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/pqc"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/probe"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/remediate"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/replication"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/sandbox"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/sbom"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/spiffe"
@@ -69,6 +70,9 @@ type JSONAuditReport struct {
 	RemediateSummary        *remediate.RemediationSummary   `json:"remediate_summary,omitempty"`
 	LSMViolations           []lsm.LSMViolation              `json:"lsm_violations,omitempty"`
 	LSMSummary              *lsm.LSMSummary                 `json:"lsm_summary,omitempty"`
+	ReplicationViolations   []replication.ReplicationViolation `json:"replication_violations,omitempty"`
+	ReplicationSummary      *replication.ReplicationSummary `json:"replication_summary,omitempty"`
+	ReplicationTelemetry    *replication.CrossRegionDRTelemetry `json:"replication_telemetry,omitempty"`
 }
 
 // BuildJSONReport compiles the consolidated JSON audit report from provided audit data.
@@ -163,8 +167,17 @@ func BuildJSONReport(opts ReportOptions) (*JSONAuditReport, error) {
 	if opts.LSMSynthOut != "" {
 		scanned = append(scanned, opts.LSMSynthOut)
 	}
+	if opts.DRManifestPath != "" {
+		scanned = append(scanned, opts.DRManifestPath)
+	}
+	if opts.DRTelemetryPath != "" {
+		scanned = append(scanned, opts.DRTelemetryPath)
+	}
+	if opts.DRSynthOut != "" {
+		scanned = append(scanned, opts.DRSynthOut)
+	}
 
-	telemetry := ComputeTelemetryLSM(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations, opts.GatewayViolations, opts.AttestViolations, opts.FleetViolations, opts.SPIFFEViolations, opts.SBOMViolations, opts.HSMViolations, opts.BPFViolations, opts.PQCViolations, opts.SandboxViolations, opts.RemediateFindings, opts.LSMViolations)
+	telemetry := ComputeTelemetryReplication(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations, opts.GatewayViolations, opts.AttestViolations, opts.FleetViolations, opts.SPIFFEViolations, opts.SBOMViolations, opts.HSMViolations, opts.BPFViolations, opts.PQCViolations, opts.SandboxViolations, opts.RemediateFindings, opts.LSMViolations, opts.ReplicationViolations)
 
 	var advisories []intel.ThreatItem
 	if opts.Feed != nil {
@@ -216,6 +229,9 @@ func BuildJSONReport(opts ReportOptions) (*JSONAuditReport, error) {
 		RemediateSummary:        opts.RemediateSummary,
 		LSMViolations:           opts.LSMViolations,
 		LSMSummary:              opts.LSMSummary,
+		ReplicationViolations:   opts.ReplicationViolations,
+		ReplicationSummary:      opts.ReplicationSummary,
+		ReplicationTelemetry:    opts.ReplicationTelemetry,
 	}
 
 	return rep, nil

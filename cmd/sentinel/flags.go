@@ -51,6 +51,11 @@ type SentinelConfig struct {
 	LSMTelemetry      string
 	LSMSynthOut       string
 	LSMStrict         bool
+	DRManifests       string
+	DRTelemetry       string
+	DRSynthOut        string
+	DRRPOMax          int
+	DRStrict          bool
 	Briefing          bool
 	BriefingDir       string
 	BriefingFile      string
@@ -127,6 +132,12 @@ func parseCLI() SentinelConfig {
 	lsmTelemetry := flag.String("lsm-telemetry", "", "Path to runtime eBPF LSM denial telemetry JSON")
 	lsmSynthOut := flag.String("lsm-synth-out", "", "Output directory to export synthesized hardened NixOS eBPF LSM modules, BPF C programs, and Kubernetes MAC policies")
 	lsmStrict := flag.Bool("lsm-strict", false, "Enforce strict zero-warning eBPF LSM compliance")
+	drManifests := flag.String("dr-manifests", "", "Path to CephFS / RBD volume replication and snapshot manifests or directory")
+	drShort := flag.String("dr", "", "Alias for --dr-manifests")
+	drTelemetry := flag.String("dr-telemetry", "", "Path to cross-region volume replication runtime telemetry JSON")
+	drSynthOut := flag.String("dr-synth-out", "", "Output directory to write synthesized hardened CephFS snapshot schedule & replication manifests")
+	drRPOMax := flag.Int("dr-rpo-max", 900, "Maximum allowable volume replication delta lag threshold in seconds (default 900s / 15m)")
+	drStrict := flag.Bool("dr-strict", false, "Enforce strict zero-warning disaster recovery posture")
 	briefing := flag.Bool("briefing", false, "Generate automated Markdown threat intelligence briefing")
 	briefingDir := flag.String("briefing-dir", "intel/briefings", "Output directory for threat briefings")
 	briefingFile := flag.String("briefing-file", "", "Custom filename for threat briefing markdown")
@@ -196,6 +207,9 @@ func parseCLI() SentinelConfig {
 	if *lsmPath == "" && *lsmShort != "" {
 		*lsmPath = *lsmShort
 	}
+	if *drManifests == "" && *drShort != "" {
+		*drManifests = *drShort
+	}
 	if *outFile == "" && *outShort != "" {
 		*outFile = *outShort
 	}
@@ -249,6 +263,11 @@ func parseCLI() SentinelConfig {
 		LSMTelemetry:      *lsmTelemetry,
 		LSMSynthOut:       *lsmSynthOut,
 		LSMStrict:         *lsmStrict,
+		DRManifests:       *drManifests,
+		DRTelemetry:       *drTelemetry,
+		DRSynthOut:        *drSynthOut,
+		DRRPOMax:          *drRPOMax,
+		DRStrict:          *drStrict,
 		Briefing:          *briefing,
 		BriefingDir:       *briefingDir,
 		BriefingFile:      *briefingFile,

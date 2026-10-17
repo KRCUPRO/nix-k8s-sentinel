@@ -1,0 +1,83 @@
+# Production Compliant CephFS Snapshot & Cross-Region Volume Replication Manifests
+apiVersion: snapshot.storage.k8s.io/v1
+kind: VolumeSnapshotClass
+metadata:
+  name: cephfs-snapshot-retained
+  labels:
+    app.kubernetes.io/managed-by: nix-k8s-sentinel
+    sentinel.dr.io/tier: production
+driver: rook-ceph.cephfs.csi.ceph.com
+deletionPolicy: Retain
+parameters:
+  clusterID: rook-ceph-east
+  csi.storage.k8s.io/snapshotter-secret-name: rook-csi-cephfs-provisioner
+  csi.storage.k8s.io/snapshotter-secret-namespace: rook-ceph
+---
+apiVersion: ceph.rook.io/v1
+kind: CephFilesystemSubVolumeGroup
+metadata:
+  name: csi-prod
+  namespace: rook-ceph
+  labels:
+    app.kubernetes.io/managed-by: nix-k8s-sentinel
+spec:
+  filesystemName: production-cephfs
+  snapshotSchedule:
+    schedule: "1h"
+    retention: 14
+    pruneOld: true
+---
+apiVersion: replication.storage.openshift.io/v1alpha1
+kind: VolumeReplicationClass
+metadata:
+  name: cephfs-dr-replicated
+  labels:
+    app.kubernetes.io/managed-by: nix-k8s-sentinel
+spec:
+  provisioner: rook-ceph.cephfs.csi.ceph.com
+  parameters:
+    mirroringMode: snapshot
+    schedulingInterval: "15m"
+    replication.storage.openshift.io/replication-secret-name: rook-ceph-replication-secret
+    replication.storage.openshift.io/replication-secret-namespace: rook-ceph
+    ms_mode: secure
+    encrypted: "true"
+---
+apiVersion: replication.storage.openshift.io/v1alpha1
+kind: VolumeReplication
+metadata:
+  name: postgres-wal-vr
+  namespace: database
+  labels:
+    sentinel.dr.io/role: primary
+spec:
+  volumeReplicationClassName: cephfs-dr-replicated
+  replicationState: Primary
+  dataSource:
+    name: postgres-wal-pvc
+    kind: PersistentVolumeClaim
+  autoResync: true
+---
+apiVersion: ceph.rook.io/v1
+kind: CephFilesystemMirror
+metadata:
+  name: cephfs-mirror-ha
+  namespace: rook-ceph
+spec:
+  replicas: 2
+  placement:
+    podAntiAffinity: true
+---
+apiVersion: ceph.rook.io/v1
+kind: CephCluster
+metadata:
+  name: rook-ceph-stretched
+  namespace: rook-ceph
+spec:
+  mon:
+    count: 3
+    allowMultiplePerNode: false
+  arbiter:
+    enabled: true
+    arbiterZone: "us-central-arbiter"
+    failureDomain: zone

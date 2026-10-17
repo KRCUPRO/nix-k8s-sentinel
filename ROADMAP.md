@@ -177,10 +177,19 @@ Automated generation of defense-in-depth rules:
 - [x] Full CLI integration (`--lsm`, `--lsm-mac`, `--lsm-telemetry`, `--lsm-synth-out`, `--lsm-strict`) with unified SARIF v2.1.0 code scanning, JSON audit telemetry, and Markdown briefing exports (`cmd/sentinel/lsm_runner.go`, `cmd/sentinel/flags.go`).
 - [x] Production sample fixtures (`fixtures/nixos-lsm.nix`, `fixtures/nixos-lsm-vulnerable.nix`, `fixtures/k8s-lsm-workload.yaml`, `fixtures/lsm-telemetry.json`) and threat feed correlation with `CVE-2026-99103`.
 
-### Version 0.22.0 — CephFS Snapshot & Volume Replication DR Synchronizer (Planned)
-- [ ] Implement scheduled volume snapshot policy auditor and delta replication monitor.
-- [ ] Automated disaster recovery posture verification across cross-region storage clusters.
-- [ ] Real-time CephFS snapshot consistency group verification and immutable retention locks.
+### Version 0.22.0 — CephFS Snapshot & Volume Replication DR Synchronizer (Completed)
+- [x] Scheduled volume snapshot policy auditor and delta replication monitor (`pkg/replication/scanner.go`).
+- [x] Canonical rule catalog `CEPH-DR-001` through `CEPH-DR-012` detecting VolumeSnapshotClass `deletionPolicy: Delete`, missing/excessive snapshot schedules (> 24h), inadequate retention (< 3), unencrypted WAN replication transport, replication intervals exceeding RPO SLAs (> 60m), missing replication states, single-replica mirror daemons lacking anti-affinity, missing 3rd-zone Arbiter tie-breakers, delta replication lag exceeding 900s, cross-region split-brain dual-primary assertions (`CVE-2026-10140`), and non-promotion-ready standby DR volumes (`pkg/replication/rules.go`).
+- [x] Multi-document streaming parser for `VolumeSnapshotClass`, `CephFilesystemSubVolumeGroup`, `VolumeReplicationClass`, `VolumeReplication`, `CephFilesystemMirror`, `CephCluster` arbiter configs, and runtime JSON DR telemetry (`pkg/replication/parser.go`).
+- [x] Disaster recovery auditor and deterministic compliance scoring engine with split-brain detection and delta lag SLA monitoring (`pkg/replication/auditor.go`).
+- [x] Declarative policy synthesizer generating hardened `VolumeSnapshotClass` (Retain), `CephFilesystemSubVolumeGroup` snapshot schedules, `VolumeReplicationClass` with encrypted transport, and primary/secondary `VolumeReplication` pairs (`pkg/replication/synth.go`).
+- [x] Full CLI integration (`--dr-manifests`, `--dr`, `--dr-telemetry`, `--dr-synth-out`, `--dr-rpo-max`, `--dr-strict`) with unified SARIF v2.1.0 code scanning, JSON audit telemetry, and Markdown briefing exports (`cmd/sentinel/replication_runner.go`, `cmd/sentinel/flags.go`).
+- [x] Production sample fixtures (`fixtures/cephfs-dr-manifests.yaml`, `fixtures/cephfs-dr-vulnerable.yaml`, `fixtures/cephfs-dr-telemetry.json`) and threat feed correlation with `CVE-2026-10140`.
+
+### Version 0.23.0 — eBPF-Based WireGuard Kernel Fast-Path & Crypto Performance Auditor (Planned)
+- [ ] Profile kernel cryptographic throughput and ChaCha20-Poly1305 acceleration across AVX-512 and ARM Neon vectors.
+- [ ] Detect kernel packet drops and ring buffer overruns on 100GbE bare-metal overlay interconnects.
+- [ ] Real-time eBPF XDP fast-path packet steering for high-bandwidth container network mesh links.
 
 ### Version 1.0.0 — Enterprise Workload Identity & Ephemeral Detonation Pipeline (Planned)
 - [ ] Full end-to-end integration of SPIFFE/SPIRE workload attestation, In-Toto provenance, and HSM envelope encryption.

@@ -17,6 +17,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/pqc"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/probe"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/remediate"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/replication"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/report"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/sandbox"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/sbom"
@@ -26,7 +27,7 @@ import (
 )
 
 var (
-	version = "0.21.0"
+	version = "0.22.0"
 )
 
 func main() {
@@ -87,6 +88,9 @@ func main() {
 	var remediateSummary *remediate.RemediationSummary
 	var lsmViolations []lsm.LSMViolation
 	var lsmSummary *lsm.LSMSummary
+	var drViolations []replication.ReplicationViolation
+	var drSummary *replication.ReplicationSummary
+	var drTelemetry *replication.CrossRegionDRTelemetry
 
 	// 1. Audit Nix Flake
 	if cfg.FlakePath != "" {
@@ -178,7 +182,12 @@ func main() {
 		lsmViolations, lsmSummary = runLSMAudit(cfg.LSMPath, cfg.LSMTelemetry, cfg.LSMSynthOut, cfg.LSMStrict, feed, logInfo, logErr)
 	}
 
-	// 19. Generate Threat Briefing if --briefing is requested
+	// 19. Audit CephFS Snapshot & Volume Replication Disaster Recovery
+	if cfg.DRManifests != "" || cfg.DRTelemetry != "" || cfg.DRSynthOut != "" {
+		drViolations, drSummary, drTelemetry = runReplicationAudit(cfg.DRManifests, cfg.DRTelemetry, cfg.DRSynthOut, cfg.DRRPOMax, cfg.DRStrict, feed, logInfo, logErr)
+	}
+
+	// 20. Generate Threat Briefing if --briefing is requested
 	if cfg.Briefing {
 		logInfo("[+] Synthesizing Threat Intelligence Briefing...\n")
 		briefingOpts := report.BriefingOptions{
@@ -217,6 +226,8 @@ func main() {
 			RemediateSummary:        remediateSummary,
 			LSMViolations:           lsmViolations,
 			LSMSummary:              lsmSummary,
+			ReplicationViolations:   drViolations,
+			ReplicationSummary:      drSummary,
 			OutputDir:               cfg.BriefingDir,
 			CustomFilename:          cfg.BriefingFile,
 		}
@@ -283,6 +294,9 @@ func main() {
 			RemediateSummary:        remediateSummary,
 			LSMViolations:           lsmViolations,
 			LSMSummary:              lsmSummary,
+			ReplicationViolations:   drViolations,
+			ReplicationSummary:      drSummary,
+			ReplicationTelemetry:    drTelemetry,
 			FlakePath:               cfg.FlakePath,
 			K8sPath:                 cfg.K8sPath,
 			StoragePath:             cfg.CephPath,
@@ -311,6 +325,9 @@ func main() {
 			LSMPath:                 cfg.LSMPath,
 			LSMTelemetryPath:        cfg.LSMTelemetry,
 			LSMSynthOut:             cfg.LSMSynthOut,
+			DRManifestPath:          cfg.DRManifests,
+			DRTelemetryPath:         cfg.DRTelemetry,
+			DRSynthOut:              cfg.DRSynthOut,
 			TargetFilter:            cfg.TargetFilter,
 			Pretty:                  true,
 		}

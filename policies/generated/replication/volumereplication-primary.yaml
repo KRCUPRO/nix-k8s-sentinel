@@ -1,0 +1,14 @@
+apiVersion: replication.storage.openshift.io/v1alpha1
+kind: VolumeReplication
+metadata:
+  name: prod-data-pvc-vr
+  namespace: production
+  labels:
+    sentinel.dr.io/role: primary
+spec:
+  volumeReplicationClassName: cephfs-dr-replication-class
+  replicationState: Primary
+  dataSource:
+    name: prod-data-pvc
+    kind: PersistentVolumeClaim
+  autoResync: true

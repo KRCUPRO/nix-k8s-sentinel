@@ -1,0 +1,61 @@
+# Vulnerable CephFS Snapshot & Cross-Region Volume Replication Manifests (For Sentinel Security Auditing)
+apiVersion: snapshot.storage.k8s.io/v1
+kind: VolumeSnapshotClass
+metadata:
+  name: unhardened-snapshot-delete
+driver: rook-ceph.cephfs.csi.ceph.com
+deletionPolicy: Delete
+parameters:
+  clusterID: rook-ceph-legacy
+---
+apiVersion: ceph.rook.io/v1
+kind: CephFilesystemSubVolumeGroup
+metadata:
+  name: stale-schedule-group
+  namespace: rook-ceph
+spec:
+  filesystemName: legacy-cephfs
+  snapshotSchedule:
+    schedule: "72h"
+    retention: 1
+    pruneOld: false
+---
+apiVersion: replication.storage.openshift.io/v1alpha1
+kind: VolumeReplicationClass
+metadata:
+  name: insecure-wan-replication
+spec:
+  provisioner: rook-ceph.cephfs.csi.ceph.com
+  parameters:
+    mirroringMode: snapshot
+    schedulingInterval: "180m"
+    ms_mode: legacy
+    encrypted: "false"
+---
+apiVersion: replication.storage.openshift.io/v1alpha1
+kind: VolumeReplication
+metadata:
+  name: unmanaged-replication-target
+  namespace: database
+spec:
+  volumeReplicationClassName: insecure-wan-replication
+  dataSource:
+    name: mysql-data-pvc
+    kind: PersistentVolumeClaim
+---
+apiVersion: ceph.rook.io/v1
+kind: CephFilesystemMirror
+metadata:
+  name: single-daemon-mirror
+  namespace: rook-ceph
+spec:
+  replicas: 1
+---
+apiVersion: ceph.rook.io/v1
+kind: CephCluster
+metadata:
+  name: rook-ceph-unprotected
+  namespace: rook-ceph
+spec:
+  arbiter:
+    enabled: false
