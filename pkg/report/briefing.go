@@ -21,6 +21,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/pqc"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/probe"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/remediate"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/replication"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/sandbox"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/sbom"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/spiffe"
@@ -67,6 +68,8 @@ type BriefingOptions struct {
 	RemediateSummary        *remediate.RemediationSummary
 	LSMViolations           []lsm.LSMViolation
 	LSMSummary              *lsm.LSMSummary
+	ReplicationViolations   []replication.ReplicationViolation
+	ReplicationSummary      *replication.ReplicationSummary
 	OutputDir               string
 	CustomFilename          string
 }
@@ -96,10 +99,10 @@ func GenerateBriefing(opts BriefingOptions) (*BriefingReport, error) {
 
 	version := opts.Version
 	if version == "" {
-		version = "0.21.0"
+		version = "0.22.0"
 	}
 
-	telemetry := ComputeTelemetryLSM(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations, opts.GatewayViolations, opts.AttestViolations, opts.FleetViolations, opts.SPIFFEViolations, opts.SBOMViolations, opts.HSMViolations, opts.BPFViolations, opts.PQCViolations, opts.SandboxViolations, opts.RemediateFindings, opts.LSMViolations)
+	telemetry := ComputeTelemetryReplication(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations, opts.GatewayViolations, opts.AttestViolations, opts.FleetViolations, opts.SPIFFEViolations, opts.SBOMViolations, opts.HSMViolations, opts.BPFViolations, opts.PQCViolations, opts.SandboxViolations, opts.RemediateFindings, opts.LSMViolations, opts.ReplicationViolations)
 
 	var buf bytes.Buffer
 
@@ -685,7 +688,38 @@ func GenerateBriefing(opts BriefingOptions) (*BriefingReport, error) {
 		buf.WriteString("---\n\n")
 	}
 
-	// 21. Action Items Checklist
+	// 21. CephFS Snapshot & Volume Replication Disaster Recovery
+	if len(opts.ReplicationViolations) > 0 || opts.ReplicationSummary != nil {
+		buf.WriteString("## 🔄 CephFS Snapshot & Volume Replication Disaster Recovery Posture\n\n")
+		if opts.ReplicationSummary != nil {
+			sum := opts.ReplicationSummary
+			splitBadge := "CLEAN"
+			if sum.SplitBrainDetected {
+				splitBadge = "SPLIT-BRAIN DETECTED"
+			}
+			buf.WriteString(fmt.Sprintf("**DR Compliance Score:** `%.1f%%` (%s) | **Split-Brain Posture:** `%s` | **Snapshot Classes:** %d | **Replicated Volumes:** %d | **Max Delta Lag:** %ds\n",
+				sum.Score, sum.Status, splitBadge, sum.TotalSnapshotClasses, sum.TotalReplications, sum.MaxDeltaLagSeconds))
+			buf.WriteString(fmt.Sprintf("**Severity Breakdown:** %d Critical | %d High | %d Medium | %d Low\n\n",
+				sum.CriticalCount, sum.HighCount, sum.MediumCount, sum.LowCount))
+		}
+		if len(opts.ReplicationViolations) > 0 {
+			buf.WriteString(fmt.Sprintf("⚠️ **%d CephFS snapshot & volume replication DR violations identified:**\n\n", len(opts.ReplicationViolations)))
+			buf.WriteString("| Rule ID | Resource | Severity | CVSS | Finding & Threat Details | CVE | Remediation Action |\n")
+			buf.WriteString("| :--- | :--- | :---: | :---: | :--- | :---: | :--- |\n")
+			for _, rv := range opts.ReplicationViolations {
+				cveTag := "-"
+				if rv.MatchedCVE != "" {
+					cveTag = fmt.Sprintf("`%s`", rv.MatchedCVE)
+				}
+				buf.WriteString(fmt.Sprintf("| `%s` | `%s/%s` | **%s** | %.1f | %s | %s | %s |\n",
+					rv.RuleID, rv.ResourceKind, rv.ResourceName, rv.Severity, rv.CVSSScore, rv.Description, cveTag, rv.Remediation))
+			}
+			buf.WriteString("\n")
+		}
+		buf.WriteString("---\n\n")
+	}
+
+	// 22. Action Items Checklist
 	buf.WriteString("## 📋 SecOps & SRE Operational Checklist\n\n")
 	buf.WriteString("- [ ] Review high and critical severity advisories against production deployment manifests.\n")
 	buf.WriteString("- [ ] Verify that ingress controllers enforce URI path normalization and snippet guards.\n")
@@ -705,6 +739,7 @@ func GenerateBriefing(opts BriefingOptions) (*BriefingReport, error) {
 	buf.WriteString("- [ ] Quarantine untrusted artifacts and isolate ephemeral microVM network egress to internal honeypot lures.\n")
 	buf.WriteString("- [ ] Verify pre-flight canary test validation before applying declarative security hardening patches.\n")
 	buf.WriteString("- [ ] Attach eBPF LSM mandatory access control hooks to restrict container syscalls, unprivileged BPF loading, and root privilege escalations.\n")
+	buf.WriteString("- [ ] Enforce declarative VolumeSnapshotClass retention policies and verify cross-region volume replication delta sync within RPO targets.\n")
 	buf.WriteString("- [ ] Archive this briefing record into security audit ledger.\n")
 
 	report := &BriefingReport{

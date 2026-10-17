@@ -1,0 +1,13 @@
+apiVersion: ceph.rook.io/v1
+kind: CephFilesystemSubVolumeGroup
+metadata:
+  name: csi
+  namespace: rook-ceph
+  labels:
+    app.kubernetes.io/managed-by: nix-k8s-sentinel
+spec:
+  filesystemName: my-cephfs
+  snapshotSchedule:
+    schedule: "1h"
+    retention: 14
+    pruneOld: true

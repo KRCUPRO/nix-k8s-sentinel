@@ -17,6 +17,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/pqc"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/probe"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/remediate"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/replication"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/sandbox"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/sbom"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/spiffe"
@@ -73,6 +74,9 @@ type ReportOptions struct {
 	RemediateSummary        *remediate.RemediationSummary
 	LSMViolations           []lsm.LSMViolation
 	LSMSummary              *lsm.LSMSummary
+	ReplicationViolations   []replication.ReplicationViolation
+	ReplicationSummary      *replication.ReplicationSummary
+	ReplicationTelemetry    *replication.CrossRegionDRTelemetry
 	FlakePath               string
 	K8sPath                 string
 	StoragePath             string
@@ -101,6 +105,9 @@ type ReportOptions struct {
 	LSMPath                 string
 	LSMTelemetryPath        string
 	LSMSynthOut             string
+	DRManifestPath          string
+	DRTelemetryPath         string
+	DRSynthOut              string
 	TargetFilter            string
 	Pretty                  bool
 }

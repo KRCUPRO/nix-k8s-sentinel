@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.22.0] - 2026-10-17
+
+### Added
+- **CephFS Snapshot & Volume Replication Disaster Recovery Engine** (`pkg/replication/scanner.go`): Autonomous disaster recovery auditing engine inspecting CephFS snapshot schedules, CSI volume replication classes, cross-region replication states, and runtime delta synchronization across multi-cluster Kubernetes deployments.
+- **Authoritative Canonical CephFS DR Rules Catalog** (`pkg/replication/rules.go`): Suite of 12 canonical security rules (`CEPH-DR-001` through `CEPH-DR-012`) covering VolumeSnapshotClass deletionPolicy set to Delete (`CEPH-DR-001`), missing or excessive snapshot schedules exceeding 24h (`CEPH-DR-002`), inadequate snapshot retention < 3 (`CEPH-DR-003`), unencrypted WAN replication transport (`CEPH-DR-004`), replication intervals exceeding RPO SLAs > 60m (`CEPH-DR-005`), missing explicit replication states (`CEPH-DR-006`), single-replica mirror daemons lacking failure-domain anti-affinity (`CEPH-DR-007`), stretched cluster missing 3rd-zone Arbiter monitor (`CEPH-DR-008`), replication delta lag exceeding 900s (`CEPH-DR-009`), cross-region split-brain dual-primary assertions (`CEPH-DR-010`, mapped to `CVE-2026-10140`), persistent degraded/error replication states (`CEPH-DR-011`), and unverified DR secondary site failover posture (`CEPH-DR-012`).
+- **Multi-Document Streaming DR Manifest & Telemetry Parser** (`pkg/replication/parser.go`): High-throughput streaming parser evaluating Kubernetes `VolumeSnapshotClass`, `CephFilesystemSubVolumeGroup`, `VolumeReplicationClass`, `VolumeReplication`, `CephFilesystemMirror`, `CephCluster` arbiter configurations, and runtime cross-region DR JSON telemetry with strict 10MB memory safety bounds.
+- **Disaster Recovery Posture Auditor & Compliance Scoring Engine** (`pkg/replication/auditor.go`): Evaluates declarative configurations and live telemetry, detects split-brain assertions and RPO SLA delta lag violations, and computes deterministic compliance scores (0.0% to 100.0%).
+- **Declarative DR Policy Synthesizer** (`pkg/replication/synth.go`): Synthesizes production-hardened `VolumeSnapshotClass` (Retain), `CephFilesystemSubVolumeGroup` automated 1h/14-day snapshot schedules, `VolumeReplicationClass` with encrypted transport (`ms_mode: secure`), paired primary/secondary `VolumeReplication` CRDs, and 3rd-zone arbiter configuration templates.
+- **Dedicated CLI DR Runner & Flag Architecture** (`cmd/sentinel/replication_runner.go`, `cmd/sentinel/flags.go`): Extracted DR audit execution into a dedicated runner keeping `cmd/sentinel/main.go` at ~401 LOC. Added `--dr-manifests=<path>`, `--dr`, `--dr-telemetry=<path>`, `--dr-synth-out=<dir>`, `--dr-rpo-max=<seconds>`, and `--dr-strict` flags.
+- **Threat Feed Expansion** (`intel/cve-feed.json`): Ingested `CVE-2026-10140` (CephFS Snapshot Schedule Desync & Cross-Region Volume Replication Split-Brain in Rook-Ceph, CVSS 9.6 Critical).
+- **Unified Exporter Integration**: CephFS snapshot and volume replication DR findings, split-brain posture, and delta sync telemetry seamlessly exported to OASIS SARIF v2.1.0 (Section 18), structured JSON audit telemetry (`replication_violations`, `replication_summary`, `replication_telemetry`), and hourly Markdown threat briefings (Section 21).
+- **Production Fixtures & Policy Artifacts**: Added realistic fixtures (`fixtures/cephfs-dr-manifests.yaml`, `fixtures/cephfs-dr-vulnerable.yaml`, `fixtures/cephfs-dr-telemetry.json`) and synthesized templates in `policies/generated/replication/`.
+- **Comprehensive Unit Test Suites** (`pkg/replication/replication_test.go`, `pkg/report/replication_report_test.go`): 100% test coverage across canonical rules, manifest parsing, telemetry auditing, policy synthesizers, scanner, SARIF/JSON/Briefing serialization, and memory bounds checks.
+
+### Changed
+- Bumped engine release to `v0.22.0`.
+- Updated `SECURITY.md` establishing CephFS Snapshot Scheduling & Cross-Region Volume Replication Disaster Recovery security invariants (Invariant 24).
+- Updated `ROADMAP.md` marking Milestone M22 as completed and scheduling M23 (eBPF-Based WireGuard Kernel Fast-Path & Crypto Performance Auditor).
+- Updated `scripts/ARCHITECTURE_MAP.md` documenting new replication modules, runners, and O(1) symbols.
+
+---
+
 ## [0.21.0] - 2026-10-17
 
 ### Added

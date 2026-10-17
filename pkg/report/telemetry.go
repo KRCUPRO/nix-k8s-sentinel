@@ -17,6 +17,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nix"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/pqc"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/remediate"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/replication"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/sandbox"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/sbom"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/spiffe"
@@ -51,6 +52,7 @@ type TelemetrySummary struct {
 	TotalSandboxViolations    int            `json:"total_sandbox_violations"`
 	TotalRemediateFindings    int            `json:"total_remediate_findings"`
 	TotalLSMViolations        int            `json:"total_lsm_violations"`
+	TotalReplicationViolations int           `json:"total_replication_violations"`
 }
 
 // ComputeTelemetry aggregates CVSS metrics from the threat feed, K8s violations, and Nix flake matches.
@@ -125,6 +127,11 @@ func ComputeTelemetryRemediate(feed *intel.Feed, k8sReport *k8s.ManifestAuditRep
 
 // ComputeTelemetryLSM aggregates CVSS metrics across all domains including eBPF LSM and Kernel MAC violations.
 func ComputeTelemetryLSM(feed *intel.Feed, k8sReport *k8s.ManifestAuditReport, flakeMatches []nix.FlakeVulnerabilityMatch, storageViolations []storage.StorageViolation, wireguardViolations []wireguard.WireGuardViolation, cisViolations []bench.CISViolation, gatewayViolations []gateway.GatewayViolation, attestViolations []attest.AttestationViolation, fleetViolations []fleet.FleetViolation, spiffeViolations []spiffe.SPIFFEViolation, sbomViolations []sbom.SBOMViolation, hsmViolations []hsm.HSMViolation, bpfViolations []bpf.BPFViolation, pqcViolations []pqc.PQCViolation, sandboxViolations []sandbox.SandboxViolation, remediateFindings []remediate.RemediationFinding, lsmViolations []lsm.LSMViolation) TelemetrySummary {
+	return ComputeTelemetryReplication(feed, k8sReport, flakeMatches, storageViolations, wireguardViolations, cisViolations, gatewayViolations, attestViolations, fleetViolations, spiffeViolations, sbomViolations, hsmViolations, bpfViolations, pqcViolations, sandboxViolations, remediateFindings, lsmViolations, nil)
+}
+
+// ComputeTelemetryReplication aggregates CVSS metrics across all domains including CephFS Snapshot & Volume Replication DR findings.
+func ComputeTelemetryReplication(feed *intel.Feed, k8sReport *k8s.ManifestAuditReport, flakeMatches []nix.FlakeVulnerabilityMatch, storageViolations []storage.StorageViolation, wireguardViolations []wireguard.WireGuardViolation, cisViolations []bench.CISViolation, gatewayViolations []gateway.GatewayViolation, attestViolations []attest.AttestationViolation, fleetViolations []fleet.FleetViolation, spiffeViolations []spiffe.SPIFFEViolation, sbomViolations []sbom.SBOMViolation, hsmViolations []hsm.HSMViolation, bpfViolations []bpf.BPFViolation, pqcViolations []pqc.PQCViolation, sandboxViolations []sandbox.SandboxViolation, remediateFindings []remediate.RemediationFinding, lsmViolations []lsm.LSMViolation, replicationViolations []replication.ReplicationViolation) TelemetrySummary {
 	summary := TelemetrySummary{
 		TargetDistribution:    make(map[string]int),
 		ComponentDistribution: make(map[string]int),
@@ -236,6 +243,28 @@ func ComputeTelemetryLSM(feed *intel.Feed, k8sReport *k8s.ManifestAuditReport, f
 
 	if len(lsmViolations) > 0 {
 		summary.TotalLSMViolations = len(lsmViolations)
+	}
+
+	if len(replicationViolations) > 0 {
+		summary.TotalReplicationViolations = len(replicationViolations)
+		for _, rv := range replicationViolations {
+			summary.TotalViolations++
+			summary.TargetDistribution["kubernetes"]++
+			summary.ComponentDistribution["cephfs-dr"]++
+			if rv.CVSSScore > summary.MaxCVSS {
+				summary.MaxCVSS = rv.CVSSScore
+			}
+			switch rv.Severity {
+			case intel.SeverityCritical:
+				summary.CriticalCount++
+			case intel.SeverityHigh:
+				summary.HighCount++
+			case intel.SeverityMedium:
+				summary.MediumCount++
+			default:
+				summary.LowCount++
+			}
+		}
 	}
 
 	return summary

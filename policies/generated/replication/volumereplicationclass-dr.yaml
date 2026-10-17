@@ -1,0 +1,15 @@
+apiVersion: replication.storage.openshift.io/v1alpha1
+kind: VolumeReplicationClass
+metadata:
+  name: cephfs-dr-replication-class
+  labels:
+    app.kubernetes.io/managed-by: nix-k8s-sentinel
+spec:
+  provisioner: rook-ceph.cephfs.csi.ceph.com
+  parameters:
+    mirroringMode: snapshot
+    schedulingInterval: "15m"
+    replication.storage.openshift.io/replication-secret-name: rook-ceph-replication-secret
+    replication.storage.openshift.io/replication-secret-namespace: rook-ceph
+    ms_mode: secure
+    encrypted: "true"
