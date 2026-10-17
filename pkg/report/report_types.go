@@ -22,6 +22,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/sbom"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/spiffe"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/storage"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/wgfastpath"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/wireguard"
 )
 
@@ -77,6 +78,10 @@ type ReportOptions struct {
 	ReplicationViolations   []replication.ReplicationViolation
 	ReplicationSummary      *replication.ReplicationSummary
 	ReplicationTelemetry    *replication.CrossRegionDRTelemetry
+	FastPathViolations      []wgfastpath.WGFastPathViolation
+	FastPathSummary         *wgfastpath.WGFastPathSummary
+	FastPathTelemetry       []wgfastpath.FastPathTelemetry
+	FastPathCrypto          []wgfastpath.CryptoBenchmarkTelemetry
 	FlakePath               string
 	K8sPath                 string
 	StoragePath             string
@@ -108,6 +113,9 @@ type ReportOptions struct {
 	DRManifestPath          string
 	DRTelemetryPath         string
 	DRSynthOut              string
+	FastPathManifestPath    string
+	FastPathTelemetryPath   string
+	FastPathSynthOut        string
 	TargetFilter            string
 	Pretty                  bool
 }

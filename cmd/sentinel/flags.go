@@ -56,6 +56,10 @@ type SentinelConfig struct {
 	DRSynthOut        string
 	DRRPOMax          int
 	DRStrict          bool
+	FastPathManifests string
+	FastPathTelemetry string
+	FastPathSynthOut  string
+	FastPathStrict    bool
 	Briefing          bool
 	BriefingDir       string
 	BriefingFile      string
@@ -138,6 +142,11 @@ func parseCLI() SentinelConfig {
 	drSynthOut := flag.String("dr-synth-out", "", "Output directory to write synthesized hardened CephFS snapshot schedule & replication manifests")
 	drRPOMax := flag.Int("dr-rpo-max", 900, "Maximum allowable volume replication delta lag threshold in seconds (default 900s / 15m)")
 	drStrict := flag.Bool("dr-strict", false, "Enforce strict zero-warning disaster recovery posture")
+	fastpathManifests := flag.String("wg-fastpath", "", "Path to WireGuard fast-path manifest file or directory to audit")
+	fastpathShort := flag.String("fastpath", "", "Alias for --wg-fastpath")
+	fastpathTelemetry := flag.String("wg-fastpath-telemetry", "", "Path to runtime WireGuard crypto and fast-path telemetry JSON to inspect")
+	fastpathSynthOut := flag.String("wg-fastpath-synth-out", "", "Output directory to write synthesized hardened NixOS fast-path modules, eBPF XDP programs, and K8s CRDs")
+	fastpathStrict := flag.Bool("wg-fastpath-strict", false, "Enforce strict zero-drop and SIMD hardware acceleration thresholds")
 	briefing := flag.Bool("briefing", false, "Generate automated Markdown threat intelligence briefing")
 	briefingDir := flag.String("briefing-dir", "intel/briefings", "Output directory for threat briefings")
 	briefingFile := flag.String("briefing-file", "", "Custom filename for threat briefing markdown")
@@ -210,6 +219,9 @@ func parseCLI() SentinelConfig {
 	if *drManifests == "" && *drShort != "" {
 		*drManifests = *drShort
 	}
+	if *fastpathManifests == "" && *fastpathShort != "" {
+		*fastpathManifests = *fastpathShort
+	}
 	if *outFile == "" && *outShort != "" {
 		*outFile = *outShort
 	}
@@ -268,6 +280,10 @@ func parseCLI() SentinelConfig {
 		DRSynthOut:        *drSynthOut,
 		DRRPOMax:          *drRPOMax,
 		DRStrict:          *drStrict,
+		FastPathManifests: *fastpathManifests,
+		FastPathTelemetry: *fastpathTelemetry,
+		FastPathSynthOut:  *fastpathSynthOut,
+		FastPathStrict:    *fastpathStrict,
 		Briefing:          *briefing,
 		BriefingDir:       *briefingDir,
 		BriefingFile:      *briefingFile,

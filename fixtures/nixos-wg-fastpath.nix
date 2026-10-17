@@ -1,0 +1,46 @@
+# Production hardened NixOS WireGuard eBPF Fast-Path configuration
+# Interface: wg0 | Fabric: 100GbE Bare-Metal Interconnect
+{
+  boot.kernelModules = [
+    "chacha20_simd"
+    "poly1305_simd"
+    "wireguard"
+    "cls_bpf"
+  ];
+
+  boot.kernelParams = [
+    "wireguard.crypto=avx512"
+    "processor.max_cstate=1"
+    "idle=poll"
+  ];
+
+  boot.kernel.sysctl = {
+    "net.core.netdev_max_backlog" = 16384;
+    "net.core.rmem_max" = 67108864;
+    "net.core.wmem_max" = 67108864;
+    "net.core.optmem_max" = 2048576;
+    "net.ipv4.udp_rmem_min" = 16384;
+    "net.ipv4.udp_wmem_min" = 16384;
+  };
+
+  networking.wireguard.interfaces.wg0 = {
+    mtu = 1420;
+    fastpath.enable = true;
+    fastpath.mode = "native_xdp";
+    cryptoVector = "AVX512";
+    ringBufferSize = 4096;
+    hardwareOffload = true;
+    queueCount = 16;
+    xdpDriver = "mlx5_core";
+  };
+
+  systemd.services."ethtool-fastpath-wg0" = {
+    description = "Configure 100GbE NIC ring buffers and hardware offloads for wg0";
+    wantedBy = [ "multi-user.target" ];
+    serviceConfig = {
+      Type = "oneshot";
+      ExecStart = "${pkgs.ethtool}/bin/ethtool -G wg0 rx 4096 tx 4096";
+      ExecStartPost = "${pkgs.ethtool}/bin/ethtool -K wg0 rx-gro-hw on tso on gso on";
+    };
+  };
+}

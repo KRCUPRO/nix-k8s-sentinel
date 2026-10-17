@@ -1,0 +1,48 @@
+{
+  "telemetry": [
+    {
+      "interface_name": "wg0",
+      "rx_packets_per_sec": 14200000.0,
+      "tx_packets_per_sec": 13800000.0,
+      "rx_drops_per_sec": 0.0,
+      "tx_drops_per_sec": 0.0,
+      "ring_buffer_util_percent": 38.5,
+      "xdp_aborted_drops": 0,
+      "memory_alloc_failures": 0,
+      "softirq_cpu_percent": 28.4,
+      "active_peers": 128
+    },
+    {
+      "interface_name": "wg-bottleneck",
+      "rx_packets_per_sec": 8500000.0,
+      "tx_packets_per_sec": 8100000.0,
+      "rx_drops_per_sec": 1450.0,
+      "tx_drops_per_sec": 620.0,
+      "ring_buffer_util_percent": 91.2,
+      "xdp_aborted_drops": 45,
+      "memory_alloc_failures": 12,
+      "softirq_cpu_percent": 84.6,
+      "active_peers": 256
+    }
+  ],
+  "crypto_benchmarks": [
+    {
+      "vector_engine": "AVX512",
+      "chunk_size_bytes": 65536,
+      "cycles_per_byte": 0.38,
+      "gbps_throughput": 94.2,
+      "simd_register_width": 512,
+      "thermal_throttled": false,
+      "context_switch_ns": 42.5
+    },
+    {
+      "vector_engine": "GENERIC_SCALAR",
+      "chunk_size_bytes": 65536,
+      "cycles_per_byte": 2.85,
+      "gbps_throughput": 12.4,
+      "simd_register_width": 64,
+      "thermal_throttled": false,
+      "context_switch_ns": 295.0
+    }
+  ]
+}

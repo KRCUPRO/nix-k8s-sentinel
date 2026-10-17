@@ -186,10 +186,17 @@ Automated generation of defense-in-depth rules:
 - [x] Full CLI integration (`--dr-manifests`, `--dr`, `--dr-telemetry`, `--dr-synth-out`, `--dr-rpo-max`, `--dr-strict`) with unified SARIF v2.1.0 code scanning, JSON audit telemetry, and Markdown briefing exports (`cmd/sentinel/replication_runner.go`, `cmd/sentinel/flags.go`).
 - [x] Production sample fixtures (`fixtures/cephfs-dr-manifests.yaml`, `fixtures/cephfs-dr-vulnerable.yaml`, `fixtures/cephfs-dr-telemetry.json`) and threat feed correlation with `CVE-2026-10140`.
 
-### Version 0.23.0 — eBPF-Based WireGuard Kernel Fast-Path & Crypto Performance Auditor (Planned)
-- [ ] Profile kernel cryptographic throughput and ChaCha20-Poly1305 acceleration across AVX-512 and ARM Neon vectors.
-- [ ] Detect kernel packet drops and ring buffer overruns on 100GbE bare-metal overlay interconnects.
-- [ ] Real-time eBPF XDP fast-path packet steering for high-bandwidth container network mesh links.
+### Version 0.23.0 — eBPF-Based WireGuard Kernel Fast-Path & Crypto Performance Auditor (Completed)
+- [x] Kernel cryptographic throughput profiler and ChaCha20-Poly1305 acceleration across AVX-512 and ARM Neon vectors (`pkg/wgfastpath/auditor.go`).
+- [x] Canonical rule catalog `WG-FAST-001` through `WG-FAST-012` detecting scalar crypto fallback, missing native XDP/eBPF driver hooks, 100GbE kernel ring buffer saturation (`CVE-2026-31049`), packet drops exceeding 1000/s, disabled physical NIC offloads (GRO/GSO), softIRQ starvation (> 70%), MTU fragmentation mismatches, eBPF `XDP_ABORTED` runtime exceptions, SIMD context switch overhead (> 250ns), and queue contention (`pkg/wgfastpath/rules.go`).
+- [x] Streaming parser for declarative NixOS WireGuard modules, Kubernetes CiliumNodeConfig CRDs, and runtime JSON fast-path/crypto benchmark telemetry (`pkg/wgfastpath/parser.go`).
+- [x] Declarative policy synthesizer generating hardened NixOS fastpath modules (`wg-fastpath-hardened.nix`), eBPF XDP C program templates (`wg_fastpath_xdp.bpf.c`), and Kubernetes CiliumNodeConfig manifests (`pkg/wgfastpath/synth.go`).
+- [x] Full CLI integration (`--wg-fastpath`, `--fastpath`, `--wg-fastpath-telemetry`, `--wg-fastpath-synth-out`, `--wg-fastpath-strict`) with unified SARIF v2.1.0 code scanning, JSON audit telemetry, and Markdown briefing exports (`cmd/sentinel/fastpath_runner.go`, `cmd/sentinel/flags.go`).
+- [x] Production sample fixtures (`fixtures/nixos-wg-fastpath.nix`, `fixtures/nixos-wg-fastpath-vulnerable.nix`, `fixtures/wg-fastpath-telemetry.json`) and threat feed correlation with `CVE-2026-31049`.
+
+### Version 0.24.0 — Confidential VM & Secure Enclave WireGuard Peer Attestation (Planned)
+- [ ] Bind WireGuard ephemeral session keys to AMD SEV-SNP VCEK and Intel TDX attestation reports.
+- [ ] Reject peer tunnel establishment if node measured boot PCRs deviate from declarative gold image.
 
 ### Version 1.0.0 — Enterprise Workload Identity & Ephemeral Detonation Pipeline (Planned)
 - [ ] Full end-to-end integration of SPIFFE/SPIRE workload attestation, In-Toto provenance, and HSM envelope encryption.
@@ -198,3 +205,4 @@ Automated generation of defense-in-depth rules:
 ### Version 1.1.0 — Autonomous Self-Healing & Continuous Cloud Defense (Vision)
 - [ ] Autonomous GitOps Pull Request synthesizer generating declarative Kustomize and Flake patches for CVE mitigations.
 - [ ] Real-time eBPF LSM kernel hotpatching without node reboot or workload disruption.
+

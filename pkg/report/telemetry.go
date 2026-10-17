@@ -22,37 +22,39 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/sbom"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/spiffe"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/storage"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/wgfastpath"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/wireguard"
 )
 
 // TelemetrySummary captures aggregated vulnerability metrics across all audit domains.
 type TelemetrySummary struct {
-	TotalThreats              int            `json:"total_threats"`
-	CriticalCount             int            `json:"critical_count"`
-	HighCount                 int            `json:"high_count"`
-	MediumCount               int            `json:"medium_count"`
-	LowCount                  int            `json:"low_count"`
-	AverageCVSS               float64        `json:"average_cvss"`
-	MaxCVSS                   float64        `json:"max_cvss"`
-	TargetDistribution        map[string]int `json:"target_distribution"`
-	ComponentDistribution     map[string]int `json:"component_distribution"`
-	TotalViolations           int            `json:"total_violations"`
-	TotalFlakeMatches         int            `json:"total_flake_matches"`
-	TotalStorageViolations    int            `json:"total_storage_violations"`
-	TotalWireGuardViolations  int            `json:"total_wireguard_violations"`
-	TotalCISViolations        int            `json:"total_cis_violations"`
-	TotalGatewayViolations    int            `json:"total_gateway_violations"`
-	TotalAttestViolations     int            `json:"total_attest_violations"`
-	TotalFleetViolations      int            `json:"total_fleet_violations"`
-	TotalSPIFFEViolations     int            `json:"total_spiffe_violations"`
-	TotalSBOMViolations       int            `json:"total_sbom_violations"`
-	TotalHSMViolations        int            `json:"total_hsm_violations"`
-	TotalBPFViolations        int            `json:"total_bpf_violations"`
-	TotalPQCViolations        int            `json:"total_pqc_violations"`
-	TotalSandboxViolations    int            `json:"total_sandbox_violations"`
-	TotalRemediateFindings    int            `json:"total_remediate_findings"`
-	TotalLSMViolations        int            `json:"total_lsm_violations"`
-	TotalReplicationViolations int           `json:"total_replication_violations"`
+	TotalThreats               int            `json:"total_threats"`
+	CriticalCount              int            `json:"critical_count"`
+	HighCount                  int            `json:"high_count"`
+	MediumCount                int            `json:"medium_count"`
+	LowCount                   int            `json:"low_count"`
+	AverageCVSS                float64        `json:"average_cvss"`
+	MaxCVSS                    float64        `json:"max_cvss"`
+	TargetDistribution         map[string]int `json:"target_distribution"`
+	ComponentDistribution      map[string]int `json:"component_distribution"`
+	TotalViolations            int            `json:"total_violations"`
+	TotalFlakeMatches          int            `json:"total_flake_matches"`
+	TotalStorageViolations     int            `json:"total_storage_violations"`
+	TotalWireGuardViolations   int            `json:"total_wireguard_violations"`
+	TotalCISViolations         int            `json:"total_cis_violations"`
+	TotalGatewayViolations     int            `json:"total_gateway_violations"`
+	TotalAttestViolations      int            `json:"total_attest_violations"`
+	TotalFleetViolations       int            `json:"total_fleet_violations"`
+	TotalSPIFFEViolations      int            `json:"total_spiffe_violations"`
+	TotalSBOMViolations        int            `json:"total_sbom_violations"`
+	TotalHSMViolations         int            `json:"total_hsm_violations"`
+	TotalBPFViolations         int            `json:"total_bpf_violations"`
+	TotalPQCViolations         int            `json:"total_pqc_violations"`
+	TotalSandboxViolations     int            `json:"total_sandbox_violations"`
+	TotalRemediateFindings     int            `json:"total_remediate_findings"`
+	TotalLSMViolations         int            `json:"total_lsm_violations"`
+	TotalReplicationViolations int            `json:"total_replication_violations"`
+	TotalFastPathViolations    int            `json:"total_fastpath_violations"`
 }
 
 // ComputeTelemetry aggregates CVSS metrics from the threat feed, K8s violations, and Nix flake matches.
@@ -132,6 +134,11 @@ func ComputeTelemetryLSM(feed *intel.Feed, k8sReport *k8s.ManifestAuditReport, f
 
 // ComputeTelemetryReplication aggregates CVSS metrics across all domains including CephFS Snapshot & Volume Replication DR findings.
 func ComputeTelemetryReplication(feed *intel.Feed, k8sReport *k8s.ManifestAuditReport, flakeMatches []nix.FlakeVulnerabilityMatch, storageViolations []storage.StorageViolation, wireguardViolations []wireguard.WireGuardViolation, cisViolations []bench.CISViolation, gatewayViolations []gateway.GatewayViolation, attestViolations []attest.AttestationViolation, fleetViolations []fleet.FleetViolation, spiffeViolations []spiffe.SPIFFEViolation, sbomViolations []sbom.SBOMViolation, hsmViolations []hsm.HSMViolation, bpfViolations []bpf.BPFViolation, pqcViolations []pqc.PQCViolation, sandboxViolations []sandbox.SandboxViolation, remediateFindings []remediate.RemediationFinding, lsmViolations []lsm.LSMViolation, replicationViolations []replication.ReplicationViolation) TelemetrySummary {
+	return ComputeTelemetryFastPath(feed, k8sReport, flakeMatches, storageViolations, wireguardViolations, cisViolations, gatewayViolations, attestViolations, fleetViolations, spiffeViolations, sbomViolations, hsmViolations, bpfViolations, pqcViolations, sandboxViolations, remediateFindings, lsmViolations, replicationViolations, nil)
+}
+
+// ComputeTelemetryFastPath aggregates CVSS metrics across all domains including WireGuard eBPF Fast-Path & Crypto Performance findings.
+func ComputeTelemetryFastPath(feed *intel.Feed, k8sReport *k8s.ManifestAuditReport, flakeMatches []nix.FlakeVulnerabilityMatch, storageViolations []storage.StorageViolation, wireguardViolations []wireguard.WireGuardViolation, cisViolations []bench.CISViolation, gatewayViolations []gateway.GatewayViolation, attestViolations []attest.AttestationViolation, fleetViolations []fleet.FleetViolation, spiffeViolations []spiffe.SPIFFEViolation, sbomViolations []sbom.SBOMViolation, hsmViolations []hsm.HSMViolation, bpfViolations []bpf.BPFViolation, pqcViolations []pqc.PQCViolation, sandboxViolations []sandbox.SandboxViolation, remediateFindings []remediate.RemediationFinding, lsmViolations []lsm.LSMViolation, replicationViolations []replication.ReplicationViolation, fastPathViolations []wgfastpath.WGFastPathViolation) TelemetrySummary {
 	summary := TelemetrySummary{
 		TargetDistribution:    make(map[string]int),
 		ComponentDistribution: make(map[string]int),
@@ -255,6 +262,28 @@ func ComputeTelemetryReplication(feed *intel.Feed, k8sReport *k8s.ManifestAuditR
 				summary.MaxCVSS = rv.CVSSScore
 			}
 			switch rv.Severity {
+			case intel.SeverityCritical:
+				summary.CriticalCount++
+			case intel.SeverityHigh:
+				summary.HighCount++
+			case intel.SeverityMedium:
+				summary.MediumCount++
+			default:
+				summary.LowCount++
+			}
+		}
+	}
+
+	if len(fastPathViolations) > 0 {
+		summary.TotalFastPathViolations = len(fastPathViolations)
+		for _, fp := range fastPathViolations {
+			summary.TotalViolations++
+			summary.TargetDistribution["nixos"]++
+			summary.ComponentDistribution["wireguard-fastpath"]++
+			if fp.CVSSScore > summary.MaxCVSS {
+				summary.MaxCVSS = fp.CVSSScore
+			}
+			switch fp.Severity {
 			case intel.SeverityCritical:
 				summary.CriticalCount++
 			case intel.SeverityHigh:

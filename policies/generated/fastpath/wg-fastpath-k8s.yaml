@@ -1,0 +1,14 @@
+apiVersion: cilium.io/v2
+kind: CiliumNodeConfig
+metadata:
+  name: wg0-fastpath-config
+  namespace: kube-system
+spec:
+  interfaceName: wg0
+  mtu: 1420
+  fastPathMode: NATIVE_XDP
+  cryptoVector: AVX512
+  ringBufferSize: 4096
+  hardwareOffload: true
+  queueCount: 16
+  xdpDriver: native

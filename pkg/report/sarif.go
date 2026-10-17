@@ -1255,8 +1255,70 @@ func BuildSARIFReport(opts ReportOptions) (*SARIFLog, error) {
 		}
 	}
 
-	// 19. Process Standalone Feed Advisories (if no specific audit targets yielded findings)
-	if (opts.K8sReport == nil || len(opts.K8sReport.Violations) == 0) && len(opts.FlakeMatches) == 0 && len(opts.ProbeEvents) == 0 && len(opts.StorageViolations) == 0 && len(opts.WireGuardViolations) == 0 && len(opts.CISViolations) == 0 && len(opts.GatewayViolations) == 0 && len(opts.AttestViolations) == 0 && len(opts.FleetViolations) == 0 && len(opts.SPIFFEViolations) == 0 && len(opts.SBOMViolations) == 0 && len(opts.HSMViolations) == 0 && len(opts.BPFViolations) == 0 && len(opts.PQCViolations) == 0 && len(opts.SandboxViolations) == 0 && len(opts.RemediateFindings) == 0 && len(opts.LSMViolations) == 0 && len(opts.ReplicationViolations) == 0 && opts.Feed != nil {
+	// 19. Process WireGuard eBPF Fast-Path & Crypto Performance Violations
+	if len(opts.FastPathViolations) > 0 {
+		for _, fp := range opts.FastPathViolations {
+			tags := []string{"security", "nixos", "wireguard", "ebpf", "fastpath", "crypto"}
+			if fp.MatchedCVE != "" {
+				tags = append(tags, fp.MatchedCVE)
+			}
+
+			ruleIdx := getOrCreateRule(fp.RuleID, fp.Title, fp.Description, fp.Remediation, fp.Severity, fp.CVSSScore, tags)
+			level := SeverityToSARIFLevel(string(fp.Severity), fp.CVSSScore)
+
+			locURI := fp.FilePath
+			if locURI == "" {
+				locURI = opts.FastPathManifestPath
+			}
+			if locURI == "" {
+				locURI = "network/wireguard-fastpath.nix"
+			}
+			locURI = filepath.ToSlash(locURI)
+
+			line := fp.StartLine
+			if line <= 0 {
+				line = 1
+			}
+
+			cveTag := ""
+			if fp.MatchedCVE != "" {
+				cveTag = fmt.Sprintf(" [%s]", fp.MatchedCVE)
+			}
+			resMsg := fmt.Sprintf("[%s]%s %s (Interface: %s, Remediation: %s)",
+				fp.RuleID, cveTag, fp.Description, fp.InterfaceName, fp.Remediation)
+
+			results = append(results, SARIFResult{
+				RuleID:    fp.RuleID,
+				RuleIndex: ruleIdx,
+				Level:     level,
+				Message:   SARIFMessage{Text: resMsg},
+				Locations: []SARIFLocation{
+					{
+						PhysicalLocation: &PhysicalLocation{
+							ArtifactLocation: ArtifactLocation{
+								URI:       locURI,
+								URIBaseID: "%SRCROOT%",
+							},
+							Region: &Region{
+								StartLine:   line,
+								StartColumn: 1,
+							},
+						},
+						LogicalLocations: []LogicalLocation{
+							{
+								Name:               fp.RuleID,
+								Kind:               "FastPathRule",
+								FullyQualifiedName: fmt.Sprintf("fastpath/%s", fp.RuleID),
+							},
+						},
+					},
+				},
+			})
+		}
+	}
+
+	// 20. Process Standalone Feed Advisories (if no specific audit targets yielded findings)
+	if (opts.K8sReport == nil || len(opts.K8sReport.Violations) == 0) && len(opts.FlakeMatches) == 0 && len(opts.ProbeEvents) == 0 && len(opts.StorageViolations) == 0 && len(opts.WireGuardViolations) == 0 && len(opts.CISViolations) == 0 && len(opts.GatewayViolations) == 0 && len(opts.AttestViolations) == 0 && len(opts.FleetViolations) == 0 && len(opts.SPIFFEViolations) == 0 && len(opts.SBOMViolations) == 0 && len(opts.HSMViolations) == 0 && len(opts.BPFViolations) == 0 && len(opts.PQCViolations) == 0 && len(opts.SandboxViolations) == 0 && len(opts.RemediateFindings) == 0 && len(opts.LSMViolations) == 0 && len(opts.ReplicationViolations) == 0 && len(opts.FastPathViolations) == 0 && opts.Feed != nil {
 		feedItems := opts.Feed.Items
 		if opts.TargetFilter != "" {
 			feedItems = opts.Feed.FilterByTarget(opts.TargetFilter)
