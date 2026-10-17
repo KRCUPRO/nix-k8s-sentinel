@@ -1,0 +1,69 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-processing-workload
+  namespace: finance
+  labels:
+    app.kubernetes.io/name: payment-processing
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: payment-processing
+  template:
+    metadata:
+      labels:
+        app: payment-processing
+    spec:
+      containers:
+        - name: payment-api
+          image: ghcr.io/org/payment-service:v2.14.0
+          ports:
+            - containerPort: 8080
+          resources:
+            limits:
+              cpu: "1"
+              memory: 1Gi
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: payment-ingress
+  namespace: finance
+  annotations:
+    nginx.ingress.kubernetes.io/configuration-snippet: "proxy_set_header X-Custom-Origin $http_origin;"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: payment.internal.cluster
+      http:
+        paths:
+          - path: /api/v1
+            pathType: Prefix
+            backend:
+              service:
+                name: payment-processing-workload
+                port:
+                  number: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: legacy-bpf-daemon
+  namespace: telemetry
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bpf-daemon
+  template:
+    metadata:
+      labels:
+        app: bpf-daemon
+    spec:
+      securityContext:
+        seccompProfile:
+          type: Unconfined
+      containers:
+        - name: daemon
+          image: ghcr.io/org/bpf-profiler:1.0.0
