@@ -26,6 +26,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/sbom"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/spiffe"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/storage"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/wgfastpath"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/wireguard"
 )
 
@@ -70,6 +71,9 @@ type BriefingOptions struct {
 	LSMSummary              *lsm.LSMSummary
 	ReplicationViolations   []replication.ReplicationViolation
 	ReplicationSummary      *replication.ReplicationSummary
+	FastPathViolations      []wgfastpath.WGFastPathViolation
+	FastPathSummary         *wgfastpath.WGFastPathSummary
+	FastPathTelemetry       []wgfastpath.FastPathTelemetry
 	OutputDir               string
 	CustomFilename          string
 }
@@ -99,10 +103,10 @@ func GenerateBriefing(opts BriefingOptions) (*BriefingReport, error) {
 
 	version := opts.Version
 	if version == "" {
-		version = "0.22.0"
+		version = "0.23.0"
 	}
 
-	telemetry := ComputeTelemetryReplication(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations, opts.GatewayViolations, opts.AttestViolations, opts.FleetViolations, opts.SPIFFEViolations, opts.SBOMViolations, opts.HSMViolations, opts.BPFViolations, opts.PQCViolations, opts.SandboxViolations, opts.RemediateFindings, opts.LSMViolations, opts.ReplicationViolations)
+	telemetry := ComputeTelemetryFastPath(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations, opts.GatewayViolations, opts.AttestViolations, opts.FleetViolations, opts.SPIFFEViolations, opts.SBOMViolations, opts.HSMViolations, opts.BPFViolations, opts.PQCViolations, opts.SandboxViolations, opts.RemediateFindings, opts.LSMViolations, opts.ReplicationViolations, opts.FastPathViolations)
 
 	var buf bytes.Buffer
 
@@ -719,7 +723,40 @@ func GenerateBriefing(opts BriefingOptions) (*BriefingReport, error) {
 		buf.WriteString("---\n\n")
 	}
 
-	// 22. Action Items Checklist
+	// 22. WireGuard eBPF Kernel Fast-Path & Crypto Performance Posture
+	if len(opts.FastPathViolations) > 0 || opts.FastPathSummary != nil {
+		buf.WriteString("## ⚡ WireGuard eBPF Kernel Fast-Path & Crypto Performance Posture\n\n")
+		if opts.FastPathSummary != nil {
+			sum := opts.FastPathSummary
+			avxStatus := "Disabled"
+			if sum.AVX512Accelerated {
+				avxStatus = "Active (AVX-512)"
+			} else if sum.ARMNeonAccelerated {
+				avxStatus = "Active (ARM Neon)"
+			}
+			buf.WriteString(fmt.Sprintf("**Fast-Path Compliance Score:** `%.1f%%` | **Crypto Vector Engine:** `%s` | **Audited Interfaces:** %d | **Bottleneck Interfaces:** %d\n",
+				sum.ComplianceScore, avxStatus, sum.TotalInterfacesAudited, len(sum.BottleneckInterfaces)))
+			buf.WriteString(fmt.Sprintf("**Severity Breakdown:** %d Critical | %d High | %d Medium | %d Low\n\n",
+				sum.CriticalCount, sum.HighCount, sum.MediumCount, sum.LowCount))
+		}
+		if len(opts.FastPathViolations) > 0 {
+			buf.WriteString(fmt.Sprintf("⚠️ **%d WireGuard fast-path and cryptographic performance anomalies detected:**\n\n", len(opts.FastPathViolations)))
+			buf.WriteString("| Rule ID | Interface | Severity | CVSS | Anomaly & Bottleneck Details | CVE | Remediation Action |\n")
+			buf.WriteString("| :--- | :--- | :---: | :---: | :--- | :---: | :--- |\n")
+			for _, fp := range opts.FastPathViolations {
+				cveTag := "-"
+				if fp.MatchedCVE != "" {
+					cveTag = fmt.Sprintf("`%s`", fp.MatchedCVE)
+				}
+				buf.WriteString(fmt.Sprintf("| `%s` | `%s` | **%s** | %.1f | %s | %s | %s |\n",
+					fp.RuleID, fp.InterfaceName, fp.Severity, fp.CVSSScore, fp.Description, cveTag, fp.Remediation))
+			}
+			buf.WriteString("\n")
+		}
+		buf.WriteString("---\n\n")
+	}
+
+	// 23. Action Items Checklist
 	buf.WriteString("## 📋 SecOps & SRE Operational Checklist\n\n")
 	buf.WriteString("- [ ] Review high and critical severity advisories against production deployment manifests.\n")
 	buf.WriteString("- [ ] Verify that ingress controllers enforce URI path normalization and snippet guards.\n")
@@ -740,6 +777,7 @@ func GenerateBriefing(opts BriefingOptions) (*BriefingReport, error) {
 	buf.WriteString("- [ ] Verify pre-flight canary test validation before applying declarative security hardening patches.\n")
 	buf.WriteString("- [ ] Attach eBPF LSM mandatory access control hooks to restrict container syscalls, unprivileged BPF loading, and root privilege escalations.\n")
 	buf.WriteString("- [ ] Enforce declarative VolumeSnapshotClass retention policies and verify cross-region volume replication delta sync within RPO targets.\n")
+	buf.WriteString("- [ ] Profile WireGuard kernel cryptographic throughput, enable AVX-512/ARM Neon vector acceleration, and configure 100GbE NIC ring buffers to prevent packet loss under high load.\n")
 	buf.WriteString("- [ ] Archive this briefing record into security audit ledger.\n")
 
 	report := &BriefingReport{

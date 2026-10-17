@@ -19,7 +19,7 @@
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](../../LICENSE)
 [![Go Report Card](https://goreportcard.com/badge/github.com/KRCUPRO/nix-k8s-sentinel)](https://goreportcard.com/report/github.com/KRCUPRO/nix-k8s-sentinel)
-[![Version](https://img.shields.io/badge/Release-v0.22.0-emerald.svg)](https://github.com/KRCUPRO/nix-k8s-sentinel/releases)
+[![Version](https://img.shields.io/badge/Release-v0.23.0-emerald.svg)](https://github.com/KRCUPRO/nix-k8s-sentinel/releases)
 [![Architecture](https://img.shields.io/badge/Architecture-Bare--Metal_NixOS_+_K8s-8b5cf6.svg)](#-architecture-overview)
 [![Security](https://img.shields.io/badge/Security-Declarative_Audit-38bdf8.svg)](../../SECURITY.md)
 
@@ -31,13 +31,14 @@
 
 `nix-k8s-sentinel`은 베어메탈 NixOS 클러스터 및 Kubernetes 인프라에 최적화된 고성능 선언적 취약점 스캐너이자 자율 위협 해결 엔진, 지속적 위협 인텔리전스 동기화 시스템입니다.
 
-배포 후 컨테이너 레이어를 수동적으로 검사하는 기존 런타임 스캐너와 달리, `nix-k8s-sentinel`은 선언적 구성 명세(NixOS Flakes, Kubernetes CNI 정책, Ingress 컨트롤러, Gateway API, Rook Ceph 스토리지, WireGuard, CIS 벤치마크, 기밀 컴퓨팅, 멀티 클러스터 GitOps 플릿, SPIFFE/SPIRE 제로 트러스트 마이크로세그멘테이션, 소프트웨어 자재명세서 및 In-Toto SLSA Level 3 공급망 증명, 하드웨어 보안 모듈 봉투 암호화, 동적 커널 위협 프로파일링, 시스템 콜 BPF 필터, 양자 내성 암호(PQC) 및 NSA CNSA 2.0 TLS 감사 엔진, 에페메럴 마이크로VM 샌드박스 및 허니팟 디토네이션 디스패치, 자율 위협 해결 및 카나리 검증 GitOps 풀 리퀘스트 합성 엔진, eBPF LSM 보안 모듈 및 커널 강제적 접근 제어, CephFS 스냅샷 스케줄링 및 크로스 리전 볼륨 복제 재해 복구)를 실시간 정규화된 CVSS 위협 피드와 대조하여 워크로드가 스케줄링되기 전에 사전 대응할 수 있도록 지원합니다.
+배포 후 컨테이너 레이어를 수동적으로 검사하는 기존 런타임 스캐너와 달리, `nix-k8s-sentinel`은 선언적 구성 명세(NixOS Flakes, Kubernetes CNI 정책, Ingress 컨트롤러, Gateway API, Rook Ceph 스토리지, WireGuard, CIS 벤치마크, 기밀 컴퓨팅, 멀티 클러스터 GitOps 플릿, SPIFFE/SPIRE 제로 트러스트 마이크로세그멘테이션, 소프트웨어 자재명세서 및 In-Toto SLSA Level 3 공급망 증명, 하드웨어 보안 모듈 봉투 암호화, 동적 커널 위협 프로파일링, 시스템 콜 BPF 필터, 양자 내성 암호(PQC) 및 NSA CNSA 2.0 TLS 감사 엔진, 에페메럴 마이크로VM 샌드박스 및 허니팟 디토네이션 디스패치, 자율 위협 해결 및 카나리 검증 GitOps 풀 리퀘스트 합성 엔진, eBPF LSM 보안 모듈 및 커널 강제적 접근 제어, CephFS 스냅샷 스케줄링 및 크로스 리전 볼륨 복제 재해 복구, eBPF 기반 WireGuard 커널 패스트패스 및 암호화 성능 감사)를 실시간 정규화된 CVSS 위협 피드와 대조하여 워크로드가 스케줄링되기 전에 사전 대응할 수 있도록 지원합니다.
 
 ---
 
 ## 🏛️ 핵심 역량
 
 - **🔍 선언적 인프라 감사**: NixOS Flake 입력 락, Kubernetes 매니페스트 명세, CNI 네트워크 정책에 대한 패턴 매칭 및 의존성 추적.
+- **⚡ WireGuard eBPF 커널 패스트패스 & 암호화 성능 엔진**: WireGuard 네트워크 인터페이스, ChaCha20-Poly1305 SIMD 벡터 가속(AVX-512, ARM Neon), 네이티브 eBPF/XDP 드라이버 바인딩 및 100GbE 베어메탈 오버레이 인터커넥트 처리량을 전수 감사하는 자율 성능 및 보안 감사 엔진. AVX-512 / ARM Neon 벡터 가속이 누락된 스칼라 암호화 폴백(`WG-FAST-001`), 고대역폭 링크에서 네이티브 eBPF/XDP 드라이버 훅 누락(`WG-FAST-002`), 85%를 초과하는 커널 패스트패스 링 버퍼 포화(`WG-FAST-003`, `CVE-2026-31049` 연계), TCP 붕괴를 유발하는 초당 1,000회 초과 패킷 드롭(`WG-FAST-004`), 물리 언더레이 NIC 하드웨어 오프로드(GRO/GSO/TSO) 비활성화(`WG-FAST-005`), 암호화 워커 코어의 70% 초과 softIRQ 예산 고갈(`WG-FAST-006`), WireGuard MTU 단편화 불일치(`WG-FAST-007`), eBPF 런타임 `XDP_ABORTED` 트랩(`WG-FAST-008`), 250ns를 초과하는 SIMD FPU 컨텍스트 스위칭 오버헤드(`WG-FAST-009`), 활성 CPU 코어 수 미만의 멀티 큐 NIC 디스크립터(`WG-FAST-010`), 커널 소켓 버퍼 할당 실패(`WG-FAST-011`), AVX-512 실행 유닛 서멀 다운클럭(`WG-FAST-012`) 정밀 탐지. 강화된 NixOS 패스트패스 모듈(`wg-fastpath-hardened.nix`), 검증된 eBPF XDP C 프로그램(`wg_fastpath_xdp.bpf.c`), Kubernetes CiliumNodeConfig 매니페스트 선언적 자동 합성(`--wg-fastpath`, `--fastpath`, `--wg-fastpath-telemetry`, `--wg-fastpath-synth-out`, `--wg-fastpath-strict`).
 - **🔄 CephFS 스냅샷 스케줄링 & 크로스 리전 볼륨 복제 재해 복구(DR) 동기화 엔진**: 멀티 클러스터 Kubernetes 배포 환경 전반에서 CephFS 스냅샷 스케줄, CSI 볼륨 복제 클래스(VolumeReplicationClass), 리전 간 복제 상태 및 런타임 델타 동기화를 전수 감사하는 포괄적 재해 복구(DR) 보안 엔진. 볼륨 이탈 시 복구 시점(RPO) 파괴 위험이 있는 deletionPolicy `Delete` VolumeSnapshotClass 탐지(`CEPH-DR-001`), RPO SLA를 위반하는 스냅샷 스케줄 누락 또는 24시간 초과 지연(`CEPH-DR-002`), 3개 미만의 불충분한 스냅샷 보존 주기(`CEPH-DR-003`), 암호화되지 않은 WAN 복제 전송(`CEPH-DR-004`), 과도한 복제 주기(`CEPH-DR-005`), 비관리 복제 CRD(`CEPH-DR-006`), 안티 어피니티가 누락된 단일 복제본 미러 데몬(`CEPH-DR-007`), 3번째 영역 아비터 모니터가 누락된 스트레치 클러스터(`CEPH-DR-008`), 900초를 초과하는 복제 델타 지연(`CEPH-DR-009`), 리전 간 스플릿 브레인 이중 Primary 선언 충돌(CVE-2026-10140), 성능 저하/오류 상태(`CEPH-DR-011`), 검증되지 않은 대기 DR 장애 조치 준비 상태(`CEPH-DR-012`) 정밀 탐지. 강화된 `VolumeSnapshotClass`(Retain), `CephFilesystemSubVolumeGroup` 스냅샷 스케줄, 암호화 전송 지원 `VolumeReplicationClass`, 1차/2차 `VolumeReplication` 페어 선언적 자동 합성(`--dr-manifests`, `--dr`, `--dr-telemetry`, `--dr-synth-out`, `--dr-rpo-max`, `--dr-strict`).
 - **🛡️ eBPF LSM 보안 모듈 & 커널 강제적 접근 제어(MAC) 엔진**: NixOS 컨테이너 호스트 및 Kubernetes 워크로드를 위한 커널 레벨 강제적 접근 제어(MAC) 및 선언적 eBPF Linux Security Module(LSM) 보안 엔진. 선언적 호스트 커널 매개변수(`boot.kernelParams`, `security.lsm = [ ... "bpf" ... ]`), 컨테이너 보안 컨텍스트 및 eBPF LSM 텔레메트리 훅(`bprm_check_security`, `file_open`, `socket_create`, `task_alloc`, `bpf`) 정밀 감사. seccomp를 우회하는 특권 컨테이너 탈출 취약점(CVE-2026-99103), 비인가 시스템 콜 호출, 미인가 BPF 맵 조작 및 커널 MAC 프로필 누락 탐지. 런타임 eBPF 거부 텔레메트리 실시간 분석 및 강화된 NixOS 선언적 모듈(`lsm-bpf-policy.nix`), 검증 가능한 eBPF C 프로그램(`lsm_container_mac.bpf.c`), Kubernetes `ContainerMACProfile` CRD 선언적 자동 합성(`--lsm`, `--lsm-mac`, `--lsm-telemetry`, `--lsm-synth-out`).
 - **🤖 자율 위협 해결 & GitOps 풀 리퀘스트 합성 엔진**: NixOS 모듈 및 Kubernetes 매니페스트를 전수 감사하여 조치 가능한 보안 취약점을 식별하고, 사람의 개입 없이 원자적 선언적 보안 강화 패치를 자동 합성하는 자율 보안 엔지니어링 엔진. GitOps 풀 리퀘스트 생성 전 시뮬레이션 기반의 NixOS pure flake 평가와 `kubectl kustomize` dry-run 스키마 검증을 수행하는 사전 카나리 테스트 엔진(`pkg/remediate/canary.go`)을 탑재하여 100% 비파괴적 안전성을 보장. 단일 diff 형식의 NixOS 구성 패치(`remediation-patches.nix`), Kubernetes Kustomize 전략적 머지 패치(`patch-<name>.yaml`), RFC 6902 JSONPatch(`jsonpatch-<name>.yaml`), 통합 `kustomization.yaml` 오버레이 매니페스트 및 브랜치 명명 규칙(`remediation/*`)과 Conventional Commit 메시지를 포함한 PR 요약문(`PR_SUMMARY.md`) 자동 생성(`--remediate`, `--remediate-synth-out`, CVE-2026-98402).
@@ -130,6 +131,26 @@ go run cmd/sentinel/main.go --lsm=fixtures/nixos-lsm-vulnerable.nix --lsm-teleme
 
 # 강화된 NixOS LSM 모듈, eBPF C 프로그램 및 Kubernetes ContainerMACProfile CRD 자동 합성
 go run cmd/sentinel/main.go --lsm-synth-out=policies/generated/lsm
+
+# CephFS 스냅샷 스케줄 및 크로스 리전 볼륨 복제 매니페스트 감사
+go run cmd/sentinel/main.go --dr-manifests=fixtures/cephfs-dr-manifests.yaml
+go run cmd/sentinel/main.go --dr=fixtures/cephfs-dr-vulnerable.yaml
+
+# 런타임 CephFS 복제 델타 지연 텔레메트리 조정 및 SARIF 출력
+go run cmd/sentinel/main.go --dr=fixtures/cephfs-dr-vulnerable.yaml --dr-telemetry=fixtures/cephfs-dr-telemetry.json --format=sarif --output=dr-results.sarif
+
+# 강화된 VolumeSnapshotClass, SubVolumeGroup 및 VolumeReplication 매니페스트 자동 합성
+go run cmd/sentinel/main.go --dr-synth-out=policies/generated/replication
+
+# WireGuard eBPF 커널 패스트패스 및 암호화 성능 구성 감사
+go run cmd/sentinel/main.go --wg-fastpath=fixtures/nixos-wg-fastpath.nix
+go run cmd/sentinel/main.go --wg-fastpath=fixtures/nixos-wg-fastpath-vulnerable.nix
+
+# 런타임 eBPF 패스트패스 및 100GbE 링 버퍼 텔레메트리 실시간 조정
+go run cmd/sentinel/main.go --wg-fastpath=fixtures/nixos-wg-fastpath-vulnerable.nix --wg-fastpath-telemetry=fixtures/wg-fastpath-telemetry.json --format=sarif --output=fastpath-results.sarif
+
+# 강화된 NixOS 패스트패스 모듈, eBPF XDP C 프로그램 및 CiliumNodeConfig CRD 자동 합성
+go run cmd/sentinel/main.go --wg-fastpath-synth-out=policies/generated/fastpath
 
 # 베어메탈 eBPF 커널 텔레메트리 다중 노드 실시간 분석 실행
 go run cmd/sentinel/main.go --probe

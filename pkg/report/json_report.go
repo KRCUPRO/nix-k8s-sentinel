@@ -25,6 +25,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/sbom"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/spiffe"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/storage"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/wgfastpath"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/wireguard"
 )
 
@@ -73,6 +74,10 @@ type JSONAuditReport struct {
 	ReplicationViolations   []replication.ReplicationViolation `json:"replication_violations,omitempty"`
 	ReplicationSummary      *replication.ReplicationSummary `json:"replication_summary,omitempty"`
 	ReplicationTelemetry    *replication.CrossRegionDRTelemetry `json:"replication_telemetry,omitempty"`
+	FastPathViolations      []wgfastpath.WGFastPathViolation `json:"fastpath_violations,omitempty"`
+	FastPathSummary         *wgfastpath.WGFastPathSummary   `json:"fastpath_summary,omitempty"`
+	FastPathTelemetry       []wgfastpath.FastPathTelemetry  `json:"fastpath_telemetry,omitempty"`
+	FastPathCrypto          []wgfastpath.CryptoBenchmarkTelemetry `json:"fastpath_crypto,omitempty"`
 }
 
 // BuildJSONReport compiles the consolidated JSON audit report from provided audit data.
@@ -176,8 +181,17 @@ func BuildJSONReport(opts ReportOptions) (*JSONAuditReport, error) {
 	if opts.DRSynthOut != "" {
 		scanned = append(scanned, opts.DRSynthOut)
 	}
+	if opts.FastPathManifestPath != "" {
+		scanned = append(scanned, opts.FastPathManifestPath)
+	}
+	if opts.FastPathTelemetryPath != "" {
+		scanned = append(scanned, opts.FastPathTelemetryPath)
+	}
+	if opts.FastPathSynthOut != "" {
+		scanned = append(scanned, opts.FastPathSynthOut)
+	}
 
-	telemetry := ComputeTelemetryReplication(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations, opts.GatewayViolations, opts.AttestViolations, opts.FleetViolations, opts.SPIFFEViolations, opts.SBOMViolations, opts.HSMViolations, opts.BPFViolations, opts.PQCViolations, opts.SandboxViolations, opts.RemediateFindings, opts.LSMViolations, opts.ReplicationViolations)
+	telemetry := ComputeTelemetryFastPath(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations, opts.GatewayViolations, opts.AttestViolations, opts.FleetViolations, opts.SPIFFEViolations, opts.SBOMViolations, opts.HSMViolations, opts.BPFViolations, opts.PQCViolations, opts.SandboxViolations, opts.RemediateFindings, opts.LSMViolations, opts.ReplicationViolations, opts.FastPathViolations)
 
 	var advisories []intel.ThreatItem
 	if opts.Feed != nil {
@@ -232,6 +246,10 @@ func BuildJSONReport(opts ReportOptions) (*JSONAuditReport, error) {
 		ReplicationViolations:   opts.ReplicationViolations,
 		ReplicationSummary:      opts.ReplicationSummary,
 		ReplicationTelemetry:    opts.ReplicationTelemetry,
+		FastPathViolations:      opts.FastPathViolations,
+		FastPathSummary:         opts.FastPathSummary,
+		FastPathTelemetry:       opts.FastPathTelemetry,
+		FastPathCrypto:          opts.FastPathCrypto,
 	}
 
 	return rep, nil
