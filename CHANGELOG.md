@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.21.0] - 2026-10-17
+
+### Added
+- **eBPF Linux Security Module (LSM) & Kernel Mandatory Access Control Engine** (`pkg/lsm/scanner.go`): Autonomous security engine auditing NixOS host configurations and Kubernetes container workloads, enforcing declarative eBPF LSM hooks and mandatory access controls directly in kernel space before container syscall execution.
+- **Authoritative Canonical eBPF LSM Rules Catalog** (`pkg/lsm/rules.go`): Suite of 12 canonical security rules (`LSM-MAC-001` through `LSM-MAC-012`) covering missing `bpf` in `boot.kernelParams` (`LSM-MAC-001`, mapped to `CVE-2026-99103`), missing `bprm_check_security` execution guards against writable paths (`/tmp`, `/dev/shm`), missing `file_open` MAC protections on sensitive host structures (`/proc/kcore`, `/sys/kernel/debug`), permissive raw socket creation (`AF_PACKET`, `SOCK_RAW`) (`CVE-2026-20914`), unauthorized setuid privilege escalation, unconfined container BPF program loading (`CVE-2026-90412`), cross-process ptrace memory inspection, unconfined privileged containers, host namespace sharing (`hostPID`, `hostIPC`), and runtime telemetry denial correlations (`LSM-MAC-011`, `LSM-MAC-012`).
+- **Streaming NixOS Host & Kubernetes Container MAC Parsers** (`pkg/lsm/parser.go`): High-throughput streaming parser evaluating declarative NixOS boot parameters (`boot.kernelParams = [ "lsm=..." ]`), `security.lsm`, sysctl flags (`kernel.unprivileged_bpf_disabled`), and systemd eBPF LSM service units, alongside Kubernetes workload security contexts and runtime eBPF LSM JSON telemetry payloads with strict 10MB memory safety bounds.
+- **Declarative eBPF LSM & Kernel MAC Policy Synthesizer** (`pkg/lsm/synth.go`): Generates drop-in hardened NixOS modules (`lsm-bpf-policy.nix`), verifiable eBPF C programs (`lsm_container_mac.bpf.c`) implementing `bprm_check_security`, `file_open`, `socket_create`, and `task_fix_setuid` hooks, and Kubernetes ContainerMACProfile CRD specifications (`container-mac-policy.yaml`).
+- **Runtime Telemetry Anomaly Reconciler & Scoring Engine** (`pkg/lsm/auditor.go`): Reconciles runtime eBPF LSM denial telemetry, evaluates blocked execution attempts and unauthorized capability requests, and computes deterministic compliance posture scores (0.0% to 100.0%).
+- **Dedicated CLI LSM Runner & Flag Architecture** (`cmd/sentinel/lsm_runner.go`, `cmd/sentinel/flags.go`): Extracted LSM audit coordination into a dedicated runner maintaining `cmd/sentinel/main.go` under 400 LOC. Added `--lsm=<path>`, `--lsm-mac`, `--lsm-telemetry=<path>`, `--lsm-synth-out=<dir>`, and `--lsm-strict` flags.
+- **Threat Feed Expansion** (`intel/cve-feed.json`): Ingested `CVE-2026-99103` (Linux Kernel Privileged Container Escape Bypassing Seccomp via Unconfined Syscall & Missing eBPF LSM Hooks, CVSS 9.8 Critical).
+- **Unified Exporter Integration**: eBPF LSM violations, kernel MAC status, and runtime denial events seamlessly exported to OASIS SARIF v2.1.0 (Section 17), structured JSON audit telemetry (`lsm_violations`, `lsm_summary`), and hourly Markdown threat briefings (Section 20).
+- **Production Fixtures**: Added realistic declarative fixtures (`fixtures/nixos-lsm.nix`, `fixtures/nixos-lsm-vulnerable.nix`, `fixtures/k8s-lsm-workload.yaml`, `fixtures/lsm-telemetry.json`) and pre-generated policy artifacts in `policies/generated/lsm/`.
+- **Comprehensive Unit Test Suites** (`pkg/lsm/lsm_test.go`, `pkg/report/lsm_report_test.go`): 100% test coverage across canonical rules, NixOS config parsing, Kubernetes MAC profiles, runtime telemetry, policy synthesis, directory scanner, SARIF/JSON/Briefing serialization, and memory bounds checks.
+
+### Changed
+- Bumped engine release to `v0.21.0`.
+- Updated `SECURITY.md` establishing eBPF Linux Security Module (LSM) & Kernel Mandatory Access Control security invariants (Invariant 23).
+- Updated `ROADMAP.md` marking Milestone M21 as completed and scheduling M22 (CephFS Snapshot & Volume Replication DR Synchronizer).
+- Updated `scripts/ARCHITECTURE_MAP.md` documenting new LSM modules, runners, and O(1) symbols.
+
+---
+
 ## [0.20.0] - 2026-10-17
 
 ### Added

@@ -168,10 +168,19 @@ Automated generation of defense-in-depth rules:
 - [x] Full CLI integration (`--remediate`, `--auto-remediate`, `--remediate-synth-out`, `--canary-strict`) with unified SARIF v2.1.0 code scanning, JSON audit telemetry, and Markdown briefing exports (`cmd/sentinel/remediate_runner.go`, `cmd/sentinel/flags.go`).
 - [x] Production sample fixtures (`fixtures/remediation/nixos-vulnerable.nix`, `fixtures/remediation/k8s-workload.yaml`, `fixtures/remediation/kustomization-base.yaml`, `fixtures/remediation/canary-telemetry.json`) and threat feed correlation with `CVE-2026-98402`.
 
-### Version 0.21.0 — eBPF LSM Security Module & Kernel Mandatory Access Control (Planned)
-- [ ] Implement declarative eBPF Linux Security Module (LSM) hooks for NixOS container hosts.
-- [ ] Synthesize kernel-level mandatory access control (MAC) policies restricting privileged container syscalls.
-- [ ] Real-time kernel telemetry correlation for unconfined container runtime containment.
+### Version 0.21.0 — eBPF LSM Security Module & Kernel Mandatory Access Control (Completed)
+- [x] Declarative eBPF Linux Security Module (LSM) hooks and Kernel Mandatory Access Control (MAC) engine (`pkg/lsm/scanner.go`).
+- [x] Canonical rule catalog `LSM-MAC-001` through `LSM-MAC-012` detecting missing `bpf` in `boot.kernelParams` (`CVE-2026-99103`), unconfined executable execution from `/tmp` and `/dev/shm`, unprotected sensitive host kernel structures (`/proc/kcore`), unconfined raw sockets (`CVE-2026-20914`), unauthorized setuid privilege escalation, unprivileged BPF loading (`CVE-2026-90412`), cross-process ptrace memory injection, unconfined privileged containers, and host namespace sharing (`pkg/lsm/rules.go`).
+- [x] Streaming line parsers for declarative NixOS host configurations (`boot.kernelParams`, `security.lsm`, sysctls, systemd eBPF units), Kubernetes workload security contexts, and runtime eBPF LSM denial telemetry (`pkg/lsm/parser.go`).
+- [x] Declarative policy synthesizer generating drop-in hardened NixOS modules (`lsm-bpf-policy.nix`), verifiable eBPF C programs (`lsm_container_mac.bpf.c`), and Kubernetes ContainerMACProfile CRD specifications (`pkg/lsm/synth.go`).
+- [x] Deterministic compliance posture scoring (0.0% to 100.0%) and runtime telemetry anomaly reconciler tracking blocked syscalls (`pkg/lsm/auditor.go`).
+- [x] Full CLI integration (`--lsm`, `--lsm-mac`, `--lsm-telemetry`, `--lsm-synth-out`, `--lsm-strict`) with unified SARIF v2.1.0 code scanning, JSON audit telemetry, and Markdown briefing exports (`cmd/sentinel/lsm_runner.go`, `cmd/sentinel/flags.go`).
+- [x] Production sample fixtures (`fixtures/nixos-lsm.nix`, `fixtures/nixos-lsm-vulnerable.nix`, `fixtures/k8s-lsm-workload.yaml`, `fixtures/lsm-telemetry.json`) and threat feed correlation with `CVE-2026-99103`.
+
+### Version 0.22.0 — CephFS Snapshot & Volume Replication DR Synchronizer (Planned)
+- [ ] Implement scheduled volume snapshot policy auditor and delta replication monitor.
+- [ ] Automated disaster recovery posture verification across cross-region storage clusters.
+- [ ] Real-time CephFS snapshot consistency group verification and immutable retention locks.
 
 ### Version 1.0.0 — Enterprise Workload Identity & Ephemeral Detonation Pipeline (Planned)
 - [ ] Full end-to-end integration of SPIFFE/SPIRE workload attestation, In-Toto provenance, and HSM envelope encryption.

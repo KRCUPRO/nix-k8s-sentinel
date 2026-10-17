@@ -47,6 +47,10 @@ type SentinelConfig struct {
 	RemediatePath     string
 	RemediateSynthOut string
 	CanaryStrict      bool
+	LSMPath           string
+	LSMTelemetry      string
+	LSMSynthOut       string
+	LSMStrict         bool
 	Briefing          bool
 	BriefingDir       string
 	BriefingFile      string
@@ -118,6 +122,11 @@ func parseCLI() SentinelConfig {
 	remediateShort := flag.String("auto-remediate", "", "Alias for --remediate")
 	remediateSynthOut := flag.String("remediate-synth-out", "", "Output directory to export synthesized NixOS patches and GitOps Kustomize overlays")
 	canaryStrict := flag.Bool("canary-strict", false, "Enforce strict zero-warning pre-flight canary test validation")
+	lsmPath := flag.String("lsm", "", "Path to NixOS host config or Kubernetes manifest to audit for eBPF LSM & MAC")
+	lsmShort := flag.String("lsm-mac", "", "Alias for --lsm")
+	lsmTelemetry := flag.String("lsm-telemetry", "", "Path to runtime eBPF LSM denial telemetry JSON")
+	lsmSynthOut := flag.String("lsm-synth-out", "", "Output directory to export synthesized hardened NixOS eBPF LSM modules, BPF C programs, and Kubernetes MAC policies")
+	lsmStrict := flag.Bool("lsm-strict", false, "Enforce strict zero-warning eBPF LSM compliance")
 	briefing := flag.Bool("briefing", false, "Generate automated Markdown threat intelligence briefing")
 	briefingDir := flag.String("briefing-dir", "intel/briefings", "Output directory for threat briefings")
 	briefingFile := flag.String("briefing-file", "", "Custom filename for threat briefing markdown")
@@ -184,6 +193,9 @@ func parseCLI() SentinelConfig {
 	if *remediatePath == "" && *remediateShort != "" {
 		*remediatePath = *remediateShort
 	}
+	if *lsmPath == "" && *lsmShort != "" {
+		*lsmPath = *lsmShort
+	}
 	if *outFile == "" && *outShort != "" {
 		*outFile = *outShort
 	}
@@ -233,6 +245,10 @@ func parseCLI() SentinelConfig {
 		RemediatePath:     *remediatePath,
 		RemediateSynthOut: *remediateSynthOut,
 		CanaryStrict:      *canaryStrict,
+		LSMPath:           *lsmPath,
+		LSMTelemetry:      *lsmTelemetry,
+		LSMSynthOut:       *lsmSynthOut,
+		LSMStrict:         *lsmStrict,
 		Briefing:          *briefing,
 		BriefingDir:       *briefingDir,
 		BriefingFile:      *briefingFile,

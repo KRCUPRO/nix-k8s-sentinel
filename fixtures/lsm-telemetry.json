@@ -1,0 +1,54 @@
+[
+  {
+    "timestamp": "2026-10-17T11:45:00Z",
+    "node": "nixos-worker-01",
+    "container_id": "cri-o://d4a1b8c9e0f2",
+    "cgroup": "kubepods.slice/kubepods-burstable.slice/pod-telemetry",
+    "hook": "bprm_check_security",
+    "syscall": "execve",
+    "comm": "curl_payload",
+    "target_path": "/tmp/reverse_shell.sh",
+    "return_code": -1,
+    "blocked": true,
+    "action": "DENY"
+  },
+  {
+    "timestamp": "2026-10-17T11:46:12Z",
+    "node": "nixos-worker-01",
+    "container_id": "cri-o://d4a1b8c9e0f2",
+    "cgroup": "kubepods.slice/kubepods-burstable.slice/pod-telemetry",
+    "hook": "file_open",
+    "syscall": "openat",
+    "comm": "priv_scan",
+    "target_path": "/proc/kcore",
+    "return_code": -1,
+    "blocked": true,
+    "action": "DENY"
+  },
+  {
+    "timestamp": "2026-10-17T11:47:30Z",
+    "node": "nixos-worker-02",
+    "container_id": "cri-o://f9e8d7c6b5a4",
+    "cgroup": "kubepods.slice/kubepods-besteffort.slice/pod-ingress",
+    "hook": "socket_create",
+    "syscall": "socket",
+    "comm": "packet_injector",
+    "target_path": "AF_PACKET",
+    "return_code": -1,
+    "blocked": true,
+    "action": "DENY"
+  },
+  {
+    "timestamp": "2026-10-17T11:48:05Z",
+    "node": "nixos-worker-02",
+    "container_id": "cri-o://f9e8d7c6b5a4",
+    "cgroup": "kubepods.slice/kubepods-besteffort.slice/pod-ingress",
+    "hook": "task_fix_setuid",
+    "syscall": "setuid",
+    "comm": "su_escalate",
+    "target_path": "UID:0",
+    "return_code": -1,
+    "blocked": true,
+    "action": "DENY"
+  }
+]

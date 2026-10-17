@@ -1131,8 +1131,70 @@ func BuildSARIFReport(opts ReportOptions) (*SARIFLog, error) {
 		}
 	}
 
-	// 17. Process Standalone Feed Advisories (if no specific audit targets yielded findings)
-	if (opts.K8sReport == nil || len(opts.K8sReport.Violations) == 0) && len(opts.FlakeMatches) == 0 && len(opts.ProbeEvents) == 0 && len(opts.StorageViolations) == 0 && len(opts.WireGuardViolations) == 0 && len(opts.CISViolations) == 0 && len(opts.GatewayViolations) == 0 && len(opts.AttestViolations) == 0 && len(opts.FleetViolations) == 0 && len(opts.SPIFFEViolations) == 0 && len(opts.SBOMViolations) == 0 && len(opts.HSMViolations) == 0 && len(opts.BPFViolations) == 0 && len(opts.PQCViolations) == 0 && len(opts.SandboxViolations) == 0 && len(opts.RemediateFindings) == 0 && opts.Feed != nil {
+	// 17. Process eBPF LSM and Kernel MAC Violations
+	if len(opts.LSMViolations) > 0 {
+		for _, lv := range opts.LSMViolations {
+			tags := []string{"security", "ebpf", "lsm", "mac", "kernel"}
+			if lv.MatchedCVE != "" {
+				tags = append(tags, lv.MatchedCVE)
+			}
+
+			ruleIdx := getOrCreateRule(lv.RuleID, lv.RuleID, lv.Message, lv.Remediation, lv.Severity, lv.CVSSScore, tags)
+			level := SeverityToSARIFLevel(string(lv.Severity), lv.CVSSScore)
+
+			locURI := lv.File
+			if locURI == "" {
+				locURI = opts.LSMPath
+			}
+			if locURI == "" {
+				locURI = "configuration.nix"
+			}
+			locURI = filepath.ToSlash(locURI)
+
+			line := lv.Line
+			if line <= 0 {
+				line = 1
+			}
+
+			cveTag := ""
+			if lv.MatchedCVE != "" {
+				cveTag = fmt.Sprintf(" [%s]", lv.MatchedCVE)
+			}
+			resMsg := fmt.Sprintf("[%s]%s %s (Resource: %s, Remediation: %s)",
+				lv.RuleID, cveTag, lv.Message, lv.Resource, lv.Remediation)
+
+			results = append(results, SARIFResult{
+				RuleID:    lv.RuleID,
+				RuleIndex: ruleIdx,
+				Level:     level,
+				Message:   SARIFMessage{Text: resMsg},
+				Locations: []SARIFLocation{
+					{
+						PhysicalLocation: &PhysicalLocation{
+							ArtifactLocation: ArtifactLocation{
+								URI:       locURI,
+								URIBaseID: "%SRCROOT%",
+							},
+							Region: &Region{
+								StartLine:   line,
+								StartColumn: 1,
+							},
+						},
+						LogicalLocations: []LogicalLocation{
+							{
+								Name:               lv.RuleID,
+								Kind:               "LSMRule",
+								FullyQualifiedName: fmt.Sprintf("lsm/%s", lv.RuleID),
+							},
+						},
+					},
+				},
+			})
+		}
+	}
+
+	// 18. Process Standalone Feed Advisories (if no specific audit targets yielded findings)
+	if (opts.K8sReport == nil || len(opts.K8sReport.Violations) == 0) && len(opts.FlakeMatches) == 0 && len(opts.ProbeEvents) == 0 && len(opts.StorageViolations) == 0 && len(opts.WireGuardViolations) == 0 && len(opts.CISViolations) == 0 && len(opts.GatewayViolations) == 0 && len(opts.AttestViolations) == 0 && len(opts.FleetViolations) == 0 && len(opts.SPIFFEViolations) == 0 && len(opts.SBOMViolations) == 0 && len(opts.HSMViolations) == 0 && len(opts.BPFViolations) == 0 && len(opts.PQCViolations) == 0 && len(opts.SandboxViolations) == 0 && len(opts.RemediateFindings) == 0 && len(opts.LSMViolations) == 0 && opts.Feed != nil {
 		feedItems := opts.Feed.Items
 		if opts.TargetFilter != "" {
 			feedItems = opts.Feed.FilterByTarget(opts.TargetFilter)
