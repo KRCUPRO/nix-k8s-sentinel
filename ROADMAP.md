@@ -203,9 +203,18 @@ Automated generation of defense-in-depth rules:
 - [x] Full CLI integration (`--wg-enclave`, `--enclave`, `--wg-enclave-telemetry`, `--wg-enclave-synth-out`, `--wg-enclave-strict`) with unified SARIF v2.1.0 code scanning, JSON audit telemetry, and Markdown briefing exports (`cmd/sentinel/enclave_runner.go`, `cmd/sentinel/flags.go`).
 - [x] Production sample fixtures (`fixtures/nixos-wg-enclave.nix`, `fixtures/nixos-wg-enclave-vulnerable.nix`, `fixtures/wg-enclave-telemetry.json`) and threat feed correlation with `CVE-2026-40291`.
 
-### Version 0.25.0 — Kubernetes Dynamic Admission Webhook & Certificate Authority Rotation Radar (Planned)
-- [ ] Audit ValidatingWebhookConfiguration and MutatingWebhookConfiguration failurePolicy and caBundle expiration.
-- [ ] Detect webhook timeout latency stalls risking API server denial of service.
+### Version 0.25.0 — Kubernetes Dynamic Admission Webhook & Certificate Authority Rotation Radar (Completed)
+- [x] Admission webhook configuration scanner and X.509 CA certificate expiration monitor (`pkg/webhook/scanner.go`).
+- [x] Canonical rule catalog `WH-RADAR-001` through `WH-RADAR-012` detecting failurePolicy: Ignore on sensitive resources (`CVE-2026-52194`), excessive admission timeout (> 10s default, recommending <= 3s), missing `kube-system` exemption in namespaceSelector risking cluster boot deadlocks, plaintext HTTP webhook endpoints, expired or expiring (< 30d) CA bundles, weak RSA (< 2048) or SHA-1 certificates, unknown sideEffects annotations, legacy `admissionReviewVersions` (v1beta1), P95/P99 latency degradation, admission webhook error spikes (> 1.0%), and cert-manager automated injection annotation absences (`pkg/webhook/rules.go`).
+- [x] Multi-document streaming parser for `ValidatingWebhookConfiguration`, `MutatingWebhookConfiguration`, and runtime JSON admission telemetry with X.509 ASN.1 certificate parsing (`pkg/webhook/parser.go`).
+- [x] Dynamic admission auditor and deterministic compliance scoring engine with live telemetry latency tracking (`pkg/webhook/auditor.go`).
+- [x] Declarative policy synthesizer generating hardened `ValidatingWebhookConfiguration` (Fail, timeout: 3s, kube-system exemption), cert-manager automated `Certificate` manifests, and Prometheus APIServer admission latency alert rules (`pkg/webhook/synth.go`).
+- [x] Full CLI integration (`--webhook`, `--admission-webhook`, `--webhook-telemetry`, `--webhook-synth-out`, `--webhook-strict`) with unified SARIF v2.1.0 code scanning, JSON audit telemetry, and Markdown briefing exports (`cmd/sentinel/webhook_runner.go`, `cmd/sentinel/flags.go`).
+- [x] Production sample fixtures (`fixtures/k8s-admission-webhook.yaml`, `fixtures/k8s-admission-webhook-vulnerable.yaml`, `fixtures/webhook-telemetry.json`) and threat feed correlation with `CVE-2026-52194`.
+
+### Version 0.26.0 — NixOS Immutable Root & Impermanence Storage Ephemerality Verifier (Planned)
+- [ ] Audit NixOS impermanence configurations (`environment.persistence`) against cluster storage mounts.
+- [ ] Ensure stateless node reboot sanitization and transient secret memory wiping.
 
 ### Version 1.0.0 — Enterprise Workload Identity & Ephemeral Detonation Pipeline (Planned)
 - [ ] Full end-to-end integration of SPIFFE/SPIRE workload attestation, In-Toto provenance, and HSM envelope encryption.

@@ -22,6 +22,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/sbom"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/spiffe"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/storage"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/webhook"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/wgenclave"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/wgfastpath"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/wireguard"
@@ -57,6 +58,7 @@ type TelemetrySummary struct {
 	TotalReplicationViolations int            `json:"total_replication_violations"`
 	TotalFastPathViolations    int            `json:"total_fastpath_violations"`
 	TotalEnclaveViolations     int            `json:"total_enclave_violations"`
+	TotalWebhookViolations     int            `json:"total_webhook_violations"`
 }
 
 // ComputeTelemetry aggregates CVSS metrics from the threat feed, K8s violations, and Nix flake matches.
@@ -315,6 +317,35 @@ func ComputeTelemetryEnclave(feed *intel.Feed, k8sReport *k8s.ManifestAuditRepor
 				summary.MaxCVSS = ev.CVSSScore
 			}
 			switch ev.Severity {
+			case intel.SeverityCritical:
+				summary.CriticalCount++
+			case intel.SeverityHigh:
+				summary.HighCount++
+			case intel.SeverityMedium:
+				summary.MediumCount++
+			default:
+				summary.LowCount++
+			}
+		}
+	}
+
+	return summary
+}
+
+// ComputeTelemetryWebhook aggregates CVSS metrics across all domains including Dynamic Admission Webhook and CA rotation findings.
+func ComputeTelemetryWebhook(feed *intel.Feed, k8sReport *k8s.ManifestAuditReport, flakeMatches []nix.FlakeVulnerabilityMatch, storageViolations []storage.StorageViolation, wireguardViolations []wireguard.WireGuardViolation, cisViolations []bench.CISViolation, gatewayViolations []gateway.GatewayViolation, attestViolations []attest.AttestationViolation, fleetViolations []fleet.FleetViolation, spiffeViolations []spiffe.SPIFFEViolation, sbomViolations []sbom.SBOMViolation, hsmViolations []hsm.HSMViolation, bpfViolations []bpf.BPFViolation, pqcViolations []pqc.PQCViolation, sandboxViolations []sandbox.SandboxViolation, remediateFindings []remediate.RemediationFinding, lsmViolations []lsm.LSMViolation, replicationViolations []replication.ReplicationViolation, fastPathViolations []wgfastpath.WGFastPathViolation, enclaveViolations []wgenclave.WGEnclaveViolation, webhookViolations []webhook.WebhookViolation) TelemetrySummary {
+	summary := ComputeTelemetryEnclave(feed, k8sReport, flakeMatches, storageViolations, wireguardViolations, cisViolations, gatewayViolations, attestViolations, fleetViolations, spiffeViolations, sbomViolations, hsmViolations, bpfViolations, pqcViolations, sandboxViolations, remediateFindings, lsmViolations, replicationViolations, fastPathViolations, enclaveViolations)
+
+	if len(webhookViolations) > 0 {
+		summary.TotalWebhookViolations = len(webhookViolations)
+		for _, wv := range webhookViolations {
+			summary.TotalViolations++
+			summary.TargetDistribution["kubernetes"]++
+			summary.ComponentDistribution["admission-webhook"]++
+			if wv.CVSSScore > summary.MaxCVSS {
+				summary.MaxCVSS = wv.CVSSScore
+			}
+			switch wv.Severity {
 			case intel.SeverityCritical:
 				summary.CriticalCount++
 			case intel.SeverityHigh:

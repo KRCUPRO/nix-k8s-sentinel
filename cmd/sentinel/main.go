@@ -23,13 +23,14 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/sbom"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/spiffe"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/storage"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/webhook"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/wgenclave"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/wgfastpath"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/wireguard"
 )
 
 var (
-	version = "0.24.0"
+	version = "0.25.0"
 )
 
 func main() {
@@ -101,6 +102,9 @@ func main() {
 	var enclaveSummary *wgenclave.WGEnclaveSummary
 	var enclaveReports []wgenclave.AttestationReport
 	var enclavePeers []wgenclave.PeerTunnelStatus
+	var webhookViolations []webhook.WebhookViolation
+	var webhookSummary *webhook.WebhookSummary
+	var webhookTelemetry *webhook.WebhookTelemetry
 
 	// 1. Audit Nix Flake
 	if cfg.FlakePath != "" {
@@ -215,7 +219,20 @@ func main() {
 		)
 	}
 
-	// 22. Generate Threat Briefing if --briefing is requested
+	// 22. Audit Kubernetes Dynamic Admission Webhook & CA Rotation Radar
+	if cfg.WebhookPath != "" || cfg.WebhookTelemetry != "" || cfg.WebhookSynthOut != "" {
+		webhookViolations, webhookSummary, webhookTelemetry = runWebhookAudit(
+			cfg.WebhookPath,
+			cfg.WebhookTelemetry,
+			cfg.WebhookSynthOut,
+			cfg.WebhookStrict,
+			feed,
+			logInfo,
+			logErr,
+		)
+	}
+
+	// 23. Generate Threat Briefing if --briefing is requested
 	if cfg.Briefing {
 		logInfo("[+] Synthesizing Threat Intelligence Briefing...\n")
 		briefingOpts := report.BriefingOptions{
@@ -262,6 +279,9 @@ func main() {
 			EnclaveViolations:       enclaveViolations,
 			EnclaveSummary:          enclaveSummary,
 			EnclaveReports:          enclaveReports,
+			WebhookViolations:       webhookViolations,
+			WebhookSummary:          webhookSummary,
+			WebhookTelemetry:        webhookTelemetry,
 			OutputDir:               cfg.BriefingDir,
 			CustomFilename:          cfg.BriefingFile,
 		}
@@ -376,6 +396,12 @@ func main() {
 			EnclaveManifestPath:     cfg.EnclaveManifests,
 			EnclaveTelemetryPath:    cfg.EnclaveTelemetry,
 			EnclaveSynthOut:         cfg.EnclaveSynthOut,
+			WebhookViolations:       webhookViolations,
+			WebhookSummary:          webhookSummary,
+			WebhookTelemetry:        webhookTelemetry,
+			WebhookPath:             cfg.WebhookPath,
+			WebhookTelemetryPath:    cfg.WebhookTelemetry,
+			WebhookSynthOut:         cfg.WebhookSynthOut,
 			TargetFilter:            cfg.TargetFilter,
 			Pretty:                  true,
 		}

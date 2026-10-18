@@ -1,0 +1,68 @@
+{
+  "timestamp": "2026-10-18T12:00:00Z",
+  "cluster_id": "k8s-baremetal-prod-01",
+  "metrics": [
+    {
+      "webhook_name": "validation.sentinel.io",
+      "p50_ms": 5.2,
+      "p95_ms": 32.0,
+      "p99_ms": 88.0,
+      "request_count": 145000,
+      "error_rate_percent": 0.01,
+      "timeout_count": 0,
+      "stall_warning": false
+    },
+    {
+      "webhook_name": "bypass.security.gatekeeper.sh",
+      "p50_ms": 140.0,
+      "p95_ms": 490.0,
+      "p99_ms": 820.0,
+      "request_count": 28400,
+      "error_rate_percent": 8.4,
+      "timeout_count": 48,
+      "stall_warning": true
+    },
+    {
+      "webhook_name": "external.insecure.mutator.net",
+      "p50_ms": 210.0,
+      "p95_ms": 680.0,
+      "p99_ms": 1150.0,
+      "request_count": 12000,
+      "error_rate_percent": 12.1,
+      "timeout_count": 95,
+      "stall_warning": true
+    }
+  ],
+  "ca_certificates": [
+    {
+      "cert_name": "sentinel-ca",
+      "issuer": "cert-manager",
+      "subject": "sentinel-root-ca",
+      "not_before": "2026-09-01T00:00:00Z",
+      "not_after": "2027-03-01T00:00:00Z",
+      "days_remaining": 133,
+      "is_expired": false,
+      "auto_rotation_enabled": true
+    },
+    {
+      "cert_name": "legacy-cluster-ca",
+      "issuer": "internal-vault",
+      "subject": "cluster-legacy-ca",
+      "not_before": "2025-10-18T00:00:00Z",
+      "not_after": "2026-10-28T00:00:00Z",
+      "days_remaining": 10,
+      "is_expired": false,
+      "auto_rotation_enabled": false
+    },
+    {
+      "cert_name": "expired-gatekeeper-ca",
+      "issuer": "manual-selfsigned",
+      "subject": "gatekeeper-ca",
+      "not_before": "2025-01-01T00:00:00Z",
+      "not_after": "2026-09-15T00:00:00Z",
+      "days_remaining": -33,
+      "is_expired": true,
+      "auto_rotation_enabled": false
+    }
+  ]
+}

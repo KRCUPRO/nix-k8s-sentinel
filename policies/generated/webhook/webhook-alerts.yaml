@@ -1,0 +1,36 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: sentinel-webhook-alerts
+  namespace: monitoring
+  labels:
+    role: alert-rules
+    sentinel.defense.io/radar: admission-webhook
+spec:
+  groups:
+    - name: sentinel-admission-webhook.rules
+      rules:
+        - alert: AdmissionWebhookLatencyStall
+          expr: histogram_quantile(0.99, sum(rate(apiserver_admission_webhook_admission_duration_seconds_bucket{name=~"bypass.security.gatekeeper.sh.*"}[5m])) by (le, name)) > 0.5
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: Admission webhook p99 latency exceeds 500ms ceiling
+            description: Webhook {{ $labels.name }} is taking longer than 500ms to evaluate admission requests, risking API server request queue saturation.
+        - alert: AdmissionWebhookRejectionSpike
+          expr: sum(rate(apiserver_admission_webhook_rejection_count{name=~"bypass.security.gatekeeper.sh.*"}[5m])) by (name) > 5
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: Admission webhook error or rejection spike detected
+            description: Webhook {{ $labels.name }} is rejecting admission requests at an elevated rate (> 5/s).
+        - alert: AdmissionWebhookCAExpiringSoon
+          expr: (certmanager_certificate_expiration_timestamp_seconds{name=~"bypass.security.gatekeeper.sh.*"} - time()) < (30 * 24 * 3600)
+          for: 1h
+          labels:
+            severity: critical
+          annotations:
+            summary: Admission webhook CA certificate expiring in fewer than 30 days
+            description: The CA certificate for {{ $labels.name }} expires within 30 days. Verify cert-manager automated rotation.

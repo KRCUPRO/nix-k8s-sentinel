@@ -1,0 +1,38 @@
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: vulnerable-policy-gatekeeper
+webhooks:
+  - name: bypass.security.gatekeeper.sh
+    admissionReviewVersions: ["v1beta1"]
+    clientConfig:
+      caBundle: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURORENDQWh5Z0F3SUJBZ0lDQlRrd0RRWUpLb1pJaHZjTkFRRUxCUUF3T3pFZU1Cd0dBMVVFQ2hNVlUyVnUKZEdsdVpXd2dVMlZqZFhKcGRIa2dVRXRKTVJrd0Z3WURWUVFERXhCelpXNTBhVzVsYkMxMFpYTjBMV05oTUI0WApEVEkyTVRBeE56QTRNVE15TWxvWERUSTJNRGt5T0RBNE1UTXlNbG93T3pFZU1Cd0dBMVVFQ2hNVlUyVnVkR2x1ClpXd2dVMlZqZFhKcGRIa2dVRXRKTVJrd0Z3WURWUVFERXhCelpXNTBhVzVsYkMxMFpYTjBMV05oTUlJQklqQU4KQmdrcWhraUc5dzBCQVFFRkFBT0NBUThBTUlJQkNnS0NBUUVBc2Nici9ZU1JzUVVwcTZoK2Q5YTZMdm9hKzF0Zgp6R3hLdTljWUEzN2VXMDd0MVpCcHNOME8xN1F3SFhjd0l2aE5GWHNzcnpNWFNKajJ5QytDMTAzTG9jb3N3M1RpCitmRW1FL25sOTZOK3FyQzU0S05rZFBhc01wQ283Qm8zWmdNbFlNTUNnRkl6U0lvb2l6Q2x3UUJoWG9XSnpJbjYKbFdTcG92SVRVVWhUR2FtZC9MblFKQksrck1SQjQ3d3lvQ21mOWlUdWJaQmNwVHhMNmF4NW1aK096cEhZSEdoVgpWaVZRRkZBMXBqMlhna0puQjN4VjA1bHNoWE9NWlJKSGVwUnQ2TGJoMlVPd3lUUENKZktvcDhWMjhqTE4wcWhNCi9TVzdFRUEwTzVyek90R1ZQUGhUUFc1N0dIZWlMcWJrMWVzUnZFOS95RlJtb3UxNFE4ZzJxc2xkaVFJREFRQUIKbzBJd1FEQU9CZ05WSFE4QkFmOEVCQU1DQVFZd0R3WURWUjBUQVFIL0JBVXdBd0VCL3pBZEJnTlZIUTRFRmdRVQp5aVBuc2xMaFgrczVtd0xYUWNkRXZiOHpJdVV3RFFZSktvWklodmNOQVFFTEJRQURnZ0VCQURLS3NFaWFpeGVoCjg1aTBMMGdKZExIYkR1M2xxbEwyVDRUUmpVc3FVRmRmTUdpY2hVNFNUNGRqMzhYazlFVHVibXczQzFoTHVERW0KaTBTSjBIYWhIYlVoekorOWREOHBTd0g5SGplbE0rZ05zL2dZQVJoL1pWU2tDK2Y2cXFVNGpVaU4wL0g4NEljcgpUR1NrZDNIQk55NGc3cjhoM3A0UXQwMDZZQWZvaHoyNFhkK3NUUjAvdkJpZGltUGgrQ3NQTUxhamRVYnZ6UitZCk02bWFlTzBsQitwdW9tRTAyYWd2WmlndFIwNUlKak9CMzUrbmd6ZWJxWWZ5MFF1NEowQzcvbmNRVU9iRER6NFoKOVBaYXZPcFpCSis3YTNKRDYzWnR4MW5vaTRSWmFsWlBoUGxhM1N3REpDbXFrTkZOWC90RTF6RXdQZTFyS2pNMQpsNCt4Y0pEd21Mbz0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=
+      service:
+        name: gatekeeper-broken-svc
+        namespace: default
+        path: /v1/admit
+        port: 8080
+    failurePolicy: Ignore
+    timeoutSeconds: 20
+    sideEffects: Some
+    rules:
+      - operations: ["*"]
+        apiGroups: ["*"]
+        apiVersions: ["*"]
+        resources: ["*"]
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: unauthenticated-external-mutator
+webhooks:
+  - name: external.insecure.mutator.net
+    admissionReviewVersions: ["v1beta1"]
+    clientConfig:
+      insecureSkipTLSVerify: true
+      url: http://192.168.100.50:9090/mutate
+    failurePolicy: Ignore
+    timeoutSeconds: 15
+    reinvocationPolicy: Never
+    sideEffects: Some

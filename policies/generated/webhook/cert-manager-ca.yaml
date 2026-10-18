@@ -1,0 +1,27 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: bypass.security.gatekeeper.sh-ca
+  namespace: default
+  labels:
+    app.kubernetes.io/managed-by: cert-manager
+    sentinel.defense.io/rotation-radar: active
+spec:
+  secretName: bypass.security.gatekeeper.sh-ca-tls
+  duration: 2160h # 90 days
+  renewBefore: 720h # 30 days renewal buffer
+  isCA: true
+  privateKey:
+    algorithm: ECDSA
+    size: 384
+    rotationPolicy: Always
+  commonName: bypass.security.gatekeeper.sh-root-ca
+  dnsNames:
+    - bypass.security.gatekeeper.sh
+    - bypass.security.gatekeeper.sh.default
+    - bypass.security.gatekeeper.sh.default.svc
+    - bypass.security.gatekeeper.sh.default.svc.cluster.local
+  issuerRef:
+    name: sentinel-ca-issuer
+    kind: ClusterIssuer
+    group: cert-manager.io
