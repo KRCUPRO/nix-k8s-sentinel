@@ -19,7 +19,7 @@
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](../../LICENSE)
 [![Go Report Card](https://goreportcard.com/badge/github.com/KRCUPRO/nix-k8s-sentinel)](https://goreportcard.com/report/github.com/KRCUPRO/nix-k8s-sentinel)
-[![Version](https://img.shields.io/badge/Release-v0.24.0-emerald.svg)](https://github.com/KRCUPRO/nix-k8s-sentinel/releases)
+[![Version](https://img.shields.io/badge/Release-v0.25.0-emerald.svg)](https://github.com/KRCUPRO/nix-k8s-sentinel/releases)
 [![Architecture](https://img.shields.io/badge/Architecture-Bare--Metal_NixOS_+_K8s-8b5cf6.svg)](#-architecture-overview)
 [![Security](https://img.shields.io/badge/Security-Declarative_Audit-38bdf8.svg)](../../SECURITY.md)
 
@@ -31,13 +31,14 @@
 
 `nix-k8s-sentinel`은 베어메탈 NixOS 클러스터 및 Kubernetes 인프라에 최적화된 고성능 선언적 취약점 스캐너이자 자율 위협 해결 엔진, 지속적 위협 인텔리전스 동기화 시스템입니다.
 
-배포 후 컨테이너 레이어를 수동적으로 검사하는 기존 런타임 스캐너와 달리, `nix-k8s-sentinel`은 선언적 구성 명세(NixOS Flakes, Kubernetes CNI 정책, Ingress 컨트롤러, Gateway API, Rook Ceph 스토리지, WireGuard, CIS 벤치마크, 기밀 컴퓨팅, 멀티 클러스터 GitOps 플릿, SPIFFE/SPIRE 제로 트러스트 마이크로세그멘테이션, 소프트웨어 자재명세서 및 In-Toto SLSA Level 3 공급망 증명, 하드웨어 보안 모듈 봉투 암호화, 동적 커널 위협 프로파일링, 시스템 콜 BPF 필터, 양자 내성 암호(PQC) 및 NSA CNSA 2.0 TLS 감사 엔진, 에페메럴 마이크로VM 샌드박스 및 허니팟 디토네이션 디스패치, 자율 위협 해결 및 카나리 검증 GitOps 풀 리퀘스트 합성 엔진, eBPF LSM 보안 모듈 및 커널 강제적 접근 제어, CephFS 스냅샷 스케줄링 및 크로스 리전 볼륨 복제 재해 복구, eBPF 기반 WireGuard 커널 패스트패스 및 암호화 성능 감사, 기밀 VM 및 보안 엔클레이브 WireGuard 피어 하드웨어 원격 증명)를 실시간 정규화된 CVSS 위협 피드와 대조하여 워크로드가 스케줄링되기 전에 사전 대응할 수 있도록 지원합니다.
+배포 후 컨테이너 레이어를 수동적으로 검사하는 기존 런타임 스캐너와 달리, `nix-k8s-sentinel`은 선언적 구성 명세(NixOS Flakes, Kubernetes CNI 정책, Ingress 컨트롤러, Gateway API, Rook Ceph 스토리지, WireGuard, CIS 벤치마크, 기밀 컴퓨팅, 멀티 클러스터 GitOps 플릿, SPIFFE/SPIRE 제로 트러스트 마이크로세그멘테이션, 소프트웨어 자재명세서 및 In-Toto SLSA Level 3 공급망 증명, 하드웨어 보안 모듈 봉투 암호화, 동적 커널 위협 프로파일링, 시스템 콜 BPF 필터, 양자 내성 암호(PQC) 및 NSA CNSA 2.0 TLS 감사 엔진, 에페메럴 마이크로VM 샌드박스 및 허니팟 디토네이션 디스패치, 자율 위협 해결 및 카나리 검증 GitOps 풀 리퀘스트 합성 엔진, eBPF LSM 보안 모듈 및 커널 강제적 접근 제어, CephFS 스냅샷 스케줄링 및 크로스 리전 볼륨 복제 재해 복구, eBPF 기반 WireGuard 커널 패스트패스 및 암호화 성능 감사, 기밀 VM 및 보안 엔클레이브 WireGuard 피어 하드웨어 원격 증명, Kubernetes 동적 어드미션 웹훅 및 CA 인증서 교체 레이더)를 실시간 정규화된 CVSS 위협 피드와 대조하여 워크로드가 스케줄링되기 전에 사전 대응할 수 있도록 지원합니다.
 
 ---
 
 ## 🏛️ 핵심 역량
 
 - **🔍 선언적 인프라 감사**: NixOS Flake 입력 락, Kubernetes 매니페스트 명세, CNI 네트워크 정책에 대한 패턴 매칭 및 의존성 추적.
+- **🎯 Kubernetes 동적 어드미션 웹훅 & CA 인증서 교체 레이더 엔진**: Kubernetes `ValidatingWebhookConfiguration` 및 `MutatingWebhookConfiguration` 매니페스트, X.509 CA 번들 인증서 유효기간 및 런타임 어드미션 텔레메트리를 전수 감사하는 자율 보안 엔진. 보안 민감 리소스에 대한 `failurePolicy: Ignore` 우회 취약점(`CVE-2026-52194`), 10초 초과 과도한 타임아웃, 클러스터 부팅 교착을 유발하는 `kube-system` 네임스페이스 면제 누락, 평문 HTTP 엔드포인트 노출, 만료되었거나 만료 임박(< 30일)한 CA 인증서, 취약한 RSA(< 2048)/SHA-1 알고리즘, 미검증 sideEffects 및 레거시 어드미션 버전(v1beta1), 런타임 P95/P99 지연 시간 저하 및 에러율 스파이크 정밀 탐지. 강화된 ValidatingWebhook 매니페스트(`webhook-hardened.yaml`), cert-manager CA 리소스(`cert-manager-ca.yaml`), Prometheus 어드미션 지연 경보 룰(`webhook-alerts.yaml`) 선언적 자동 합성(`--webhook`, `--admission-webhook`, `--webhook-telemetry`, `--webhook-synth-out`, `--webhook-strict`).
 - **🔐 기밀 VM & 보안 엔클레이브 WireGuard 피어 하드웨어 원격 증명 엔진**: AMD SEV-SNP 및 Intel TDX 기밀 가상 머신(Confidential VM) 전반의 WireGuard 메시 피어 구성을 전수 감사하는 자율 하드웨어 신뢰점(Root-of-Trust) 원격 증명 보안 엔진. WireGuard 에페메럴 세션 키와 엔클레이브 보고서 데이터(`REPORT_DATA`) 간 암호학적 바인딩 검증, AMD KDS VCEK 인증서 체인 및 Intel PCS Quote 유효성 검증, 런타임 측정 부트 PCR 다이제스트(PCR 0, 2, 4, 7) 및 TDX RTMR과 선언적 골든 레퍼런스 측정값 간 정합성 비교, 미검증 또는 변조된 피어 터널 차단(`CVE-2026-40291`), 하이퍼바이저 게스트 메모리 디버깅 비인가 허용 차단(`allowDebug = false`), 최소 TCB 보안 버전 번호(SVN >= 4) 강제, 3600초를 초과한 만료된 증명 보고서 거부 및 강화된 NixOS 엔클레이브 모듈(`wg-enclave-hardened.nix`), Kubernetes `EnclaveWireGuardPeer` 커스텀 리소스 정의(CRD), 핸드셰이크 이전 커널 증명 게이트키퍼 스크립트(`wg-enclave-gate.sh`) 선언적 자동 합성(`--wg-enclave`, `--enclave`, `--wg-enclave-telemetry`, `--wg-enclave-synth-out`, `--wg-enclave-strict`).
 - **⚡ WireGuard eBPF 커널 패스트패스 & 암호화 성능 엔진**: WireGuard 네트워크 인터페이스, ChaCha20-Poly1305 SIMD 벡터 가속(AVX-512, ARM Neon), 네이티브 eBPF/XDP 드라이버 바인딩 및 100GbE 베어메탈 오버레이 인터커넥트 처리량을 전수 감사하는 자율 성능 및 보안 감사 엔진. AVX-512 / ARM Neon 벡터 가속이 누락된 스칼라 암호화 폴백(`WG-FAST-001`), 고대역폭 링크에서 네이티브 eBPF/XDP 드라이버 훅 누락(`WG-FAST-002`), 85%를 초과하는 커널 패스트패스 링 버퍼 포화(`WG-FAST-003`, `CVE-2026-31049` 연계), TCP 붕괴를 유발하는 초당 1,000회 초과 패킷 드롭(`WG-FAST-004`), 물리 언더레이 NIC 하드웨어 오프로드(GRO/GSO/TSO) 비활성화(`WG-FAST-005`), 암호화 워커 코어의 70% 초과 softIRQ 예산 고갈(`WG-FAST-006`), WireGuard MTU 단편화 불일치(`WG-FAST-007`), eBPF 런타임 `XDP_ABORTED` 트랩(`WG-FAST-008`), 250ns를 초과하는 SIMD FPU 컨텍스트 스위칭 오버헤드(`WG-FAST-009`), 활성 CPU 코어 수 미만의 멀티 큐 NIC 디스크립터(`WG-FAST-010`), 커널 소켓 버퍼 할당 실패(`WG-FAST-011`), AVX-512 실행 유닛 서멀 다운클럭(`WG-FAST-012`) 정밀 탐지. 강화된 NixOS 패스트패스 모듈(`wg-fastpath-hardened.nix`), 검증된 eBPF XDP C 프로그램(`wg_fastpath_xdp.bpf.c`), Kubernetes CiliumNodeConfig 매니페스트 선언적 자동 합성(`--wg-fastpath`, `--fastpath`, `--wg-fastpath-telemetry`, `--wg-fastpath-synth-out`, `--wg-fastpath-strict`).
 - **🔄 CephFS 스냅샷 스케줄링 & 크로스 리전 볼륨 복제 재해 복구(DR) 동기화 엔진**: 멀티 클러스터 Kubernetes 배포 환경 전반에서 CephFS 스냅샷 스케줄, CSI 볼륨 복제 클래스(VolumeReplicationClass), 리전 간 복제 상태 및 런타임 델타 동기화를 전수 감사하는 포괄적 재해 복구(DR) 보안 엔진. 볼륨 이탈 시 복구 시점(RPO) 파괴 위험이 있는 deletionPolicy `Delete` VolumeSnapshotClass 탐지(`CEPH-DR-001`), RPO SLA를 위반하는 스냅샷 스케줄 누락 또는 24시간 초과 지연(`CEPH-DR-002`), 3개 미만의 불충분한 스냅샷 보존 주기(`CEPH-DR-003`), 암호화되지 않은 WAN 복제 전송(`CEPH-DR-004`), 과도한 복제 주기(`CEPH-DR-005`), 비관리 복제 CRD(`CEPH-DR-006`), 안티 어피니티가 누락된 단일 복제본 미러 데몬(`CEPH-DR-007`), 3번째 영역 아비터 모니터가 누락된 스트레치 클러스터(`CEPH-DR-008`), 900초를 초과하는 복제 델타 지연(`CEPH-DR-009`), 리전 간 스플릿 브레인 이중 Primary 선언 충돌(CVE-2026-10140), 성능 저하/오류 상태(`CEPH-DR-011`), 검증되지 않은 대기 DR 장애 조치 준비 상태(`CEPH-DR-012`) 정밀 탐지. 강화된 `VolumeSnapshotClass`(Retain), `CephFilesystemSubVolumeGroup` 스냅샷 스케줄, 암호화 전송 지원 `VolumeReplicationClass`, 1차/2차 `VolumeReplication` 페어 선언적 자동 합성(`--dr-manifests`, `--dr`, `--dr-telemetry`, `--dr-synth-out`, `--dr-rpo-max`, `--dr-strict`).
@@ -161,6 +162,13 @@ go run cmd/sentinel/main.go --wg-enclave=fixtures/nixos-wg-enclave-vulnerable.ni
 
 # 강화된 NixOS 엔클레이브 모듈, Kubernetes CRD 및 핸드셰이크 게이트키퍼 스크립트 자동 합성
 go run cmd/sentinel/main.go --wg-enclave-synth-out=policies/generated/enclave
+
+# Kubernetes 동적 어드미션 웹훅 매니페스트 감사 (Validating / Mutating Webhooks)
+go run cmd/sentinel/main.go --webhook=fixtures/k8s-admission-webhook-vulnerable.yaml
+
+# 런타임 어드미션 텔레메트리, CA 유효기간 조정 및 보안 강화 정책 자동 합성
+go run cmd/sentinel/main.go --webhook=fixtures/k8s-admission-webhook-vulnerable.yaml --webhook-telemetry=fixtures/webhook-telemetry.json --webhook-synth-out=policies/generated/webhook --format=sarif --output=webhook-results.sarif
+
 
 # 베어메탈 eBPF 커널 텔레메트리 다중 노드 실시간 분석 실행
 go run cmd/sentinel/main.go --probe

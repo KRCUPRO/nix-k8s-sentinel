@@ -25,6 +25,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/sbom"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/spiffe"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/storage"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/webhook"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/wgenclave"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/wgfastpath"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/wireguard"
@@ -83,6 +84,9 @@ type JSONAuditReport struct {
 	EnclaveSummary          *wgenclave.WGEnclaveSummary     `json:"enclave_summary,omitempty"`
 	EnclaveReports          []wgenclave.AttestationReport   `json:"enclave_reports,omitempty"`
 	EnclavePeers            []wgenclave.PeerTunnelStatus    `json:"enclave_peers,omitempty"`
+	WebhookViolations       []webhook.WebhookViolation      `json:"webhook_violations,omitempty"`
+	WebhookSummary          *webhook.WebhookSummary         `json:"webhook_summary,omitempty"`
+	WebhookTelemetry        *webhook.WebhookTelemetry       `json:"webhook_telemetry,omitempty"`
 }
 
 // BuildJSONReport compiles the consolidated JSON audit report from provided audit data.
@@ -204,8 +208,17 @@ func BuildJSONReport(opts ReportOptions) (*JSONAuditReport, error) {
 	if opts.EnclaveSynthOut != "" {
 		scanned = append(scanned, opts.EnclaveSynthOut)
 	}
+	if opts.WebhookPath != "" {
+		scanned = append(scanned, opts.WebhookPath)
+	}
+	if opts.WebhookTelemetryPath != "" {
+		scanned = append(scanned, opts.WebhookTelemetryPath)
+	}
+	if opts.WebhookSynthOut != "" {
+		scanned = append(scanned, opts.WebhookSynthOut)
+	}
 
-	telemetry := ComputeTelemetryEnclave(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations, opts.GatewayViolations, opts.AttestViolations, opts.FleetViolations, opts.SPIFFEViolations, opts.SBOMViolations, opts.HSMViolations, opts.BPFViolations, opts.PQCViolations, opts.SandboxViolations, opts.RemediateFindings, opts.LSMViolations, opts.ReplicationViolations, opts.FastPathViolations, opts.EnclaveViolations)
+	telemetry := ComputeTelemetryWebhook(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations, opts.GatewayViolations, opts.AttestViolations, opts.FleetViolations, opts.SPIFFEViolations, opts.SBOMViolations, opts.HSMViolations, opts.BPFViolations, opts.PQCViolations, opts.SandboxViolations, opts.RemediateFindings, opts.LSMViolations, opts.ReplicationViolations, opts.FastPathViolations, opts.EnclaveViolations, opts.WebhookViolations)
 
 	var advisories []intel.ThreatItem
 	if opts.Feed != nil {
@@ -268,6 +281,9 @@ func BuildJSONReport(opts ReportOptions) (*JSONAuditReport, error) {
 		EnclaveSummary:          opts.EnclaveSummary,
 		EnclaveReports:          opts.EnclaveReports,
 		EnclavePeers:            opts.EnclavePeers,
+		WebhookViolations:       opts.WebhookViolations,
+		WebhookSummary:          opts.WebhookSummary,
+		WebhookTelemetry:        opts.WebhookTelemetry,
 	}
 
 	return rep, nil

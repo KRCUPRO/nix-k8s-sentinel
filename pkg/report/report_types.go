@@ -22,6 +22,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/sbom"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/spiffe"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/storage"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/webhook"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/wgenclave"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/wgfastpath"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/wireguard"
@@ -87,6 +88,9 @@ type ReportOptions struct {
 	EnclaveSummary          *wgenclave.WGEnclaveSummary
 	EnclaveReports          []wgenclave.AttestationReport
 	EnclavePeers            []wgenclave.PeerTunnelStatus
+	WebhookViolations       []webhook.WebhookViolation
+	WebhookSummary          *webhook.WebhookSummary
+	WebhookTelemetry        *webhook.WebhookTelemetry
 	FlakePath               string
 	K8sPath                 string
 	StoragePath             string
@@ -124,6 +128,9 @@ type ReportOptions struct {
 	EnclaveManifestPath     string
 	EnclaveTelemetryPath    string
 	EnclaveSynthOut         string
+	WebhookPath             string
+	WebhookTelemetryPath    string
+	WebhookSynthOut         string
 	TargetFilter            string
 	Pretty                  bool
 }

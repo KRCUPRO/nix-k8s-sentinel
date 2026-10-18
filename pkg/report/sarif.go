@@ -1375,8 +1375,66 @@ func BuildSARIFReport(opts ReportOptions) (*SARIFLog, error) {
 		}
 	}
 
-	// 21. Process Standalone Feed Advisories (if no specific audit targets yielded findings)
-	if (opts.K8sReport == nil || len(opts.K8sReport.Violations) == 0) && len(opts.FlakeMatches) == 0 && len(opts.ProbeEvents) == 0 && len(opts.StorageViolations) == 0 && len(opts.WireGuardViolations) == 0 && len(opts.CISViolations) == 0 && len(opts.GatewayViolations) == 0 && len(opts.AttestViolations) == 0 && len(opts.FleetViolations) == 0 && len(opts.SPIFFEViolations) == 0 && len(opts.SBOMViolations) == 0 && len(opts.HSMViolations) == 0 && len(opts.BPFViolations) == 0 && len(opts.PQCViolations) == 0 && len(opts.SandboxViolations) == 0 && len(opts.RemediateFindings) == 0 && len(opts.LSMViolations) == 0 && len(opts.ReplicationViolations) == 0 && len(opts.FastPathViolations) == 0 && len(opts.EnclaveViolations) == 0 && opts.Feed != nil {
+	// 21. Process Kubernetes Dynamic Admission Webhook & CA Rotation Radar Findings
+	if len(opts.WebhookViolations) > 0 {
+		for _, wv := range opts.WebhookViolations {
+			tags := []string{"security", "kubernetes", "admission-webhook", "cert-manager", "tls", strings.ToLower(string(wv.WebhookType))}
+			if wv.MatchedCVE != "" {
+				tags = append(tags, wv.MatchedCVE)
+			}
+			ruleIdx := getOrCreateRule(wv.RuleID, wv.Title, wv.Description, wv.Remediation, wv.Severity, wv.CVSSScore, tags)
+			level := SeverityToSARIFLevel(string(wv.Severity), wv.CVSSScore)
+
+			locURI := wv.FilePath
+			if locURI == "" {
+				locURI = opts.WebhookPath
+			}
+			if locURI == "" {
+				locURI = opts.WebhookTelemetryPath
+			}
+			if locURI == "" {
+				locURI = "admissionregistration.k8s.io/webhooks"
+			}
+
+			line := wv.StartLine
+			if line <= 0 {
+				line = 1
+			}
+
+			resMsg := fmt.Sprintf("[%s/%s] %s: %s (Remediation: %s)", wv.WebhookType, wv.WebhookName, wv.Title, wv.Description, wv.Remediation)
+
+			results = append(results, SARIFResult{
+				RuleID:    wv.RuleID,
+				RuleIndex: ruleIdx,
+				Level:     level,
+				Message:   SARIFMessage{Text: resMsg},
+				Locations: []SARIFLocation{
+					{
+						PhysicalLocation: &PhysicalLocation{
+							ArtifactLocation: ArtifactLocation{
+								URI:       locURI,
+								URIBaseID: "%SRCROOT%",
+							},
+							Region: &Region{
+								StartLine:   line,
+								StartColumn: 1,
+							},
+						},
+						LogicalLocations: []LogicalLocation{
+							{
+								Name:               wv.RuleID,
+								Kind:               "AdmissionWebhookRule",
+								FullyQualifiedName: fmt.Sprintf("webhook/%s/%s", wv.WebhookType, wv.WebhookName),
+							},
+						},
+					},
+				},
+			})
+		}
+	}
+
+	// 22. Process Standalone Feed Advisories (if no specific audit targets yielded findings)
+	if (opts.K8sReport == nil || len(opts.K8sReport.Violations) == 0) && len(opts.FlakeMatches) == 0 && len(opts.ProbeEvents) == 0 && len(opts.StorageViolations) == 0 && len(opts.WireGuardViolations) == 0 && len(opts.CISViolations) == 0 && len(opts.GatewayViolations) == 0 && len(opts.AttestViolations) == 0 && len(opts.FleetViolations) == 0 && len(opts.SPIFFEViolations) == 0 && len(opts.SBOMViolations) == 0 && len(opts.HSMViolations) == 0 && len(opts.BPFViolations) == 0 && len(opts.PQCViolations) == 0 && len(opts.SandboxViolations) == 0 && len(opts.RemediateFindings) == 0 && len(opts.LSMViolations) == 0 && len(opts.ReplicationViolations) == 0 && len(opts.FastPathViolations) == 0 && len(opts.EnclaveViolations) == 0 && len(opts.WebhookViolations) == 0 && opts.Feed != nil {
 		feedItems := opts.Feed.Items
 		if opts.TargetFilter != "" {
 			feedItems = opts.Feed.FilterByTarget(opts.TargetFilter)

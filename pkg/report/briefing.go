@@ -26,6 +26,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/sbom"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/spiffe"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/storage"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/webhook"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/wgenclave"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/wgfastpath"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/wireguard"
@@ -78,6 +79,9 @@ type BriefingOptions struct {
 	EnclaveViolations       []wgenclave.WGEnclaveViolation
 	EnclaveSummary          *wgenclave.WGEnclaveSummary
 	EnclaveReports          []wgenclave.AttestationReport
+	WebhookViolations       []webhook.WebhookViolation
+	WebhookSummary          *webhook.WebhookSummary
+	WebhookTelemetry        *webhook.WebhookTelemetry
 	OutputDir               string
 	CustomFilename          string
 }
@@ -110,7 +114,7 @@ func GenerateBriefing(opts BriefingOptions) (*BriefingReport, error) {
 		version = "0.24.0"
 	}
 
-	telemetry := ComputeTelemetryEnclave(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations, opts.GatewayViolations, opts.AttestViolations, opts.FleetViolations, opts.SPIFFEViolations, opts.SBOMViolations, opts.HSMViolations, opts.BPFViolations, opts.PQCViolations, opts.SandboxViolations, opts.RemediateFindings, opts.LSMViolations, opts.ReplicationViolations, opts.FastPathViolations, opts.EnclaveViolations)
+	telemetry := ComputeTelemetryWebhook(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations, opts.GatewayViolations, opts.AttestViolations, opts.FleetViolations, opts.SPIFFEViolations, opts.SBOMViolations, opts.HSMViolations, opts.BPFViolations, opts.PQCViolations, opts.SandboxViolations, opts.RemediateFindings, opts.LSMViolations, opts.ReplicationViolations, opts.FastPathViolations, opts.EnclaveViolations, opts.WebhookViolations)
 
 	var buf bytes.Buffer
 
@@ -787,7 +791,34 @@ func GenerateBriefing(opts BriefingOptions) (*BriefingReport, error) {
 		buf.WriteString("---\n\n")
 	}
 
-	// 24. Action Items Checklist
+	// 24. Kubernetes Dynamic Admission Webhook & Certificate Authority Rotation Radar
+	if len(opts.WebhookViolations) > 0 || opts.WebhookSummary != nil {
+		buf.WriteString("## 🎯 Kubernetes Dynamic Admission Webhook & CA Rotation Radar\n\n")
+		if opts.WebhookSummary != nil {
+			sum := opts.WebhookSummary
+			buf.WriteString(fmt.Sprintf("**Webhook Compliance Score:** `%.1f%%` | **Scanned Webhooks:** %d (Validating: %d, Mutating: %d) | **Expired CAs:** %d | **Timeout Risks:** %d | **Avg P99:** `%.1fms`\n",
+				sum.ComplianceScore, sum.TotalWebhooksScanned, sum.ValidatingCount, sum.MutatingCount, sum.ExpiredCACount, sum.TimeoutRiskCount, sum.AverageP99LatencyMs))
+			buf.WriteString(fmt.Sprintf("**Severity Breakdown:** %d Critical | %d High | %d Medium | %d Low\n\n",
+				sum.CriticalCount, sum.HighCount, sum.MediumCount, sum.LowCount))
+		}
+		if len(opts.WebhookViolations) > 0 {
+			buf.WriteString(fmt.Sprintf("⚠️ **%d admission webhook & CA rotation violations identified:**\n\n", len(opts.WebhookViolations)))
+			buf.WriteString("| Rule ID | Webhook Name | Type | Severity | CVSS | Finding & Threat Details | CVE | Remediation Action |\n")
+			buf.WriteString("| :--- | :--- | :---: | :---: | :---: | :--- | :---: | :--- |\n")
+			for _, wv := range opts.WebhookViolations {
+				cveTag := "-"
+				if wv.MatchedCVE != "" {
+					cveTag = fmt.Sprintf("`%s`", wv.MatchedCVE)
+				}
+				buf.WriteString(fmt.Sprintf("| `%s` | `%s` | `%s` | **%s** | %.1f | %s | %s | %s |\n",
+					wv.RuleID, wv.WebhookName, wv.WebhookType, wv.Severity, wv.CVSSScore, wv.Description, cveTag, wv.Remediation))
+			}
+			buf.WriteString("\n")
+		}
+		buf.WriteString("---\n\n")
+	}
+
+	// 25. Action Items Checklist
 	buf.WriteString("## 📋 SecOps & SRE Operational Checklist\n\n")
 	buf.WriteString("- [ ] Review high and critical severity advisories against production deployment manifests.\n")
 	buf.WriteString("- [ ] Verify that ingress controllers enforce URI path normalization and snippet guards.\n")
@@ -810,6 +841,7 @@ func GenerateBriefing(opts BriefingOptions) (*BriefingReport, error) {
 	buf.WriteString("- [ ] Enforce declarative VolumeSnapshotClass retention policies and verify cross-region volume replication delta sync within RPO targets.\n")
 	buf.WriteString("- [ ] Profile WireGuard kernel cryptographic throughput, enable AVX-512/ARM Neon vector acceleration, and configure 100GbE NIC ring buffers to prevent packet loss under high load.\n")
 	buf.WriteString("- [ ] Bind WireGuard ephemeral session keys to AMD SEV-SNP VCEK and Intel TDX attestation reports and reject peers with deviated boot PCRs.\n")
+	buf.WriteString("- [ ] Enforce ValidatingWebhookConfiguration failurePolicy: Fail, timeoutSeconds <= 3s, exempt kube-system, and establish cert-manager automated CA rotation.\n")
 	buf.WriteString("- [ ] Archive this briefing record into security audit ledger.\n")
 
 	report := &BriefingReport{

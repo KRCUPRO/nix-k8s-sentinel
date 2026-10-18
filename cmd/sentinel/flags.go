@@ -64,6 +64,10 @@ type SentinelConfig struct {
 	EnclaveTelemetry  string
 	EnclaveSynthOut   string
 	EnclaveStrict     bool
+	WebhookPath       string
+	WebhookTelemetry  string
+	WebhookSynthOut   string
+	WebhookStrict     bool
 	Briefing          bool
 	BriefingDir       string
 	BriefingFile      string
@@ -156,6 +160,11 @@ func parseCLI() SentinelConfig {
 	enclaveTelemetry := flag.String("wg-enclave-telemetry", "", "Path to runtime enclave attestation telemetry JSON to inspect")
 	enclaveSynthOut := flag.String("wg-enclave-synth-out", "", "Output directory to write synthesized hardened NixOS enclave modules, K8s CRDs, and gate scripts")
 	enclaveStrict := flag.Bool("wg-enclave-strict", false, "Enforce strict zero-warning enclave peer attestation and measured boot compliance")
+	webhookPath := flag.String("webhook", "", "Path to Kubernetes admission webhook manifests or directory to audit")
+	webhookShort := flag.String("admission-webhook", "", "Alias for --webhook")
+	webhookTelemetry := flag.String("webhook-telemetry", "", "Path to runtime admission webhook and CA rotation telemetry JSON to inspect")
+	webhookSynthOut := flag.String("webhook-synth-out", "", "Output directory to write synthesized hardened WebhookConfiguration, cert-manager CA renewal, and PrometheusRule alert policies")
+	webhookStrict := flag.Bool("webhook-strict", false, "Enforce strict zero-warning admission webhook and CA rotation compliance")
 	briefing := flag.Bool("briefing", false, "Generate automated Markdown threat intelligence briefing")
 	briefingDir := flag.String("briefing-dir", "intel/briefings", "Output directory for threat briefings")
 	briefingFile := flag.String("briefing-file", "", "Custom filename for threat briefing markdown")
@@ -234,6 +243,9 @@ func parseCLI() SentinelConfig {
 	if *enclaveManifests == "" && *enclaveShort != "" {
 		*enclaveManifests = *enclaveShort
 	}
+	if *webhookPath == "" && *webhookShort != "" {
+		*webhookPath = *webhookShort
+	}
 	if *outFile == "" && *outShort != "" {
 		*outFile = *outShort
 	}
@@ -300,6 +312,10 @@ func parseCLI() SentinelConfig {
 		EnclaveTelemetry:  *enclaveTelemetry,
 		EnclaveSynthOut:   *enclaveSynthOut,
 		EnclaveStrict:     *enclaveStrict,
+		WebhookPath:       *webhookPath,
+		WebhookTelemetry:  *webhookTelemetry,
+		WebhookSynthOut:   *webhookSynthOut,
+		WebhookStrict:     *webhookStrict,
 		Briefing:          *briefing,
 		BriefingDir:       *briefingDir,
 		BriefingFile:      *briefingFile,

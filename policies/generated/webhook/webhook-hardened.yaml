@@ -1,0 +1,31 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: bypass.security.gatekeeper.sh
+  annotations:
+    cert-manager.io/inject-ca-from: default/bypass.security.gatekeeper.sh-ca
+    sentinel.defense.io/hardened-by: nix-k8s-sentinel
+webhooks:
+  - name: bypass.security.gatekeeper.sh.default.svc
+    admissionReviewVersions: ["v1"]
+    clientConfig:
+      service:
+        name: gatekeeper-broken-svc
+        namespace: default
+        path: /v1/admit
+        port: 8080
+    failurePolicy: Fail
+    timeoutSeconds: 3
+    sideEffects: None
+    matchPolicy: Equivalent
+    namespaceSelector:
+      matchExpressions:
+        - key: kubernetes.io/metadata.name
+          operator: NotIn
+          values: ["kube-system", "kube-node-lease", "kube-public"]
+    rules:
+      - operations: ["CREATE", "UPDATE"]
+        apiGroups: ["*", "apps", "batch"]
+        apiVersions: ["v1"]
+        resources: ["pods", "deployments", "statefulsets", "daemonsets", "jobs"]
+        scope: Namespaced

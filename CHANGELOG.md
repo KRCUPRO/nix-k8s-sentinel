@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.25.0] - 2026-10-18
+
+### Added
+- **Kubernetes Dynamic Admission Webhook & Certificate Authority Rotation Radar** (`pkg/webhook/scanner.go`): Autonomous security and CA rotation monitoring engine inspecting Kubernetes `ValidatingWebhookConfiguration` and `MutatingWebhookConfiguration` manifests, X.509 CA certificate expiration, and live admission controller telemetry across bare-metal and cloud clusters.
+- **Authoritative Canonical Admission Webhook Rules Catalog** (`pkg/webhook/rules.go`): Suite of 12 canonical security rules (`WH-RADAR-001` through `WH-RADAR-012`) covering `failurePolicy: Ignore` on sensitive security resources (`WH-RADAR-001`, mapped to `CVE-2026-52194`), excessive webhook timeout duration > 10s default or recommending <= 3s (`WH-RADAR-002`), missing `kube-system` namespace exemption in `namespaceSelector` risking cluster-wide API server startup deadlocks (`WH-RADAR-003`), plaintext HTTP or insecure non-TLS webhook URLs (`WH-RADAR-004`), expired X.509 CA bundle certificates in `caBundle` (`WH-RADAR-005`), CA bundle certificates expiring within 30 days without automated renewal (`WH-RADAR-006`), weak cryptographic CA signing algorithms with RSA < 2048 or SHA-1 (`WH-RADAR-007`), unknown or permissive `sideEffects` annotations missing dry-run declarations (`WH-RADAR-008`), deprecated `admissionReviewVersions` declarations lacking v1 (`WH-RADAR-009`), admission webhook runtime P95/P99 latency degradation (`WH-RADAR-010`), admission webhook error rates exceeding 1.0% threshold (`WH-RADAR-011`), and missing cert-manager automated CA injection annotations (`WH-RADAR-012`).
+- **Streaming Webhook Manifest & Telemetry Parser** (`pkg/webhook/parser.go`): Multi-document streaming YAML and line parser evaluating declarative Kubernetes webhook configurations, base64-encoded ASN.1 DER CA bundles, and live runtime JSON admission telemetry with 10MB memory safety bounds.
+- **Dynamic Admission Auditor & Deterministic Compliance Engine** (`pkg/webhook/auditor.go`): Reconciles static webhook declarations and runtime admission metrics, evaluates CA validity windows and latency degradation, and calculates deterministic compliance scores (0.0% to 100.0%).
+- **Declarative Webhook Policy Synthesizer** (`pkg/webhook/synth.go`): Synthesizes production-hardened `ValidatingWebhookConfiguration` manifests (`webhook-hardened.yaml`), automated cert-manager `Certificate` and `Issuer` resources (`cert-manager-ca.yaml`), and Prometheus APIServer admission latency alert rules (`webhook-alerts.yaml`).
+- **Dedicated CLI Webhook Runner & Flag Architecture** (`cmd/sentinel/webhook_runner.go`, `cmd/sentinel/flags.go`): Extracted webhook audit coordination into a dedicated modular runner keeping `cmd/sentinel/main.go` under 480 LOC. Added `--webhook=<path>`, `--admission-webhook`, `--webhook-telemetry=<path>`, `--webhook-synth-out=<dir>`, and `--webhook-strict` flags.
+- **Threat Feed Expansion** (`intel/cve-feed.json`): Ingested `CVE-2026-52194` (Kubernetes Dynamic Admission Webhook Latency Stall & CA Bundle Expiration Denial of Service, CVSS 9.2 Critical).
+- **Unified Exporter Integration**: Admission webhook findings, CA expiration statuses, and runtime telemetry exported to OASIS SARIF v2.1.0 (Section 21), structured JSON audit telemetry (`webhook_violations`, `webhook_summary`, `webhook_telemetry`), and hourly Markdown threat briefings (Section 24).
+- **Production Fixtures & Policy Artifacts**: Added realistic fixtures (`fixtures/k8s-admission-webhook.yaml`, `fixtures/k8s-admission-webhook-vulnerable.yaml`, `fixtures/webhook-telemetry.json`) and synthesized templates in `policies/generated/webhook/`.
+- **Comprehensive Unit Test Suites** (`pkg/webhook/webhook_test.go`, `pkg/report/webhook_report_test.go`): 100% test coverage across canonical rules, manifest parsing, X.509 certificate decoding, telemetry auditing, policy synthesizers, scanner, SARIF/JSON/Briefing serialization, and memory bounds checks.
+
+### Changed
+- Bumped engine release to `v0.25.0`.
+- Updated `SECURITY.md` establishing Kubernetes Dynamic Admission Webhook & Certificate Authority Rotation Radar security invariants (Invariant 27).
+- Updated `ROADMAP.md` marking Milestone M25 as completed and scheduling M26 (NixOS Immutable Root & Impermanence Storage Ephemerality Verifier).
+- Updated `scripts/ARCHITECTURE_MAP.md` documenting new webhook modules, runners, and O(1) symbols.
+
+---
+
 ## [0.24.0] - 2026-10-18
 
 ### Added
