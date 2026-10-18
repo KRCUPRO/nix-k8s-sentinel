@@ -10,6 +10,7 @@ import (
 
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/attest"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/bench"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/bgp"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/bpf"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/fleet"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/gateway"
@@ -86,6 +87,9 @@ type BriefingOptions struct {
 	ImpermanenceViolations     []impermanence.ImpermanenceViolation
 	ImpermanenceSummary        *impermanence.ImpermanenceSummary
 	ImpermanenceTelemetry      *impermanence.EphemeralStorageTelemetry
+	BGPViolations              []bgp.BGPViolation
+	BGPSummary                 *bgp.BGPSummary
+	BGPTelemetry               *bgp.BGPTelemetryReport
 	OutputDir                  string
 	CustomFilename             string
 }
@@ -115,10 +119,10 @@ func GenerateBriefing(opts BriefingOptions) (*BriefingReport, error) {
 
 	version := opts.Version
 	if version == "" {
-		version = "0.24.0"
+		version = "0.27.0"
 	}
 
-	telemetry := ComputeTelemetryImpermanence(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations, opts.GatewayViolations, opts.AttestViolations, opts.FleetViolations, opts.SPIFFEViolations, opts.SBOMViolations, opts.HSMViolations, opts.BPFViolations, opts.PQCViolations, opts.SandboxViolations, opts.RemediateFindings, opts.LSMViolations, opts.ReplicationViolations, opts.FastPathViolations, opts.EnclaveViolations, opts.WebhookViolations, opts.ImpermanenceViolations)
+	telemetry := ComputeTelemetryBGP(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations, opts.GatewayViolations, opts.AttestViolations, opts.FleetViolations, opts.SPIFFEViolations, opts.SBOMViolations, opts.HSMViolations, opts.BPFViolations, opts.PQCViolations, opts.SandboxViolations, opts.RemediateFindings, opts.LSMViolations, opts.ReplicationViolations, opts.FastPathViolations, opts.EnclaveViolations, opts.WebhookViolations, opts.ImpermanenceViolations, opts.BGPViolations)
 
 	var buf bytes.Buffer
 
@@ -848,7 +852,81 @@ func GenerateBriefing(opts BriefingOptions) (*BriefingReport, error) {
 		buf.WriteString("---\n\n")
 	}
 
-	// 26. Action Items Checklist
+	// 26. Kubernetes Service Mesh Dual-Stack IPv6 & Cilium BGP Peering Radar
+	if len(opts.BGPViolations) > 0 || opts.BGPSummary != nil || opts.BGPTelemetry != nil {
+		buf.WriteString("## 🌐 Section 26: Kubernetes Service Mesh Dual-Stack IPv6 & Cilium BGP Peering Radar\n\n")
+		buf.WriteString("Evaluates declarative Cilium BGP peering policies, dual-stack IPv6 route advertisements, IPAM allocation thresholds, ToR switch authentication, and runtime session stability.\n\n")
+
+		if opts.BGPSummary != nil {
+			buf.WriteString("| Evaluated Metric | Value | Baseline Reference | Posture Compliance |\n")
+			buf.WriteString("| :--- | :---: | :---: | :---: |\n")
+			buf.WriteString(fmt.Sprintf("| Total BGP Policies | `%d` | >= 1 | Verified |\n", opts.BGPSummary.TotalPolicies))
+			buf.WriteString(fmt.Sprintf("| Configured BGP Neighbors | `%d` | >= 1 | Verified |\n", opts.BGPSummary.TotalPeers))
+			buf.WriteString(fmt.Sprintf("| Dual-Stack IPv6 Compliant | `%t` | true | %s |\n", opts.BGPSummary.DualStackCompliant, func() string {
+				if opts.BGPSummary.DualStackCompliant {
+					return "PASS"
+				}
+				return "DEFICIENT"
+			}()))
+			buf.WriteString(fmt.Sprintf("| Total Policy Violations | `%d` | 0 | %s |\n", opts.BGPSummary.TotalViolations, func() string {
+				if opts.BGPSummary.TotalViolations == 0 {
+					return "PASS"
+				}
+				return "ATTENTION"
+			}()))
+			buf.WriteString(fmt.Sprintf("| Peering Radar Compliance | **%.1f%%** | >= 90.0%% | %s |\n\n", opts.BGPSummary.ComplianceScore, func() string {
+				if opts.BGPSummary.ComplianceScore >= 90.0 {
+					return "HARDENED"
+				}
+				return "DEGRADED"
+			}()))
+		}
+
+		if len(opts.BGPViolations) > 0 {
+			buf.WriteString("### 🚨 Detected BGP Peering & Routing Vulnerabilities\n\n")
+			buf.WriteString("| Rule ID | Policy / Neighbor | Severity | CVSS | Description | Matched CVE | Remediation Target |\n")
+			buf.WriteString("| :--- | :--- | :---: | :---: | :--- | :---: | :--- |\n")
+			for _, bv := range opts.BGPViolations {
+				cveTag := "None"
+				if bv.MatchedCVE != "" {
+					cveTag = fmt.Sprintf("`%s`", bv.MatchedCVE)
+				}
+				target := bv.PolicyName
+				if bv.PeerAddress != "" {
+					target = fmt.Sprintf("%s (%s)", bv.PolicyName, bv.PeerAddress)
+				}
+				buf.WriteString(fmt.Sprintf("| `%s` | `%s` | **%s** | %.1f | %s | %s | %s |\n",
+					bv.RuleID, target, bv.Severity, bv.CVSSScore, bv.Description, cveTag, bv.Remediation))
+			}
+			buf.WriteString("\n")
+		}
+
+		if opts.BGPTelemetry != nil && len(opts.BGPTelemetry.Peers) > 0 {
+			buf.WriteString("### 📡 Live BGP Peering Neighbor Telemetry\n\n")
+			buf.WriteString("| Neighbor Address | Peer ASN | Session State | Uptime (s) | Prefixes Recv/Adv | Resets | Flap Damping |\n")
+			buf.WriteString("| :--- | :---: | :---: | :---: | :---: | :---: | :--- |\n")
+			for _, p := range opts.BGPTelemetry.Peers {
+				buf.WriteString(fmt.Sprintf("| `%s` | `%d` | `%s` | `%d` | `%d / %d` | `%d` | `%t` |\n",
+					p.PeerAddress, p.PeerASN, p.State, p.UptimeSeconds, p.PrefixesReceived, p.PrefixesAdvertised, p.ResetCount, p.FlapDampingActive))
+			}
+			buf.WriteString("\n")
+		}
+
+		if opts.BGPTelemetry != nil && len(opts.BGPTelemetry.IPAMPools) > 0 {
+			buf.WriteString("### 🏊 Cilium IPAM Pool Allocation Telemetry\n\n")
+			buf.WriteString("| Pool Name | Subnet CIDR | IP Family | Allocated / Total | Utilization |\n")
+			buf.WriteString("| :--- | :--- | :---: | :---: | :---: |\n")
+			for _, pool := range opts.BGPTelemetry.IPAMPools {
+				buf.WriteString(fmt.Sprintf("| `%s` | `%s` | `%s` | `%d / %d` | **%.1f%%** |\n",
+					pool.PoolName, pool.CIDR, pool.Family, pool.AllocatedIPs, pool.TotalIPs, pool.UsagePercent))
+			}
+			buf.WriteString("\n")
+		}
+
+		buf.WriteString("---\n\n")
+	}
+
+	// 27. Action Items Checklist
 	buf.WriteString("## 📋 SecOps & SRE Operational Checklist\n\n")
 	buf.WriteString("- [ ] Review high and critical severity advisories against production deployment manifests.\n")
 	buf.WriteString("- [ ] Verify that ingress controllers enforce URI path normalization and snippet guards.\n")
@@ -873,6 +951,7 @@ func GenerateBriefing(opts BriefingOptions) (*BriefingReport, error) {
 	buf.WriteString("- [ ] Bind WireGuard ephemeral session keys to AMD SEV-SNP VCEK and Intel TDX attestation reports and reject peers with deviated boot PCRs.\n")
 	buf.WriteString("- [ ] Enforce ValidatingWebhookConfiguration failurePolicy: Fail, timeoutSeconds <= 3s, exempt kube-system, and establish cert-manager automated CA rotation.\n")
 	buf.WriteString("- [ ] Audit NixOS impermanence configurations (environment.persistence), verify tmpfs/snapshot root ephemerality, and enforce encrypted swap (swapDevices.*.randomEncryption).\n")
+	buf.WriteString("- [ ] Mandate TCP MD5 / TCP-AO authentication for Cilium BGP peers, advertise dual-stack IPv6 routes, and enforce prefix-list filters to prevent prefix hijacks.\n")
 	buf.WriteString("- [ ] Archive this briefing record into security audit ledger.\n")
 
 	report := &BriefingReport{

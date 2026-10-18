@@ -9,6 +9,7 @@ import (
 
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/attest"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/bench"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/bgp"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/bpf"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/fleet"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/gateway"
@@ -91,6 +92,9 @@ type JSONAuditReport struct {
 	ImpermanenceViolations     []impermanence.ImpermanenceViolation   `json:"impermanence_violations,omitempty"`
 	ImpermanenceSummary        *impermanence.ImpermanenceSummary       `json:"impermanence_summary,omitempty"`
 	ImpermanenceTelemetry      *impermanence.EphemeralStorageTelemetry `json:"impermanence_telemetry,omitempty"`
+	BGPViolations              []bgp.BGPViolation                      `json:"bgp_violations,omitempty"`
+	BGPSummary                 *bgp.BGPSummary                         `json:"bgp_summary,omitempty"`
+	BGPTelemetry               *bgp.BGPTelemetryReport                 `json:"bgp_telemetry,omitempty"`
 }
 
 // BuildJSONReport compiles the consolidated JSON audit report from provided audit data.
@@ -230,8 +234,17 @@ func BuildJSONReport(opts ReportOptions) (*JSONAuditReport, error) {
 	if opts.ImpermanenceSynthOut != "" {
 		scanned = append(scanned, opts.ImpermanenceSynthOut)
 	}
+	if opts.BGPPath != "" {
+		scanned = append(scanned, opts.BGPPath)
+	}
+	if opts.BGPTelemetryPath != "" {
+		scanned = append(scanned, opts.BGPTelemetryPath)
+	}
+	if opts.BGPSynthOut != "" {
+		scanned = append(scanned, opts.BGPSynthOut)
+	}
 
-	telemetry := ComputeTelemetryImpermanence(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations, opts.GatewayViolations, opts.AttestViolations, opts.FleetViolations, opts.SPIFFEViolations, opts.SBOMViolations, opts.HSMViolations, opts.BPFViolations, opts.PQCViolations, opts.SandboxViolations, opts.RemediateFindings, opts.LSMViolations, opts.ReplicationViolations, opts.FastPathViolations, opts.EnclaveViolations, opts.WebhookViolations, opts.ImpermanenceViolations)
+	telemetry := ComputeTelemetryBGP(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations, opts.GatewayViolations, opts.AttestViolations, opts.FleetViolations, opts.SPIFFEViolations, opts.SBOMViolations, opts.HSMViolations, opts.BPFViolations, opts.PQCViolations, opts.SandboxViolations, opts.RemediateFindings, opts.LSMViolations, opts.ReplicationViolations, opts.FastPathViolations, opts.EnclaveViolations, opts.WebhookViolations, opts.ImpermanenceViolations, opts.BGPViolations)
 
 	var advisories []intel.ThreatItem
 	if opts.Feed != nil {
@@ -300,6 +313,9 @@ func BuildJSONReport(opts ReportOptions) (*JSONAuditReport, error) {
 		ImpermanenceViolations:     opts.ImpermanenceViolations,
 		ImpermanenceSummary:        opts.ImpermanenceSummary,
 		ImpermanenceTelemetry:      opts.ImpermanenceTelemetry,
+		BGPViolations:              opts.BGPViolations,
+		BGPSummary:                 opts.BGPSummary,
+		BGPTelemetry:               opts.BGPTelemetry,
 	}
 
 	return rep, nil

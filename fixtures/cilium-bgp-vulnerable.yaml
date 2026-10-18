@@ -1,0 +1,40 @@
+---
+# Vulnerable Cilium BGP Peering Policy - Triggers Security Findings
+apiVersion: cilium.io/v2alpha1
+kind: CiliumBGPPeeringPolicy
+metadata:
+  name: legacy-insecure-bgp-policy
+  namespace: kube-system
+  labels:
+    app.kubernetes.io/part-of: nix-k8s-sentinel
+    topology.cilium.io/bgp-mesh: insecure
+spec:
+  nodeSelectors:
+    - matchLabels:
+        cilium.io/bgp-peering: "true"
+  virtualRouters:
+    - localASN: 15169 # Public ASN without reservation (BGP-RADAR-007)
+      exportPodCIDR: true
+      neighbors:
+        - peerAddress: "192.168.1.1/32"
+          peerASN: 15169 # Missing MD5 auth (BGP-RADAR-001)
+          # Missing maxPrefixes (BGP-RADAR-002)
+          # Missing incomingRouteFilter (BGP-RADAR-003)
+          # Missing eBGPTimeToLive (BGP-RADAR-006)
+          # Missing gracefulRestart (BGP-RADAR-005)
+          families:
+            - af: ipv4 # Single stack IPv4 only (BGP-RADAR-004)
+              safi: unicast
+---
+# Vulnerable Cilium LoadBalancer IP Pool - IPv4 Only
+apiVersion: cilium.io/v2alpha1
+kind: CiliumLoadBalancerIPPool
+metadata:
+  name: legacy-ipv4-only-pool
+  namespace: kube-system
+spec:
+  cidrs:
+    - cidr: "10.0.0.0/16" # Missing IPv6 pool allocation (BGP-RADAR-011)
+  serviceSelector:
+    matchLabels:
+      io.cilium/lb-ipam-pool: legacy-pool

@@ -6,6 +6,7 @@ import (
 
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/attest"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/bench"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/bgp"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/bpf"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/fleet"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/gateway"
@@ -31,7 +32,7 @@ import (
 )
 
 var (
-	version = "0.26.0"
+	version = "0.27.0"
 )
 
 func main() {
@@ -43,9 +44,7 @@ func main() {
 			fmt.Printf(format, a...)
 		}
 	}
-	logErr := func(format string, a ...any) {
-		fmt.Fprintf(os.Stderr, format, a...)
-	}
+	logErr := func(format string, a ...any) { fmt.Fprintf(os.Stderr, format, a...) }
 
 	logInfo("[*] Loading Threat Intelligence feed: %s\n", cfg.FeedPath)
 	feedBytes, err := os.ReadFile(cfg.FeedPath)
@@ -59,56 +58,61 @@ func main() {
 		os.Exit(1)
 	}
 
-	var flakeMatches []nix.FlakeVulnerabilityMatch
-	var k8sReport *k8s.ManifestAuditReport
-	var probeSnapshots []probe.TelemetryEvent
-	var storageViolations []storage.StorageViolation
-	var storageHealth *storage.CephHealthReport
-	var wireguardViolations []wireguard.WireGuardViolation
-	var wireguardReconciliation *wireguard.ReconciliationReport
-	var cisViolations []bench.CISViolation
-	var cisSummary *bench.CISSummary
-	var gatewayViolations []gateway.GatewayViolation
-	var gatewaySummary *gateway.GatewaySummary
-	var attestViolations []attest.AttestationViolation
-	var attestSummary *attest.AttestationSummary
-	var fleetViolations []fleet.FleetViolation
-	var fleetSummary *fleet.FleetSummary
-	var spiffeViolations []spiffe.SPIFFEViolation
-	var spiffeSummary *spiffe.SPIFFESummary
-	var sbomViolations []sbom.SBOMViolation
-	var sbomSummary *sbom.SBOMSummary
-	var sbomDelta []sbom.SBOMDeltaItem
-	var hsmViolations []hsm.HSMViolation
-	var hsmSummary *hsm.HSMSummary
-	var bpfViolations []bpf.BPFViolation
-	var bpfSummary *bpf.BPFSummary
-	var pqcViolations []pqc.PQCViolation
-	var pqcSummary *pqc.PQCSummary
-	var sandboxViolations []sandbox.SandboxViolation
-	var sandboxSummary *sandbox.SandboxSummary
-	var remediateFindings []remediate.RemediationFinding
-	var remediatePRs []remediate.GitOpsPullRequest
-	var remediateSummary *remediate.RemediationSummary
-	var lsmViolations []lsm.LSMViolation
-	var lsmSummary *lsm.LSMSummary
-	var drViolations []replication.ReplicationViolation
-	var drSummary *replication.ReplicationSummary
-	var drTelemetry *replication.CrossRegionDRTelemetry
-	var fastpathViolations []wgfastpath.WGFastPathViolation
-	var fastpathSummary *wgfastpath.WGFastPathSummary
-	var fastpathTelemetry []wgfastpath.FastPathTelemetry
-	var fastpathCrypto []wgfastpath.CryptoBenchmarkTelemetry
-	var enclaveViolations []wgenclave.WGEnclaveViolation
-	var enclaveSummary *wgenclave.WGEnclaveSummary
-	var enclaveReports []wgenclave.AttestationReport
-	var enclavePeers []wgenclave.PeerTunnelStatus
-	var webhookViolations []webhook.WebhookViolation
-	var webhookSummary *webhook.WebhookSummary
-	var webhookTelemetry *webhook.WebhookTelemetry
-	var impermanenceViolations []impermanence.ImpermanenceViolation
-	var impermanenceSummary *impermanence.ImpermanenceSummary
-	var impermanenceTelemetry *impermanence.EphemeralStorageTelemetry
+	var (
+		flakeMatches            []nix.FlakeVulnerabilityMatch
+		k8sReport               *k8s.ManifestAuditReport
+		probeSnapshots          []probe.TelemetryEvent
+		storageViolations       []storage.StorageViolation
+		storageHealth           *storage.CephHealthReport
+		wireguardViolations     []wireguard.WireGuardViolation
+		wireguardReconciliation *wireguard.ReconciliationReport
+		cisViolations           []bench.CISViolation
+		cisSummary              *bench.CISSummary
+		gatewayViolations       []gateway.GatewayViolation
+		gatewaySummary          *gateway.GatewaySummary
+		attestViolations        []attest.AttestationViolation
+		attestSummary           *attest.AttestationSummary
+		fleetViolations         []fleet.FleetViolation
+		fleetSummary            *fleet.FleetSummary
+		spiffeViolations        []spiffe.SPIFFEViolation
+		spiffeSummary           *spiffe.SPIFFESummary
+		sbomViolations          []sbom.SBOMViolation
+		sbomSummary             *sbom.SBOMSummary
+		sbomDelta               []sbom.SBOMDeltaItem
+		hsmViolations           []hsm.HSMViolation
+		hsmSummary              *hsm.HSMSummary
+		bpfViolations           []bpf.BPFViolation
+		bpfSummary              *bpf.BPFSummary
+		pqcViolations           []pqc.PQCViolation
+		pqcSummary              *pqc.PQCSummary
+		sandboxViolations       []sandbox.SandboxViolation
+		sandboxSummary          *sandbox.SandboxSummary
+		remediateFindings       []remediate.RemediationFinding
+		remediatePRs            []remediate.GitOpsPullRequest
+		remediateSummary        *remediate.RemediationSummary
+		lsmViolations           []lsm.LSMViolation
+		lsmSummary              *lsm.LSMSummary
+		drViolations            []replication.ReplicationViolation
+		drSummary               *replication.ReplicationSummary
+		drTelemetry             *replication.CrossRegionDRTelemetry
+		fastpathViolations      []wgfastpath.WGFastPathViolation
+		fastpathSummary         *wgfastpath.WGFastPathSummary
+		fastpathTelemetry       []wgfastpath.FastPathTelemetry
+		fastpathCrypto          []wgfastpath.CryptoBenchmarkTelemetry
+		enclaveViolations       []wgenclave.WGEnclaveViolation
+		enclaveSummary          *wgenclave.WGEnclaveSummary
+		enclaveReports          []wgenclave.AttestationReport
+		enclavePeers            []wgenclave.PeerTunnelStatus
+		webhookViolations       []webhook.WebhookViolation
+		webhookSummary          *webhook.WebhookSummary
+		webhookTelemetry        *webhook.WebhookTelemetry
+		impermanenceViolations  []impermanence.ImpermanenceViolation
+		impermanenceSummary     *impermanence.ImpermanenceSummary
+		impermanenceTelemetry   *impermanence.EphemeralStorageTelemetry
+		bgpViolations           []bgp.BGPViolation
+		bgpSummary              *bgp.BGPSummary
+		bgpTelemetry            *bgp.BGPTelemetryReport
+	)
 
 	// 1. Audit Nix Flake
 	if cfg.FlakePath != "" {
@@ -213,44 +217,32 @@ func main() {
 	// 21. Audit Confidential VM & Secure Enclave WireGuard Peer Attestation
 	if cfg.EnclaveManifests != "" || cfg.EnclaveTelemetry != "" || cfg.EnclaveSynthOut != "" {
 		enclaveViolations, enclaveSummary, enclaveReports, enclavePeers = runEnclaveAudit(
-			cfg.EnclaveManifests,
-			cfg.EnclaveTelemetry,
-			cfg.EnclaveSynthOut,
-			cfg.EnclaveStrict,
-			feed,
-			logInfo,
-			logErr,
+			cfg.EnclaveManifests, cfg.EnclaveTelemetry, cfg.EnclaveSynthOut, cfg.EnclaveStrict, feed, logInfo, logErr,
 		)
 	}
 
 	// 22. Audit Kubernetes Dynamic Admission Webhook & CA Rotation Radar
 	if cfg.WebhookPath != "" || cfg.WebhookTelemetry != "" || cfg.WebhookSynthOut != "" {
 		webhookViolations, webhookSummary, webhookTelemetry = runWebhookAudit(
-			cfg.WebhookPath,
-			cfg.WebhookTelemetry,
-			cfg.WebhookSynthOut,
-			cfg.WebhookStrict,
-			feed,
-			logInfo,
-			logErr,
+			cfg.WebhookPath, cfg.WebhookTelemetry, cfg.WebhookSynthOut, cfg.WebhookStrict, feed, logInfo, logErr,
 		)
 	}
 
 	// 23. Audit NixOS Immutable Root & Impermanence Ephemerality Radar
 	if cfg.ImpermanencePath != "" || cfg.ImpermanenceTelemetry != "" || cfg.ImpermanenceSynthOut != "" {
 		impermanenceViolations, impermanenceSummary, impermanenceTelemetry = runImpermanenceAudit(
-			cfg.ImpermanencePath,
-			cfg.K8sPath,
-			cfg.ImpermanenceTelemetry,
-			cfg.ImpermanenceSynthOut,
-			cfg.ImpermanenceStrict,
-			feed,
-			logInfo,
-			logErr,
+			cfg.ImpermanencePath, cfg.K8sPath, cfg.ImpermanenceTelemetry, cfg.ImpermanenceSynthOut, cfg.ImpermanenceStrict, feed, logInfo, logErr,
 		)
 	}
 
-	// 24. Generate Threat Briefing if --briefing is requested
+	// 24. Audit Kubernetes Service Mesh Dual-Stack IPv6 & Cilium BGP Peering Radar
+	if cfg.BGPPath != "" || cfg.BGPTelemetry != "" || cfg.BGPSynthOut != "" {
+		bgpViolations, bgpSummary, bgpTelemetry = runBGPAudit(
+			cfg.BGPPath, cfg.BGPTelemetry, cfg.BGPSynthOut, cfg.BGPStrict, feed, logInfo, logErr,
+		)
+	}
+
+	// 25. Generate Threat Briefing if --briefing is requested
 	if cfg.Briefing {
 		logInfo("[+] Synthesizing Threat Intelligence Briefing...\n")
 		briefingOpts := report.BriefingOptions{
@@ -297,14 +289,17 @@ func main() {
 			EnclaveViolations:       enclaveViolations,
 			EnclaveSummary:          enclaveSummary,
 			EnclaveReports:          enclaveReports,
-			WebhookViolations:          webhookViolations,
-			WebhookSummary:             webhookSummary,
-			WebhookTelemetry:           webhookTelemetry,
-			ImpermanenceViolations:     impermanenceViolations,
-			ImpermanenceSummary:        impermanenceSummary,
-			ImpermanenceTelemetry:      impermanenceTelemetry,
-			OutputDir:                  cfg.BriefingDir,
-			CustomFilename:             cfg.BriefingFile,
+			WebhookViolations:       webhookViolations,
+			WebhookSummary:          webhookSummary,
+			WebhookTelemetry:        webhookTelemetry,
+			ImpermanenceViolations:  impermanenceViolations,
+			ImpermanenceSummary:     impermanenceSummary,
+			ImpermanenceTelemetry:   impermanenceTelemetry,
+			BGPViolations:           bgpViolations,
+			BGPSummary:              bgpSummary,
+			BGPTelemetry:            bgpTelemetry,
+			OutputDir:               cfg.BriefingDir,
+			CustomFilename:          cfg.BriefingFile,
 		}
 
 		rep, err := report.GenerateBriefing(briefingOpts)
@@ -321,12 +316,7 @@ func main() {
 
 		logInfo("[+] Threat Briefing written to: %s\n", savedPath)
 		logInfo("    Telemetry: Total=%d | Critical=%d | High=%d | Medium=%d | Low=%d\n",
-			rep.Telemetry.TotalThreats,
-			rep.Telemetry.CriticalCount,
-			rep.Telemetry.HighCount,
-			rep.Telemetry.MediumCount,
-			rep.Telemetry.LowCount,
-		)
+			rep.Telemetry.TotalThreats, rep.Telemetry.CriticalCount, rep.Telemetry.HighCount, rep.Telemetry.MediumCount, rep.Telemetry.LowCount)
 		logInfo("    Fleet Risk: Peak CVSS=%.1f | Avg CVSS=%.1f\n", rep.Telemetry.MaxCVSS, rep.Telemetry.AverageCVSS)
 		return
 	}
@@ -417,20 +407,26 @@ func main() {
 			EnclaveManifestPath:     cfg.EnclaveManifests,
 			EnclaveTelemetryPath:    cfg.EnclaveTelemetry,
 			EnclaveSynthOut:         cfg.EnclaveSynthOut,
-			WebhookViolations:          webhookViolations,
-			WebhookSummary:             webhookSummary,
-			WebhookTelemetry:           webhookTelemetry,
-			WebhookPath:                cfg.WebhookPath,
-			WebhookTelemetryPath:       cfg.WebhookTelemetry,
-			WebhookSynthOut:            cfg.WebhookSynthOut,
-			ImpermanenceViolations:     impermanenceViolations,
-			ImpermanenceSummary:        impermanenceSummary,
-			ImpermanenceTelemetry:      impermanenceTelemetry,
-			ImpermanencePath:           cfg.ImpermanencePath,
-			ImpermanenceTelemetryPath:  cfg.ImpermanenceTelemetry,
-			ImpermanenceSynthOut:       cfg.ImpermanenceSynthOut,
-			TargetFilter:               cfg.TargetFilter,
-			Pretty:                     true,
+			WebhookViolations:         webhookViolations,
+			WebhookSummary:            webhookSummary,
+			WebhookTelemetry:          webhookTelemetry,
+			WebhookPath:               cfg.WebhookPath,
+			WebhookTelemetryPath:      cfg.WebhookTelemetry,
+			WebhookSynthOut:           cfg.WebhookSynthOut,
+			ImpermanenceViolations:    impermanenceViolations,
+			ImpermanenceSummary:       impermanenceSummary,
+			ImpermanenceTelemetry:     impermanenceTelemetry,
+			ImpermanencePath:          cfg.ImpermanencePath,
+			ImpermanenceTelemetryPath: cfg.ImpermanenceTelemetry,
+			ImpermanenceSynthOut:      cfg.ImpermanenceSynthOut,
+			BGPViolations:             bgpViolations,
+			BGPSummary:                bgpSummary,
+			BGPTelemetry:              bgpTelemetry,
+			BGPPath:                   cfg.BGPPath,
+			BGPTelemetryPath:          cfg.BGPTelemetry,
+			BGPSynthOut:               cfg.BGPSynthOut,
+			TargetFilter:              cfg.TargetFilter,
+			Pretty:                    true,
 		}
 
 		if cfg.Format == "sarif" {
@@ -482,8 +478,8 @@ func main() {
 		}
 	}
 
-	// 23. Default feed summary (when no specific audit target was requested)
-	if cfg.FlakePath == "" && cfg.K8sPath == "" && cfg.PolicyOut == "" && !cfg.ProbeFlag && cfg.CephPath == "" && cfg.CephTelemetry == "" && cfg.WgPath == "" && cfg.WgTelemetry == "" && cfg.CISPath == "" && cfg.GwPath == "" && cfg.AttestPath == "" && cfg.AttestTelemetry == "" && cfg.FleetPath == "" && cfg.FleetTelemetry == "" && cfg.SpiffePath == "" && cfg.SvidTelemetry == "" && cfg.SpiffePolicyOut == "" && cfg.SbomPath == "" && cfg.AttestFile == "" && cfg.RuntimePath == "" && cfg.HsmPath == "" && cfg.HsmTelemetry == "" && cfg.BpfPath == "" && cfg.BpfTelemetry == "" && cfg.BpfSynthOut == "" && cfg.PqcPath == "" && cfg.PqcTelemetry == "" && cfg.PqcSynthOut == "" && cfg.SandboxPath == "" && cfg.SandboxTelemetry == "" && cfg.SandboxSynthOut == "" && cfg.RemediatePath == "" && cfg.RemediateSynthOut == "" && cfg.LSMPath == "" && cfg.LSMTelemetry == "" && cfg.LSMSynthOut == "" && cfg.DRManifests == "" && cfg.DRTelemetry == "" && cfg.DRSynthOut == "" && cfg.FastPathManifests == "" && cfg.FastPathTelemetry == "" && cfg.FastPathSynthOut == "" && cfg.EnclaveManifests == "" && cfg.EnclaveTelemetry == "" && cfg.EnclaveSynthOut == "" {
+	// 26. Default feed summary (when no specific audit target was requested)
+	if !cfg.HasAuditTargets() {
 		items := feed.Items
 		if cfg.TargetFilter != "" {
 			items = feed.FilterByTarget(cfg.TargetFilter)

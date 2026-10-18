@@ -6,6 +6,7 @@ import (
 
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/attest"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/bench"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/bgp"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/bpf"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/fleet"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/gateway"
@@ -95,6 +96,9 @@ type ReportOptions struct {
 	ImpermanenceViolations     []impermanence.ImpermanenceViolation
 	ImpermanenceSummary        *impermanence.ImpermanenceSummary
 	ImpermanenceTelemetry      *impermanence.EphemeralStorageTelemetry
+	BGPViolations              []bgp.BGPViolation
+	BGPSummary                 *bgp.BGPSummary
+	BGPTelemetry               *bgp.BGPTelemetryReport
 	FlakePath                  string
 	K8sPath                    string
 	StoragePath                string
@@ -138,6 +142,9 @@ type ReportOptions struct {
 	ImpermanencePath           string
 	ImpermanenceTelemetryPath  string
 	ImpermanenceSynthOut       string
+	BGPPath                    string
+	BGPTelemetryPath           string
+	BGPSynthOut                string
 	TargetFilter               string
 	Pretty                     bool
 }

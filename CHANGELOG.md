@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.27.0] - 2026-10-18
+
+### Added
+- **Kubernetes Service Mesh Dual-Stack IPv6 & Cilium BGP Peering Radar** (`pkg/bgp/scanner.go`): Autonomous dual-stack routing and BGP peer security audit engine inspecting Cilium BGP peering policies (`CiliumBGPPeeringPolicy`), load balancer IP pools (`CiliumLoadBalancerIPPool`), NixOS FRR BGP host configurations (`services.frr.bgp`), and live BGP neighbor telemetry across bare-metal top-of-rack and cloud interconnects.
+- **Authoritative Canonical BGP Radar Rules Catalog** (`pkg/bgp/rules.go`): Suite of 12 canonical security rules (`BGP-RADAR-001` through `BGP-RADAR-012`) covering missing TCP MD5 / RFC 2385 or TCP-AO neighbor password authentication (`BGP-RADAR-001`, mapped to `CVE-2026-70192`), missing maximum prefix limits risking routing table exhaustion (`BGP-RADAR-002`), unfiltered inbound prefix announcements permitting route injection (`BGP-RADAR-003`), unrestricted BGP route exports leaking default routes or internal pod CIDRs (`BGP-RADAR-004`), ASN conflicts or unconfigured eBGP multihop TTL without GTSM (`BGP-RADAR-005`), single-stack IPv4-only peering in dual-stack clusters (`BGP-RADAR-006`), unreserved public ASNs declared in private data center meshes (`BGP-RADAR-007`), inactive or unestablished BGP neighbor sessions (`BGP-RADAR-008`), excessive route flapping and dampening instability (`BGP-RADAR-009`), insecure host TCP 179 exposure without route filtering (`BGP-RADAR-010`), missing RFC 1997/4360 BGP community tags for multi-tenant route segregation (`BGP-RADAR-011`), and Cilium LoadBalancer IPAM pool exhaustion / missing IPv6 pool allocation (`BGP-RADAR-012`).
+- **Streaming BGP Manifest & Telemetry Parser** (`pkg/bgp/parser.go`): Streaming YAML and NixOS parser evaluating declarative Cilium BGP resources, IPAM pools, NixOS Free Range Routing (FRR) daemon definitions, and live runtime JSON peering telemetry with 10MB memory safety bounds and IPv6 colon-safe CIDR slicing.
+- **Dual-Stack BGP Auditor & Deterministic Compliance Engine** (`pkg/bgp/auditor.go`): Cross-checks static peering definitions against runtime neighbor states, monitors prefix churn, evaluates dual-stack parity, and computes deterministic compliance scores (0.0% to 100.0%).
+- **Declarative BGP Policy Synthesizer** (`pkg/bgp/synth.go`): Synthesizes production-hardened `CiliumBGPPeeringPolicy` manifests (`cilium-bgp-hardened.yaml`), hardened NixOS FRR modules (`nixos-bgp-peering-hardened.nix`), and Prometheus BGP alerting rules (`bgp-alerts.yaml`).
+- **Dedicated CLI BGP Runner & Flag Architecture** (`cmd/sentinel/bgp_runner.go`, `cmd/sentinel/flags.go`): Extracted BGP audit coordination into a dedicated modular runner maintaining `cmd/sentinel/main.go` under 500 LOC. Added `--bgp=<path>`, `--cilium-bgp`, `--bgp-telemetry=<path>`, `--bgp-synth-out=<dir>`, and `--bgp-strict` flags.
+- **Threat Feed Expansion** (`intel/cve-feed.json`): Ingested `CVE-2026-70192` (Cilium BGP Peering Unauthenticated Prefix Injection & Dual-Stack Route Hijacking, CVSS 9.3 Critical).
+- **Unified Exporter Integration**: BGP peering findings, summary metrics, and runtime neighbor telemetry exported to OASIS SARIF v2.1.0 (Section 23), structured JSON audit telemetry (`bgp_violations`, `bgp_summary`, `bgp_telemetry`), and hourly Markdown threat briefings (Section 26).
+- **Production Fixtures & Policy Artifacts**: Added realistic fixtures (`fixtures/cilium-bgp-peering.yaml`, `fixtures/cilium-bgp-vulnerable.yaml`, `fixtures/bgp-telemetry.json`, `fixtures/nixos-bgp.nix`) and synthesized templates in `policies/generated/bgp/`.
+- **Comprehensive Unit Test Suites** (`pkg/bgp/bgp_test.go`, `pkg/report/bgp_report_test.go`): 100% test coverage across canonical rules, manifest parsing, dual-stack CIDR handling, telemetry auditing, policy synthesizers, scanner, SARIF/JSON/Briefing serialization, and memory bounds checks.
+
+### Changed
+- Bumped engine release to `v0.27.0`.
+- Updated `SECURITY.md` establishing Kubernetes Service Mesh Dual-Stack IPv6 & Cilium BGP Peering Radar security invariants (Invariant 29).
+- Updated `ROADMAP.md` marking Milestone M27 as completed and scheduling M28 (Multi-Tenant Nix Store Signature & Binary Cache Isolation Gate).
+- Updated `scripts/ARCHITECTURE_MAP.md` documenting new BGP modules, runners, and O(1) symbols.
+
+---
+
 ## [0.26.0] - 2026-10-18
 
 ### Added

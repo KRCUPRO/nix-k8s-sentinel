@@ -1,0 +1,65 @@
+---
+# Cilium BGP Peering Policy - Production Dual-Stack Mesh with MD5 Authentication
+apiVersion: cilium.io/v2alpha1
+kind: CiliumBGPPeeringPolicy
+metadata:
+  name: prod-bgp-peering-policy
+  namespace: kube-system
+  labels:
+    app.kubernetes.io/part-of: nix-k8s-sentinel
+    topology.cilium.io/bgp-mesh: dual-stack
+spec:
+  nodeSelectors:
+    - matchLabels:
+        cilium.io/bgp-peering: "true"
+        node-role.kubernetes.io/control-plane: ""
+  virtualRouters:
+    - localASN: 65001
+      exportPodCIDR: true
+      serviceSelector:
+        matchLabels:
+          bgp-advertise: "true"
+      neighbors:
+        - peerAddress: "192.168.100.1/32"
+          peerASN: 65000
+          authSecretRef: "bgp-router-md5-auth"
+          eBGPTimeToLive: 64
+          connectRetryTimeSeconds: 30
+          holdTimeSeconds: 90
+          keepAliveTimeSeconds: 30
+          maxPrefixes: 500
+          gracefulRestart:
+            enabled: true
+            restartTimeSeconds: 120
+          families:
+            - af: ipv4
+              safi: unicast
+            - af: ipv6
+              safi: unicast
+          advertisedPathAttributes:
+            localPreference: 100
+            communities:
+              - "65001:100"
+              - "65001:200"
+          incomingRouteFilter:
+            - "10.0.0.0/8"
+            - "fd00::/8"
+          outgoingRouteFilter:
+            - "10.244.0.0/16"
+            - "fd00:10:244::/64"
+---
+# Cilium LoadBalancer IP Pool - Dual-Stack High-Availability
+apiVersion: cilium.io/v2alpha1
+kind: CiliumLoadBalancerIPPool
+metadata:
+  name: prod-dual-stack-pool
+  namespace: kube-system
+  labels:
+    app.kubernetes.io/part-of: nix-k8s-sentinel
+spec:
+  cidrs:
+    - cidr: "10.100.0.0/24"
+    - cidr: "2001:db8:100::/64"
+  serviceSelector:
+    matchLabels:
+      io.cilium/lb-ipam-pool: prod-dual-stack-pool

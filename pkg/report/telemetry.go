@@ -7,6 +7,7 @@ import (
 
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/attest"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/bench"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/bgp"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/bpf"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/fleet"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/gateway"
@@ -61,6 +62,7 @@ type TelemetrySummary struct {
 	TotalEnclaveViolations     int            `json:"total_enclave_violations"`
 	TotalWebhookViolations     int            `json:"total_webhook_violations"`
 	TotalImpermanenceViolations int           `json:"total_impermanence_violations"`
+	TotalBGPViolations         int            `json:"total_bgp_violations"`
 }
 
 // ComputeTelemetry aggregates CVSS metrics from the threat feed, K8s violations, and Nix flake matches.
@@ -377,6 +379,35 @@ func ComputeTelemetryImpermanence(feed *intel.Feed, k8sReport *k8s.ManifestAudit
 				summary.MaxCVSS = iv.CVSSScore
 			}
 			switch iv.Severity {
+			case intel.SeverityCritical:
+				summary.CriticalCount++
+			case intel.SeverityHigh:
+				summary.HighCount++
+			case intel.SeverityMedium:
+				summary.MediumCount++
+			default:
+				summary.LowCount++
+			}
+		}
+	}
+
+	return summary
+}
+
+// ComputeTelemetryBGP aggregates CVSS metrics across all domains including Kubernetes Service Mesh & Cilium BGP Peering Radar findings.
+func ComputeTelemetryBGP(feed *intel.Feed, k8sReport *k8s.ManifestAuditReport, flakeMatches []nix.FlakeVulnerabilityMatch, storageViolations []storage.StorageViolation, wireguardViolations []wireguard.WireGuardViolation, cisViolations []bench.CISViolation, gatewayViolations []gateway.GatewayViolation, attestViolations []attest.AttestationViolation, fleetViolations []fleet.FleetViolation, spiffeViolations []spiffe.SPIFFEViolation, sbomViolations []sbom.SBOMViolation, hsmViolations []hsm.HSMViolation, bpfViolations []bpf.BPFViolation, pqcViolations []pqc.PQCViolation, sandboxViolations []sandbox.SandboxViolation, remediateFindings []remediate.RemediationFinding, lsmViolations []lsm.LSMViolation, replicationViolations []replication.ReplicationViolation, fastPathViolations []wgfastpath.WGFastPathViolation, enclaveViolations []wgenclave.WGEnclaveViolation, webhookViolations []webhook.WebhookViolation, impermanenceViolations []impermanence.ImpermanenceViolation, bgpViolations []bgp.BGPViolation) TelemetrySummary {
+	summary := ComputeTelemetryImpermanence(feed, k8sReport, flakeMatches, storageViolations, wireguardViolations, cisViolations, gatewayViolations, attestViolations, fleetViolations, spiffeViolations, sbomViolations, hsmViolations, bpfViolations, pqcViolations, sandboxViolations, remediateFindings, lsmViolations, replicationViolations, fastPathViolations, enclaveViolations, webhookViolations, impermanenceViolations)
+
+	if len(bgpViolations) > 0 {
+		summary.TotalBGPViolations = len(bgpViolations)
+		for _, bv := range bgpViolations {
+			summary.TotalViolations++
+			summary.TargetDistribution["kubernetes"]++
+			summary.ComponentDistribution["cilium-bgp"]++
+			if bv.CVSSScore > summary.MaxCVSS {
+				summary.MaxCVSS = bv.CVSSScore
+			}
+			switch bv.Severity {
 			case intel.SeverityCritical:
 				summary.CriticalCount++
 			case intel.SeverityHigh:

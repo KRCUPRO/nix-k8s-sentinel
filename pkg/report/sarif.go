@@ -1492,8 +1492,67 @@ func BuildSARIFReport(opts ReportOptions) (*SARIFLog, error) {
 		}
 	}
 
-	// 23. Process Standalone Feed Advisories (if no specific audit targets yielded findings)
-	if (opts.K8sReport == nil || len(opts.K8sReport.Violations) == 0) && len(opts.FlakeMatches) == 0 && len(opts.ProbeEvents) == 0 && len(opts.StorageViolations) == 0 && len(opts.WireGuardViolations) == 0 && len(opts.CISViolations) == 0 && len(opts.GatewayViolations) == 0 && len(opts.AttestViolations) == 0 && len(opts.FleetViolations) == 0 && len(opts.SPIFFEViolations) == 0 && len(opts.SBOMViolations) == 0 && len(opts.HSMViolations) == 0 && len(opts.BPFViolations) == 0 && len(opts.PQCViolations) == 0 && len(opts.SandboxViolations) == 0 && len(opts.RemediateFindings) == 0 && len(opts.LSMViolations) == 0 && len(opts.ReplicationViolations) == 0 && len(opts.FastPathViolations) == 0 && len(opts.EnclaveViolations) == 0 && len(opts.WebhookViolations) == 0 && len(opts.ImpermanenceViolations) == 0 && opts.Feed != nil {
+	// 23. Process Kubernetes Service Mesh Dual-Stack IPv6 & Cilium BGP Peering Findings
+	if len(opts.BGPViolations) > 0 {
+		for _, bv := range opts.BGPViolations {
+			tags := []string{"security", "kubernetes", "cilium", "bgp", "service-mesh", "dual-stack", "ipv6"}
+			if bv.MatchedCVE != "" {
+				tags = append(tags, bv.MatchedCVE)
+			}
+			ruleIdx := getOrCreateRule(bv.RuleID, bv.Title, bv.Description, bv.Remediation, bv.Severity, bv.CVSSScore, tags)
+			level := SeverityToSARIFLevel(string(bv.Severity), bv.CVSSScore)
+
+			locURI := bv.FilePath
+			if locURI == "" {
+				locURI = opts.BGPPath
+			}
+			if locURI == "" {
+				locURI = opts.BGPTelemetryPath
+			}
+			if locURI == "" {
+				locURI = "cilium-bgp-peering.yaml"
+			}
+			locURI = filepath.ToSlash(locURI)
+
+			line := bv.StartLine
+			if line <= 0 {
+				line = 1
+			}
+
+			resMsg := fmt.Sprintf("[%s/%s] %s: %s (Remediation: %s)", bv.PolicyName, bv.PeerAddress, bv.Title, bv.Description, bv.Remediation)
+
+			results = append(results, SARIFResult{
+				RuleID:    bv.RuleID,
+				RuleIndex: ruleIdx,
+				Level:     level,
+				Message:   SARIFMessage{Text: resMsg},
+				Locations: []SARIFLocation{
+					{
+						PhysicalLocation: &PhysicalLocation{
+							ArtifactLocation: ArtifactLocation{
+								URI:       locURI,
+								URIBaseID: "%SRCROOT%",
+							},
+							Region: &Region{
+								StartLine:   line,
+								StartColumn: 1,
+							},
+						},
+						LogicalLocations: []LogicalLocation{
+							{
+								Name:               bv.RuleID,
+								Kind:               "BGPRule",
+								FullyQualifiedName: fmt.Sprintf("bgp/%s/%s", bv.PolicyName, bv.PeerAddress),
+							},
+						},
+					},
+				},
+			})
+		}
+	}
+
+	// 24. Process Standalone Feed Advisories (if no specific audit targets yielded findings)
+	if (opts.K8sReport == nil || len(opts.K8sReport.Violations) == 0) && len(opts.FlakeMatches) == 0 && len(opts.ProbeEvents) == 0 && len(opts.StorageViolations) == 0 && len(opts.WireGuardViolations) == 0 && len(opts.CISViolations) == 0 && len(opts.GatewayViolations) == 0 && len(opts.AttestViolations) == 0 && len(opts.FleetViolations) == 0 && len(opts.SPIFFEViolations) == 0 && len(opts.SBOMViolations) == 0 && len(opts.HSMViolations) == 0 && len(opts.BPFViolations) == 0 && len(opts.PQCViolations) == 0 && len(opts.SandboxViolations) == 0 && len(opts.RemediateFindings) == 0 && len(opts.LSMViolations) == 0 && len(opts.ReplicationViolations) == 0 && len(opts.FastPathViolations) == 0 && len(opts.EnclaveViolations) == 0 && len(opts.WebhookViolations) == 0 && len(opts.ImpermanenceViolations) == 0 && len(opts.BGPViolations) == 0 && opts.Feed != nil {
 		feedItems := opts.Feed.Items
 		if opts.TargetFilter != "" {
 			feedItems = opts.Feed.FilterByTarget(opts.TargetFilter)

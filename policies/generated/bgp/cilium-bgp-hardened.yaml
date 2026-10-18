@@ -1,0 +1,33 @@
+apiVersion: cilium.io/v2alpha1
+kind: CiliumBGPPeeringPolicy
+metadata:
+  name: prod-bgp-peering-policy
+spec:
+  nodeSelectors:
+    matchLabels:
+      kubernetes.io/os: linux
+      cilium.io/bgp-speaker: "true"
+  virtualRouters:
+    - localASN: 65001
+      exportPodCIDR: true
+      exportServiceCIDR: true
+      prefixFilters:
+        - "10.244.0.0/16"
+        - "fd00:10:244::/64"
+        - "10.96.0.0/12"
+        - "fd00:10:96::/112"
+      neighbors:
+        - peerAddress: "192.168.100.1/32"
+          peerASN: 65000
+          authSecretRef: "bgp-router-md5-auth"
+          eBGP:
+            multihopTTL: 2
+          gracefulRestart:
+            enabled: true
+            restartTimeSeconds: 120
+          holdTimeSeconds: 30
+          keepAliveTimeSeconds: 10
+          families:
+            - "IPv4"
+            - "IPv6"
+          community: "65000:100"
