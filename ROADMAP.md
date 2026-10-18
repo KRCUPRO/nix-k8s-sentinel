@@ -194,9 +194,18 @@ Automated generation of defense-in-depth rules:
 - [x] Full CLI integration (`--wg-fastpath`, `--fastpath`, `--wg-fastpath-telemetry`, `--wg-fastpath-synth-out`, `--wg-fastpath-strict`) with unified SARIF v2.1.0 code scanning, JSON audit telemetry, and Markdown briefing exports (`cmd/sentinel/fastpath_runner.go`, `cmd/sentinel/flags.go`).
 - [x] Production sample fixtures (`fixtures/nixos-wg-fastpath.nix`, `fixtures/nixos-wg-fastpath-vulnerable.nix`, `fixtures/wg-fastpath-telemetry.json`) and threat feed correlation with `CVE-2026-31049`.
 
-### Version 0.24.0 — Confidential VM & Secure Enclave WireGuard Peer Attestation (Planned)
-- [ ] Bind WireGuard ephemeral session keys to AMD SEV-SNP VCEK and Intel TDX attestation reports.
-- [ ] Reject peer tunnel establishment if node measured boot PCRs deviate from declarative gold image.
+### Version 0.24.0 — Confidential VM & Secure Enclave WireGuard Peer Attestation (Completed)
+- [x] Hardware root-of-trust attestation binding engine for WireGuard mesh peers across AMD SEV-SNP and Intel TDX confidential VMs (`pkg/wgenclave/scanner.go`).
+- [x] Canonical rule catalog `WG-ENC-001` through `WG-ENC-012` detecting missing hardware attestation reports, expired AMD SEV-SNP VCEK endorsement certificate chains, Intel TDX quote verification failures, measured boot PCR deviations from golden references (`CVE-2026-40291`), unbound ephemeral WireGuard session keys, hypervisor debug permissions, stale attestation reports (> 3600s), Intel TDX RTMR deviations, outdated TCB SVN (< 4), and unauthenticated peer handshakes (`pkg/wgenclave/rules.go`).
+- [x] Streaming line parser for declarative NixOS WireGuard enclave peer modules, Kubernetes `EnclaveWireGuardPeer` CRDs, and runtime JSON attestation telemetry (`pkg/wgenclave/parser.go`).
+- [x] Runtime attestation quote reconciler and deterministic compliance scoring engine verifying PCR digests, RTMR registers, and rejecting unverified/tampered peer tunnels (`pkg/wgenclave/auditor.go`).
+- [x] Declarative policy synthesizer generating hardened NixOS enclave modules (`wg-enclave-hardened.nix`), Kubernetes `EnclaveWireGuardPeer` CustomResourceDefinitions, and pre-handshake kernel verification gate scripts (`wg-enclave-gate.sh`) (`pkg/wgenclave/synth.go`).
+- [x] Full CLI integration (`--wg-enclave`, `--enclave`, `--wg-enclave-telemetry`, `--wg-enclave-synth-out`, `--wg-enclave-strict`) with unified SARIF v2.1.0 code scanning, JSON audit telemetry, and Markdown briefing exports (`cmd/sentinel/enclave_runner.go`, `cmd/sentinel/flags.go`).
+- [x] Production sample fixtures (`fixtures/nixos-wg-enclave.nix`, `fixtures/nixos-wg-enclave-vulnerable.nix`, `fixtures/wg-enclave-telemetry.json`) and threat feed correlation with `CVE-2026-40291`.
+
+### Version 0.25.0 — Kubernetes Dynamic Admission Webhook & Certificate Authority Rotation Radar (Planned)
+- [ ] Audit ValidatingWebhookConfiguration and MutatingWebhookConfiguration failurePolicy and caBundle expiration.
+- [ ] Detect webhook timeout latency stalls risking API server denial of service.
 
 ### Version 1.0.0 — Enterprise Workload Identity & Ephemeral Detonation Pipeline (Planned)
 - [ ] Full end-to-end integration of SPIFFE/SPIRE workload attestation, In-Toto provenance, and HSM envelope encryption.

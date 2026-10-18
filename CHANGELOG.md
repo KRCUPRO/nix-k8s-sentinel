@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.24.0] - 2026-10-18
+
+### Added
+- **Confidential VM & Secure Enclave WireGuard Peer Attestation Engine** (`pkg/wgenclave/scanner.go`): Autonomous security and hardware root-of-trust attestation engine inspecting WireGuard mesh peer configurations across AMD SEV-SNP and Intel TDX confidential virtual machines.
+- **Authoritative Canonical Enclave Peer Rules Catalog** (`pkg/wgenclave/rules.go`): Suite of 12 canonical security rules (`WG-ENC-001` through `WG-ENC-012`) covering missing hardware root-of-trust attestation reports (`WG-ENC-001`), expired AMD SEV-SNP VCEK endorsement certificate chains (`WG-ENC-002`), Intel TDX quote verification failures (`WG-ENC-003`), measured boot PCR deviations from declarative golden references (`WG-ENC-004`, mapped to `CVE-2026-40291`), unbound ephemeral WireGuard session keys missing enclave `REPORT_DATA` binding (`WG-ENC-005`), confidential guest policies allowing hypervisor memory inspection or debugging (`WG-ENC-006`), stale attestation report age exceeding freshness window (`WG-ENC-007`), Intel TDX Runtime Measurement Register (RTMR) deviations (`WG-ENC-008`), peer public key changes without fresh hardware quotes (`WG-ENC-009`), outdated TCB Security Version Numbers below cluster baseline (`WG-ENC-010`), unauthenticated ephemeral peer handshakes without gating (`WG-ENC-011`), and unverified plaintext WireGuard fallback connections (`WG-ENC-012`).
+- **Streaming Enclave Manifest & Telemetry Parser** (`pkg/wgenclave/parser.go`): Line-based streaming parser evaluating declarative NixOS WireGuard enclave peer modules, Kubernetes `EnclaveWireGuardPeer` CustomResourceDefinitions, and live runtime JSON attestation telemetry with 10MB memory safety bounds.
+- **Enclave Posture Auditor & Compliance Scoring Engine** (`pkg/wgenclave/auditor.go`): Reconciles declarative configurations and runtime telemetry, compares measured boot PCR digests (PCR 0, 2, 4, 7) and TDX RTMRs against golden reference values, rejects unverified or tampered peer tunnels, and computes deterministic compliance scores (0.0% to 100.0%).
+- **Declarative Enclave Policy Synthesizer** (`pkg/wgenclave/synth.go`): Synthesizes production-hardened NixOS enclave peer modules (`wg-enclave-hardened.nix`), Kubernetes `EnclaveWireGuardPeer` CustomResourceDefinition and CustomResource manifests (`enclave-wireguard-peer.yaml`), and pre-handshake kernel attestation gatekeeper scripts (`wg-enclave-gate.sh`).
+- **Dedicated CLI Enclave Runner & Flag Architecture** (`cmd/sentinel/enclave_runner.go`, `cmd/sentinel/flags.go`): Extracted enclave audit coordination into a dedicated modular runner maintaining `cmd/sentinel/main.go` under 450 LOC. Added `--wg-enclave=<path>`, `--enclave`, `--wg-enclave-telemetry=<path>`, `--wg-enclave-synth-out=<dir>`, and `--wg-enclave-strict` flags.
+- **Threat Feed Expansion** (`intel/cve-feed.json`): Ingested `CVE-2026-40291` (Confidential VM Attestation Bypass & Unverified WireGuard Peer Session Injection in SEV-SNP / TDX Nodes, CVSS 9.4 Critical).
+- **Unified Exporter Integration**: WireGuard enclave findings, rejected peer IDs, and attestation telemetry seamlessly exported to OASIS SARIF v2.1.0 (Section 20), structured JSON audit telemetry (`enclave_violations`, `enclave_summary`, `enclave_reports`, `enclave_peers`), and hourly Markdown threat briefings (Section 23).
+- **Production Fixtures & Policy Artifacts**: Added realistic fixtures (`fixtures/nixos-wg-enclave.nix`, `fixtures/nixos-wg-enclave-vulnerable.nix`, `fixtures/wg-enclave-telemetry.json`) and synthesized templates in `policies/generated/enclave/`.
+- **Comprehensive Unit Test Suites** (`pkg/wgenclave/enclave_test.go`, `pkg/report/enclave_report_test.go`): 100% test coverage across canonical rules, manifest parsing, telemetry auditing, policy synthesizers, scanner, SARIF/JSON/Briefing serialization, and memory bounds checks.
+
+### Changed
+- Bumped engine release to `v0.24.0`.
+- Updated `SECURITY.md` establishing Confidential VM & Secure Enclave WireGuard Peer Attestation security invariants (Invariant 26).
+- Updated `ROADMAP.md` marking Milestone M24 as completed and scheduling M25 (Kubernetes Dynamic Admission Webhook & Certificate Authority Rotation Radar).
+- Updated `scripts/ARCHITECTURE_MAP.md` documenting new enclave modules, runners, and O(1) symbols.
+
+---
+
 ## [0.23.0] - 2026-10-17
 
 ### Added

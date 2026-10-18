@@ -60,6 +60,10 @@ type SentinelConfig struct {
 	FastPathTelemetry string
 	FastPathSynthOut  string
 	FastPathStrict    bool
+	EnclaveManifests  string
+	EnclaveTelemetry  string
+	EnclaveSynthOut   string
+	EnclaveStrict     bool
 	Briefing          bool
 	BriefingDir       string
 	BriefingFile      string
@@ -147,6 +151,11 @@ func parseCLI() SentinelConfig {
 	fastpathTelemetry := flag.String("wg-fastpath-telemetry", "", "Path to runtime WireGuard crypto and fast-path telemetry JSON to inspect")
 	fastpathSynthOut := flag.String("wg-fastpath-synth-out", "", "Output directory to write synthesized hardened NixOS fast-path modules, eBPF XDP programs, and K8s CRDs")
 	fastpathStrict := flag.Bool("wg-fastpath-strict", false, "Enforce strict zero-drop and SIMD hardware acceleration thresholds")
+	enclaveManifests := flag.String("wg-enclave", "", "Path to WireGuard confidential enclave peer manifests or directory")
+	enclaveShort := flag.String("enclave", "", "Alias for --wg-enclave")
+	enclaveTelemetry := flag.String("wg-enclave-telemetry", "", "Path to runtime enclave attestation telemetry JSON to inspect")
+	enclaveSynthOut := flag.String("wg-enclave-synth-out", "", "Output directory to write synthesized hardened NixOS enclave modules, K8s CRDs, and gate scripts")
+	enclaveStrict := flag.Bool("wg-enclave-strict", false, "Enforce strict zero-warning enclave peer attestation and measured boot compliance")
 	briefing := flag.Bool("briefing", false, "Generate automated Markdown threat intelligence briefing")
 	briefingDir := flag.String("briefing-dir", "intel/briefings", "Output directory for threat briefings")
 	briefingFile := flag.String("briefing-file", "", "Custom filename for threat briefing markdown")
@@ -222,6 +231,9 @@ func parseCLI() SentinelConfig {
 	if *fastpathManifests == "" && *fastpathShort != "" {
 		*fastpathManifests = *fastpathShort
 	}
+	if *enclaveManifests == "" && *enclaveShort != "" {
+		*enclaveManifests = *enclaveShort
+	}
 	if *outFile == "" && *outShort != "" {
 		*outFile = *outShort
 	}
@@ -284,6 +296,10 @@ func parseCLI() SentinelConfig {
 		FastPathTelemetry: *fastpathTelemetry,
 		FastPathSynthOut:  *fastpathSynthOut,
 		FastPathStrict:    *fastpathStrict,
+		EnclaveManifests:  *enclaveManifests,
+		EnclaveTelemetry:  *enclaveTelemetry,
+		EnclaveSynthOut:   *enclaveSynthOut,
+		EnclaveStrict:     *enclaveStrict,
 		Briefing:          *briefing,
 		BriefingDir:       *briefingDir,
 		BriefingFile:      *briefingFile,

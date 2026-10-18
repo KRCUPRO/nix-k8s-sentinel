@@ -1317,8 +1317,66 @@ func BuildSARIFReport(opts ReportOptions) (*SARIFLog, error) {
 		}
 	}
 
-	// 20. Process Standalone Feed Advisories (if no specific audit targets yielded findings)
-	if (opts.K8sReport == nil || len(opts.K8sReport.Violations) == 0) && len(opts.FlakeMatches) == 0 && len(opts.ProbeEvents) == 0 && len(opts.StorageViolations) == 0 && len(opts.WireGuardViolations) == 0 && len(opts.CISViolations) == 0 && len(opts.GatewayViolations) == 0 && len(opts.AttestViolations) == 0 && len(opts.FleetViolations) == 0 && len(opts.SPIFFEViolations) == 0 && len(opts.SBOMViolations) == 0 && len(opts.HSMViolations) == 0 && len(opts.BPFViolations) == 0 && len(opts.PQCViolations) == 0 && len(opts.SandboxViolations) == 0 && len(opts.RemediateFindings) == 0 && len(opts.LSMViolations) == 0 && len(opts.ReplicationViolations) == 0 && len(opts.FastPathViolations) == 0 && opts.Feed != nil {
+	// 20. Process Confidential VM & Secure Enclave WireGuard Peer Attestation Findings
+	if len(opts.EnclaveViolations) > 0 {
+		for _, ev := range opts.EnclaveViolations {
+			tags := []string{"security", "nixos", "wireguard", "enclave", "confidential-vm", "attestation", strings.ToLower(string(ev.Platform))}
+			if ev.MatchedCVE != "" {
+				tags = append(tags, ev.MatchedCVE)
+			}
+			ruleIdx := getOrCreateRule(ev.RuleID, ev.Title, ev.Description, ev.Remediation, ev.Severity, ev.CVSSScore, tags)
+			level := SeverityToSARIFLevel(string(ev.Severity), ev.CVSSScore)
+
+			locURI := ev.FilePath
+			if locURI == "" {
+				locURI = opts.EnclaveManifestPath
+			}
+			if locURI == "" {
+				locURI = opts.EnclaveTelemetryPath
+			}
+			if locURI == "" {
+				locURI = "networking/wireguard/enclave"
+			}
+
+			line := ev.StartLine
+			if line <= 0 {
+				line = 1
+			}
+
+			resMsg := fmt.Sprintf("[%s/%s] %s: %s (Remediation: %s)", ev.InterfaceName, ev.PeerName, ev.Title, ev.Description, ev.Remediation)
+
+			results = append(results, SARIFResult{
+				RuleID:    ev.RuleID,
+				RuleIndex: ruleIdx,
+				Level:     level,
+				Message:   SARIFMessage{Text: resMsg},
+				Locations: []SARIFLocation{
+					{
+						PhysicalLocation: &PhysicalLocation{
+							ArtifactLocation: ArtifactLocation{
+								URI:       locURI,
+								URIBaseID: "%SRCROOT%",
+							},
+							Region: &Region{
+								StartLine:   line,
+								StartColumn: 1,
+							},
+						},
+						LogicalLocations: []LogicalLocation{
+							{
+								Name:               ev.RuleID,
+								Kind:               "EnclavePeerRule",
+								FullyQualifiedName: fmt.Sprintf("enclave/%s/%s", ev.InterfaceName, ev.PeerName),
+							},
+						},
+					},
+				},
+			})
+		}
+	}
+
+	// 21. Process Standalone Feed Advisories (if no specific audit targets yielded findings)
+	if (opts.K8sReport == nil || len(opts.K8sReport.Violations) == 0) && len(opts.FlakeMatches) == 0 && len(opts.ProbeEvents) == 0 && len(opts.StorageViolations) == 0 && len(opts.WireGuardViolations) == 0 && len(opts.CISViolations) == 0 && len(opts.GatewayViolations) == 0 && len(opts.AttestViolations) == 0 && len(opts.FleetViolations) == 0 && len(opts.SPIFFEViolations) == 0 && len(opts.SBOMViolations) == 0 && len(opts.HSMViolations) == 0 && len(opts.BPFViolations) == 0 && len(opts.PQCViolations) == 0 && len(opts.SandboxViolations) == 0 && len(opts.RemediateFindings) == 0 && len(opts.LSMViolations) == 0 && len(opts.ReplicationViolations) == 0 && len(opts.FastPathViolations) == 0 && len(opts.EnclaveViolations) == 0 && opts.Feed != nil {
 		feedItems := opts.Feed.Items
 		if opts.TargetFilter != "" {
 			feedItems = opts.Feed.FilterByTarget(opts.TargetFilter)

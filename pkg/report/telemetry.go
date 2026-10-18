@@ -22,6 +22,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/sbom"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/spiffe"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/storage"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/wgenclave"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/wgfastpath"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/wireguard"
 )
@@ -55,6 +56,7 @@ type TelemetrySummary struct {
 	TotalLSMViolations         int            `json:"total_lsm_violations"`
 	TotalReplicationViolations int            `json:"total_replication_violations"`
 	TotalFastPathViolations    int            `json:"total_fastpath_violations"`
+	TotalEnclaveViolations     int            `json:"total_enclave_violations"`
 }
 
 // ComputeTelemetry aggregates CVSS metrics from the threat feed, K8s violations, and Nix flake matches.
@@ -284,6 +286,35 @@ func ComputeTelemetryFastPath(feed *intel.Feed, k8sReport *k8s.ManifestAuditRepo
 				summary.MaxCVSS = fp.CVSSScore
 			}
 			switch fp.Severity {
+			case intel.SeverityCritical:
+				summary.CriticalCount++
+			case intel.SeverityHigh:
+				summary.HighCount++
+			case intel.SeverityMedium:
+				summary.MediumCount++
+			default:
+				summary.LowCount++
+			}
+		}
+	}
+
+	return summary
+}
+
+// ComputeTelemetryEnclave aggregates CVSS metrics across all domains including Confidential VM & WireGuard Enclave Peer Attestation findings.
+func ComputeTelemetryEnclave(feed *intel.Feed, k8sReport *k8s.ManifestAuditReport, flakeMatches []nix.FlakeVulnerabilityMatch, storageViolations []storage.StorageViolation, wireguardViolations []wireguard.WireGuardViolation, cisViolations []bench.CISViolation, gatewayViolations []gateway.GatewayViolation, attestViolations []attest.AttestationViolation, fleetViolations []fleet.FleetViolation, spiffeViolations []spiffe.SPIFFEViolation, sbomViolations []sbom.SBOMViolation, hsmViolations []hsm.HSMViolation, bpfViolations []bpf.BPFViolation, pqcViolations []pqc.PQCViolation, sandboxViolations []sandbox.SandboxViolation, remediateFindings []remediate.RemediationFinding, lsmViolations []lsm.LSMViolation, replicationViolations []replication.ReplicationViolation, fastPathViolations []wgfastpath.WGFastPathViolation, enclaveViolations []wgenclave.WGEnclaveViolation) TelemetrySummary {
+	summary := ComputeTelemetryFastPath(feed, k8sReport, flakeMatches, storageViolations, wireguardViolations, cisViolations, gatewayViolations, attestViolations, fleetViolations, spiffeViolations, sbomViolations, hsmViolations, bpfViolations, pqcViolations, sandboxViolations, remediateFindings, lsmViolations, replicationViolations, fastPathViolations)
+
+	if len(enclaveViolations) > 0 {
+		summary.TotalEnclaveViolations = len(enclaveViolations)
+		for _, ev := range enclaveViolations {
+			summary.TotalViolations++
+			summary.TargetDistribution["nixos"]++
+			summary.ComponentDistribution["wireguard-enclave"]++
+			if ev.CVSSScore > summary.MaxCVSS {
+				summary.MaxCVSS = ev.CVSSScore
+			}
+			switch ev.Severity {
 			case intel.SeverityCritical:
 				summary.CriticalCount++
 			case intel.SeverityHigh:
