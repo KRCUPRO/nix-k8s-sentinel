@@ -1,0 +1,29 @@
+groups:
+  - name: cilium-bgp-radar-alerts
+    rules:
+      - alert: CiliumBGPSessionDown
+        expr: cilium_bgp_session_state != 6
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Cilium BGP neighbor session is down"
+          description: "BGP peer {{ $labels.peer_ip }} (ASN {{ $labels.peer_asn }}) is in non-established state."
+
+      - alert: CiliumBGPRouteFlapStorm
+        expr: rate(cilium_bgp_session_resets_total[1h]) > 5
+        for: 5m
+        labels:
+          severity: high
+        annotations:
+          summary: "Cilium BGP route flapping detected"
+          description: "BGP neighbor {{ $labels.peer_ip }} reset count exceeds 5 resets/hour."
+
+      - alert: CiliumIPAMPoolExhaustionWarning
+        expr: cilium_ipam_pool_allocated / cilium_ipam_pool_total > 0.85
+        for: 5m
+        labels:
+          severity: high
+        annotations:
+          summary: "Cilium IPAM pool utilization exceeds 85%"
+          description: "Pool {{ $labels.pool_name }} has fewer than 15% available IP addresses remaining."

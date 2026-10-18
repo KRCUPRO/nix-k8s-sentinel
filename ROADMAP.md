@@ -220,9 +220,17 @@ Automated generation of defense-in-depth rules:
 - [x] Full CLI integration (`--impermanence`, `--ephemeral-root`, `--impermanence-telemetry`, `--impermanence-synth-out`, `--impermanence-strict`) with unified SARIF v2.1.0 code scanning, JSON audit telemetry, and Markdown briefing exports (`cmd/sentinel/impermanence_runner.go`, `cmd/sentinel/flags.go`).
 - [x] Production sample fixtures (`fixtures/nixos-impermanence.nix`, `fixtures/nixos-impermanence-vulnerable.nix`, `fixtures/impermanence-telemetry.json`) and threat feed correlation with `CVE-2026-61842`.
 
-### Version 0.27.0 — Linux Kernel eBPF LSM Socket Buffer Backpressure Sentinel (Planned)
-- [ ] Inspect BPF ring buffer watermarks, epoll event loops, and per-CPU perf buffer drops across high-throughput nodes.
-- [ ] Dynamically synthesize adaptive sampling policies and kernel sysctl socket buffer auto-scaling overrides.
+### Version 0.27.0 — Kubernetes Service Mesh Dual-Stack IPv6 & Cilium BGP Peering Radar (Completed)
+- [x] Multi-document streaming YAML and NixOS parser for Cilium BGP peering policies (`CiliumBGPPeeringPolicy`), load balancer IP pools (`CiliumLoadBalancerIPPool`), NixOS FRR BGP configuration (`services.frr.bgp`), and JSON telemetry (`pkg/bgp/parser.go`).
+- [x] Canonical rule catalog `BGP-RADAR-001` through `BGP-RADAR-012` detecting missing TCP MD5 / RFC 2385 authentication (`CVE-2026-70192`), missing max prefix limits, unfiltered inbound announcements, unrestricted route export leaking defaults, ASN conflicts, unconfigured eBGP multihop TTL, unreserved public ASNs in private mesh, BGP session degradation, excessive route flapping, insecure host TCP 179 exposure, missing community tags, and IPAM pool saturation (`pkg/bgp/rules.go`).
+- [x] Dual-stack BGP auditor and deterministic compliance scoring engine (0.0% to 100.0%) correlating static declarations with live runtime peering telemetry (`pkg/bgp/auditor.go`).
+- [x] Declarative policy synthesizer generating hardened `CiliumBGPPeeringPolicy`, NixOS FRR BGP modules (`nixos-bgp-peering-hardened.nix`), and Prometheus BGP alerting rules (`bgp-alerts.yaml`) (`pkg/bgp/synth.go`).
+- [x] Full CLI integration (`--bgp`, `--cilium-bgp`, `--bgp-telemetry`, `--bgp-synth-out`, `--bgp-strict`) with unified SARIF v2.1.0 code scanning, JSON audit telemetry, and Markdown briefing exports (`cmd/sentinel/bgp_runner.go`, `cmd/sentinel/flags.go`).
+- [x] Production sample fixtures (`fixtures/cilium-bgp-peering.yaml`, `fixtures/cilium-bgp-vulnerable.yaml`, `fixtures/bgp-telemetry.json`, `fixtures/nixos-bgp.nix`) and threat feed correlation with `CVE-2026-70192`.
+
+### Version 0.28.0 — Multi-Tenant Nix Store Signature & Binary Cache Isolation Gate (Planned)
+- [ ] Verify ed25519 cryptographic public key signatures on binary cache substitutes prior to cluster deployment.
+- [ ] Enforce namespace-scoped sandboxing and pure evaluation for non-privileged developer builds.
 
 ### Version 1.0.0 — Enterprise Workload Identity & Ephemeral Detonation Pipeline (Planned)
 - [ ] Full end-to-end integration of SPIFFE/SPIRE workload attestation, In-Toto provenance, and HSM envelope encryption.

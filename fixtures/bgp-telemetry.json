@@ -1,0 +1,56 @@
+{
+  "timestamp": "2026-10-18T14:30:00Z",
+  "clusterId": "nix-k8s-prod-mesh-01",
+  "nodeName": "node-worker-01.dc1.nix-k8s.internal",
+  "localASN": 65001,
+  "routerId": "192.168.100.10",
+  "totalPrefixes": 128,
+  "routeFlaps": 14,
+  "peers": [
+    {
+      "peerAddress": "192.168.100.1",
+      "peerASN": 65000,
+      "sessionState": "Established",
+      "uptimeSeconds": 864200,
+      "receivedPrefixes": 48,
+      "advertisedPrefixes": 64,
+      "flapCount": 1,
+      "families": [
+        "ipv4",
+        "ipv6"
+      ],
+      "lastEstablished": "2026-10-08T14:30:00Z",
+      "lastDown": ""
+    },
+    {
+      "peerAddress": "192.168.100.2",
+      "peerASN": 65000,
+      "sessionState": "Active",
+      "uptimeSeconds": 0,
+      "receivedPrefixes": 0,
+      "advertisedPrefixes": 0,
+      "flapCount": 8,
+      "families": [
+        "ipv4"
+      ],
+      "lastEstablished": "2026-10-18T12:00:00Z",
+      "lastDown": "2026-10-18T14:15:00Z"
+    }
+  ],
+  "ipamPools": [
+    {
+      "poolName": "prod-dual-stack-pool",
+      "cidrs": [
+        "10.100.0.0/24",
+        "2001:db8:100::/64"
+      ],
+      "allocatedIPs": 240,
+      "capacityIPs": 254,
+      "utilizationPercent": 94.5,
+      "families": [
+        "ipv4",
+        "ipv6"
+      ]
+    }
+  ]
+}

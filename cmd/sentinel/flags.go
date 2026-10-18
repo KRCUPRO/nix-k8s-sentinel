@@ -73,6 +73,11 @@ type SentinelConfig struct {
 	ImpermanenceTelemetry string
 	ImpermanenceSynthOut  string
 	ImpermanenceStrict    bool
+	BGPPath               string
+	CiliumBGP             bool
+	BGPTelemetry          string
+	BGPSynthOut           string
+	BGPStrict             bool
 	Briefing              bool
 	BriefingDir       string
 	BriefingFile      string
@@ -175,6 +180,11 @@ func parseCLI() SentinelConfig {
 	impermanenceTelemetry := flag.String("impermanence-telemetry", "", "Path to runtime ephemeral storage and memory telemetry JSON to inspect")
 	impermanenceSynthOut := flag.String("impermanence-synth-out", "", "Output directory to write synthesized hardened NixOS impermanence modules, wipe hooks, and Prometheus alerts")
 	impermanenceStrict := flag.Bool("impermanence-strict", false, "Enforce strict zero-warning impermanence and ephemeral root compliance")
+	bgpPath := flag.String("bgp", "", "Path to Cilium BGP manifest file or directory to audit")
+	ciliumBGPShort := flag.String("cilium-bgp", "", "Alias for --bgp")
+	bgpTelemetry := flag.String("bgp-telemetry", "", "Path to runtime BGP session and IPAM telemetry JSON to inspect")
+	bgpSynthOut := flag.String("bgp-synth-out", "", "Output directory to write synthesized hardened Cilium BGP and NixOS modules")
+	bgpStrict := flag.Bool("bgp-strict", false, "Enforce strict zero-warning BGP peering and dual-stack routing compliance")
 	briefing := flag.Bool("briefing", false, "Generate automated Markdown threat intelligence briefing")
 	briefingDir := flag.String("briefing-dir", "intel/briefings", "Output directory for threat briefings")
 	briefingFile := flag.String("briefing-file", "", "Custom filename for threat briefing markdown")
@@ -259,6 +269,9 @@ func parseCLI() SentinelConfig {
 	if *impermanencePath == "" && *ephemeralRootShort != "" {
 		*impermanencePath = *ephemeralRootShort
 	}
+	if *bgpPath == "" && *ciliumBGPShort != "" {
+		*bgpPath = *ciliumBGPShort
+	}
 	if *outFile == "" && *outShort != "" {
 		*outFile = *outShort
 	}
@@ -334,6 +347,11 @@ func parseCLI() SentinelConfig {
 		ImpermanenceTelemetry: *impermanenceTelemetry,
 		ImpermanenceSynthOut:  *impermanenceSynthOut,
 		ImpermanenceStrict:    *impermanenceStrict,
+		BGPPath:               *bgpPath,
+		CiliumBGP:             *ciliumBGPShort != "" || *bgpPath != "",
+		BGPTelemetry:          *bgpTelemetry,
+		BGPSynthOut:           *bgpSynthOut,
+		BGPStrict:             *bgpStrict,
 		Briefing:              *briefing,
 		BriefingDir:       *briefingDir,
 		BriefingFile:      *briefingFile,
@@ -347,3 +365,23 @@ func parseCLI() SentinelConfig {
 		OutFile:           *outFile,
 	}
 }
+
+// HasAuditTargets reports whether any audit subsystem or synthesis target is requested.
+func (c SentinelConfig) HasAuditTargets() bool {
+	return c.FlakePath != "" || c.K8sPath != "" || c.PolicyOut != "" || c.ProbeFlag ||
+		c.CephPath != "" || c.CephTelemetry != "" || c.WgPath != "" || c.WgTelemetry != "" ||
+		c.CISPath != "" || c.GwPath != "" || c.AttestPath != "" || c.AttestTelemetry != "" ||
+		c.FleetPath != "" || c.FleetTelemetry != "" || c.SpiffePath != "" || c.SvidTelemetry != "" ||
+		c.SpiffePolicyOut != "" || c.SbomPath != "" || c.AttestFile != "" || c.RuntimePath != "" ||
+		c.HsmPath != "" || c.HsmTelemetry != "" || c.BpfPath != "" || c.BpfTelemetry != "" ||
+		c.BpfSynthOut != "" || c.PqcPath != "" || c.PqcTelemetry != "" || c.PqcSynthOut != "" ||
+		c.SandboxPath != "" || c.SandboxTelemetry != "" || c.SandboxSynthOut != "" ||
+		c.RemediatePath != "" || c.RemediateSynthOut != "" || c.LSMPath != "" || c.LSMTelemetry != "" ||
+		c.LSMSynthOut != "" || c.DRManifests != "" || c.DRTelemetry != "" || c.DRSynthOut != "" ||
+		c.FastPathManifests != "" || c.FastPathTelemetry != "" || c.FastPathSynthOut != "" ||
+		c.EnclaveManifests != "" || c.EnclaveTelemetry != "" || c.EnclaveSynthOut != "" ||
+		c.WebhookPath != "" || c.WebhookTelemetry != "" || c.WebhookSynthOut != "" ||
+		c.ImpermanencePath != "" || c.ImpermanenceTelemetry != "" || c.ImpermanenceSynthOut != "" ||
+		c.BGPPath != "" || c.BGPTelemetry != "" || c.BGPSynthOut != ""
+}
+
