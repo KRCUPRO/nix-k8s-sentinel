@@ -10,6 +10,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/fleet"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/gateway"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/hsm"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/impermanence"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/intel"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/k8s"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/lsm"
@@ -30,7 +31,7 @@ import (
 )
 
 var (
-	version = "0.25.0"
+	version = "0.26.0"
 )
 
 func main() {
@@ -105,6 +106,9 @@ func main() {
 	var webhookViolations []webhook.WebhookViolation
 	var webhookSummary *webhook.WebhookSummary
 	var webhookTelemetry *webhook.WebhookTelemetry
+	var impermanenceViolations []impermanence.ImpermanenceViolation
+	var impermanenceSummary *impermanence.ImpermanenceSummary
+	var impermanenceTelemetry *impermanence.EphemeralStorageTelemetry
 
 	// 1. Audit Nix Flake
 	if cfg.FlakePath != "" {
@@ -232,7 +236,21 @@ func main() {
 		)
 	}
 
-	// 23. Generate Threat Briefing if --briefing is requested
+	// 23. Audit NixOS Immutable Root & Impermanence Ephemerality Radar
+	if cfg.ImpermanencePath != "" || cfg.ImpermanenceTelemetry != "" || cfg.ImpermanenceSynthOut != "" {
+		impermanenceViolations, impermanenceSummary, impermanenceTelemetry = runImpermanenceAudit(
+			cfg.ImpermanencePath,
+			cfg.K8sPath,
+			cfg.ImpermanenceTelemetry,
+			cfg.ImpermanenceSynthOut,
+			cfg.ImpermanenceStrict,
+			feed,
+			logInfo,
+			logErr,
+		)
+	}
+
+	// 24. Generate Threat Briefing if --briefing is requested
 	if cfg.Briefing {
 		logInfo("[+] Synthesizing Threat Intelligence Briefing...\n")
 		briefingOpts := report.BriefingOptions{
@@ -279,11 +297,14 @@ func main() {
 			EnclaveViolations:       enclaveViolations,
 			EnclaveSummary:          enclaveSummary,
 			EnclaveReports:          enclaveReports,
-			WebhookViolations:       webhookViolations,
-			WebhookSummary:          webhookSummary,
-			WebhookTelemetry:        webhookTelemetry,
-			OutputDir:               cfg.BriefingDir,
-			CustomFilename:          cfg.BriefingFile,
+			WebhookViolations:          webhookViolations,
+			WebhookSummary:             webhookSummary,
+			WebhookTelemetry:           webhookTelemetry,
+			ImpermanenceViolations:     impermanenceViolations,
+			ImpermanenceSummary:        impermanenceSummary,
+			ImpermanenceTelemetry:      impermanenceTelemetry,
+			OutputDir:                  cfg.BriefingDir,
+			CustomFilename:             cfg.BriefingFile,
 		}
 
 		rep, err := report.GenerateBriefing(briefingOpts)
@@ -396,14 +417,20 @@ func main() {
 			EnclaveManifestPath:     cfg.EnclaveManifests,
 			EnclaveTelemetryPath:    cfg.EnclaveTelemetry,
 			EnclaveSynthOut:         cfg.EnclaveSynthOut,
-			WebhookViolations:       webhookViolations,
-			WebhookSummary:          webhookSummary,
-			WebhookTelemetry:        webhookTelemetry,
-			WebhookPath:             cfg.WebhookPath,
-			WebhookTelemetryPath:    cfg.WebhookTelemetry,
-			WebhookSynthOut:         cfg.WebhookSynthOut,
-			TargetFilter:            cfg.TargetFilter,
-			Pretty:                  true,
+			WebhookViolations:          webhookViolations,
+			WebhookSummary:             webhookSummary,
+			WebhookTelemetry:           webhookTelemetry,
+			WebhookPath:                cfg.WebhookPath,
+			WebhookTelemetryPath:       cfg.WebhookTelemetry,
+			WebhookSynthOut:            cfg.WebhookSynthOut,
+			ImpermanenceViolations:     impermanenceViolations,
+			ImpermanenceSummary:        impermanenceSummary,
+			ImpermanenceTelemetry:      impermanenceTelemetry,
+			ImpermanencePath:           cfg.ImpermanencePath,
+			ImpermanenceTelemetryPath:  cfg.ImpermanenceTelemetry,
+			ImpermanenceSynthOut:       cfg.ImpermanenceSynthOut,
+			TargetFilter:               cfg.TargetFilter,
+			Pretty:                     true,
 		}
 
 		if cfg.Format == "sarif" {

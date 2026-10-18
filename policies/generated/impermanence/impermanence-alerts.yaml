@@ -1,0 +1,32 @@
+groups:
+- name: nixos-impermanence-alerts
+  rules:
+  - alert: TmpfsRootStorageFillingUp
+    expr: (node_filesystem_free_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) < 0.15
+    for: 5m
+    labels:
+      severity: critical
+      component: impermanence
+    annotations:
+      summary: "Node ephemeral tmpfs root storage is nearly full (< 15% free)"
+      description: "Host {{ $labels.instance }} tmpfs root mount has less than 15% free space remaining, risking imminent host kernel OOM freeze."
+
+  - alert: UnencryptedSwapDetected
+    expr: node_memory_SwapTotal_bytes > 0 and node_swap_encrypted == 0
+    for: 1m
+    labels:
+      severity: critical
+      component: impermanence
+    annotations:
+      summary: "Unencrypted swap active on stateless node"
+      description: "Host {{ $labels.instance }} has plaintext swap active, violating ephemeral root isolation (CVE-2026-61842)."
+
+  - alert: EphemeralRootWipeFailed
+    expr: node_boot_wipe_success == 0
+    for: 2m
+    labels:
+      severity: high
+      component: impermanence
+    annotations:
+      summary: "Stateless boot wipe hook failed to sanitize root"
+      description: "Node {{ $labels.instance }} failed to execute blank snapshot rollback or tmpfs initialization on boot."

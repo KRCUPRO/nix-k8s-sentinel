@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.26.0] - 2026-10-18
+
+### Added
+- **NixOS Immutable Root & Impermanence Storage Ephemerality Verifier** (`pkg/impermanence/scanner.go`): Autonomous security and storage ephemerality verification engine inspecting NixOS impermanence configurations (`environment.persistence`), Kubernetes `hostPath` cluster storage mounts, and live ephemeral storage telemetry across bare-metal and cloud nodes.
+- **Authoritative Canonical Impermanence Rules Catalog** (`pkg/impermanence/rules.go`): Suite of 12 canonical security rules (`IMP-ROOT-001` through `IMP-ROOT-012`) covering unmanaged writeable root filesystem lacking ephemeral tmpfs or rollback hooks (`IMP-ROOT-001`, mapped to `CVE-2026-61842`), missing canonical `/persist` or `/nix/persist` path prefix (`IMP-ROOT-002`), unencrypted swap device exposing memory secrets upon reboot (`IMP-ROOT-003`), missing ZFS/Btrfs blank snapshot rollback initrd hook (`IMP-ROOT-004`), missing Kubelet directory persistence for node identity and volumes (`IMP-ROOT-005`), missing system machine-id persistence (`IMP-ROOT-006`), Kubernetes hostPath storage mount escaping ephemeral root into unmanaged storage (`IMP-ROOT-007`), unmasked root directory declared in persistence configuration (`IMP-ROOT-008`), permissive directory permissions allowing unauthorized access (`IMP-ROOT-009`), live ephemeral root storage utilization exceeding 85% threshold (`IMP-ROOT-010`), ephemeral root filesystem available headroom below 1GB critical ceiling (`IMP-ROOT-011`), and unmonitored persistent storage device missing disk telemetry (`IMP-ROOT-012`).
+- **Streaming Impermanence Manifest & Telemetry Parser** (`pkg/impermanence/parser.go`): Streaming line parser for NixOS configuration modules (`fileSystems`, `environment.persistence`, `swapDevices`), Kubernetes Pod/DaemonSet/Deployment `hostPath` volume mounts, and live runtime JSON ephemeral storage telemetry with 10MB memory safety bounds.
+- **Stateless Root Auditor & Deterministic Compliance Engine** (`pkg/impermanence/auditor.go`): Evaluates NixOS host root ephemerality, cross-checks cluster storage mounts against host persistence paths, monitors live tmpfs disk headroom, and calculates deterministic compliance scores (0.0% to 100.0%).
+- **Declarative Impermanence Policy Synthesizer** (`pkg/impermanence/synth.go`): Synthesizes production-hardened NixOS impermanence modules (`impermanence-hardened.nix`), wipe-on-reboot initrd hooks (`wipe-on-reboot-zfs.nix`), and Prometheus alert rules for ephemeral storage exhaustion (`impermanence-alerts.yaml`).
+- **Dedicated CLI Impermanence Runner & Flag Architecture** (`cmd/sentinel/impermanence_runner.go`, `cmd/sentinel/flags.go`): Extracted impermanence audit coordination into a dedicated modular runner maintaining `cmd/sentinel/main.go` under 460 LOC. Added `--impermanence=<path>`, `--ephemeral-root`, `--impermanence-telemetry=<path>`, `--impermanence-synth-out=<dir>`, and `--impermanence-strict` flags.
+- **Threat Feed Expansion** (`intel/cve-feed.json`): Ingested `CVE-2026-61842` (NixOS Impermanence Ephemeral Root Desynchronization & Kubelet PKI Memory Leakage, CVSS 9.1 Critical).
+- **Unified Exporter Integration**: Impermanence violations, summary statistics, and runtime telemetry exported to OASIS SARIF v2.1.0 (Section 22), structured JSON audit telemetry (`impermanence_violations`, `impermanence_summary`, `impermanence_telemetry`), and hourly Markdown threat briefings (Section 25).
+- **Production Fixtures & Policy Artifacts**: Added realistic fixtures (`fixtures/nixos-impermanence.nix`, `fixtures/nixos-impermanence-vulnerable.nix`, `fixtures/impermanence-telemetry.json`) and synthesized templates in `policies/generated/impermanence/`.
+- **Comprehensive Unit Test Suites** (`pkg/impermanence/impermanence_test.go`, `pkg/report/impermanence_report_test.go`): 100% test coverage across canonical rules, manifest parsing, telemetry auditing, policy synthesizers, scanner, SARIF/JSON/Briefing serialization, and memory bounds checks.
+
+### Changed
+- Bumped engine release to `v0.26.0`.
+- Updated `SECURITY.md` establishing NixOS Immutable Root & Impermanence Storage Ephemerality security invariants (Invariant 28).
+- Updated `ROADMAP.md` marking Milestone M26 as completed and scheduling M27 (Linux Kernel eBPF LSM Socket Buffer Backpressure Sentinel).
+- Updated `scripts/ARCHITECTURE_MAP.md` documenting new impermanence modules, runners, and O(1) symbols.
+
+---
+
 ## [0.25.0] - 2026-10-18
 
 ### Added

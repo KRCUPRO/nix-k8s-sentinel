@@ -10,6 +10,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/fleet"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/gateway"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/hsm"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/impermanence"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/intel"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/k8s"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/lsm"
@@ -88,51 +89,57 @@ type ReportOptions struct {
 	EnclaveSummary          *wgenclave.WGEnclaveSummary
 	EnclaveReports          []wgenclave.AttestationReport
 	EnclavePeers            []wgenclave.PeerTunnelStatus
-	WebhookViolations       []webhook.WebhookViolation
-	WebhookSummary          *webhook.WebhookSummary
-	WebhookTelemetry        *webhook.WebhookTelemetry
-	FlakePath               string
-	K8sPath                 string
-	StoragePath             string
-	WireGuardPath           string
-	CISPath                 string
-	GatewayPath             string
-	AttestPath              string
-	AttestTelemetryPath     string
-	FleetPath               string
-	FleetTelemetryPath      string
-	SPIFFEPath              string
-	SPIFFETelemetryPath     string
-	SBOMPath                string
-	SBOMAttestPath          string
-	SBOMRuntimePath         string
-	HSMPath                 string
-	HSMTelemetryPath        string
-	BPFPath                 string
-	BPFTelemetryPath        string
-	PQCPath                 string
-	PQCTelemetryPath        string
-	SandboxPath             string
-	SandboxTelemetryPath    string
-	RemediatePath           string
-	RemediateOutDir         string
-	LSMPath                 string
-	LSMTelemetryPath        string
-	LSMSynthOut             string
-	DRManifestPath          string
-	DRTelemetryPath         string
-	DRSynthOut              string
-	FastPathManifestPath    string
-	FastPathTelemetryPath   string
-	FastPathSynthOut        string
-	EnclaveManifestPath     string
-	EnclaveTelemetryPath    string
-	EnclaveSynthOut         string
-	WebhookPath             string
-	WebhookTelemetryPath    string
-	WebhookSynthOut         string
-	TargetFilter            string
-	Pretty                  bool
+	WebhookViolations          []webhook.WebhookViolation
+	WebhookSummary             *webhook.WebhookSummary
+	WebhookTelemetry           *webhook.WebhookTelemetry
+	ImpermanenceViolations     []impermanence.ImpermanenceViolation
+	ImpermanenceSummary        *impermanence.ImpermanenceSummary
+	ImpermanenceTelemetry      *impermanence.EphemeralStorageTelemetry
+	FlakePath                  string
+	K8sPath                    string
+	StoragePath                string
+	WireGuardPath              string
+	CISPath                    string
+	GatewayPath                string
+	AttestPath                 string
+	AttestTelemetryPath        string
+	FleetPath                  string
+	FleetTelemetryPath         string
+	SPIFFEPath                 string
+	SPIFFETelemetryPath        string
+	SBOMPath                   string
+	SBOMAttestPath             string
+	SBOMRuntimePath            string
+	HSMPath                    string
+	HSMTelemetryPath           string
+	BPFPath                    string
+	BPFTelemetryPath           string
+	PQCPath                    string
+	PQCTelemetryPath           string
+	SandboxPath                string
+	SandboxTelemetryPath       string
+	RemediatePath              string
+	RemediateOutDir            string
+	LSMPath                    string
+	LSMTelemetryPath           string
+	LSMSynthOut                string
+	DRManifestPath             string
+	DRTelemetryPath            string
+	DRSynthOut                 string
+	FastPathManifestPath       string
+	FastPathTelemetryPath      string
+	FastPathSynthOut           string
+	EnclaveManifestPath        string
+	EnclaveTelemetryPath       string
+	EnclaveSynthOut            string
+	WebhookPath                string
+	WebhookTelemetryPath       string
+	WebhookSynthOut            string
+	ImpermanencePath           string
+	ImpermanenceTelemetryPath  string
+	ImpermanenceSynthOut       string
+	TargetFilter               string
+	Pretty                     bool
 }
 
 // SeverityToSARIFLevel translates CVSS severity metrics into standard SARIF v2.1.0 result levels.

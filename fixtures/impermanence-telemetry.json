@@ -1,0 +1,34 @@
+{
+  "timestamp": "2026-10-18T18:30:00Z",
+  "cluster_id": "nixos-k8s-prod-fleet",
+  "nodes": [
+    {
+      "node_name": "k8s-node-nixos-prod-01",
+      "root_mount": "none (tmpfs)",
+      "total_ram_bytes": 68719476736,
+      "used_ram_bytes": 21474836480,
+      "root_total_bytes": 8589934592,
+      "root_used_bytes": 2147483648,
+      "root_usage_percent": 25.0,
+      "orphaned_inodes": 12,
+      "swap_used_bytes": 0,
+      "swap_encrypted": true,
+      "wipe_on_reboot_active": true,
+      "shutdown_memory_zeroed": true
+    },
+    {
+      "node_name": "k8s-node-nixos-vuln-01",
+      "root_mount": "/dev/sda1 (ext4)",
+      "total_ram_bytes": 34359738368,
+      "used_ram_bytes": 17179869184,
+      "root_total_bytes": 107374182400,
+      "root_used_bytes": 94489280512,
+      "root_usage_percent": 88.0,
+      "orphaned_inodes": 1420,
+      "swap_used_bytes": 1073741824,
+      "swap_encrypted": false,
+      "wipe_on_reboot_active": false,
+      "shutdown_memory_zeroed": false
+    }
+  ]
+}
