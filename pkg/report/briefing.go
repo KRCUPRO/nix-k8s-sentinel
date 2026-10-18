@@ -14,6 +14,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/fleet"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/gateway"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/hsm"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/impermanence"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/intel"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/k8s"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/lsm"
@@ -79,11 +80,14 @@ type BriefingOptions struct {
 	EnclaveViolations       []wgenclave.WGEnclaveViolation
 	EnclaveSummary          *wgenclave.WGEnclaveSummary
 	EnclaveReports          []wgenclave.AttestationReport
-	WebhookViolations       []webhook.WebhookViolation
-	WebhookSummary          *webhook.WebhookSummary
-	WebhookTelemetry        *webhook.WebhookTelemetry
-	OutputDir               string
-	CustomFilename          string
+	WebhookViolations          []webhook.WebhookViolation
+	WebhookSummary             *webhook.WebhookSummary
+	WebhookTelemetry           *webhook.WebhookTelemetry
+	ImpermanenceViolations     []impermanence.ImpermanenceViolation
+	ImpermanenceSummary        *impermanence.ImpermanenceSummary
+	ImpermanenceTelemetry      *impermanence.EphemeralStorageTelemetry
+	OutputDir                  string
+	CustomFilename             string
 }
 
 // BriefingReport represents a generated Markdown briefing and its associated metadata.
@@ -114,7 +118,7 @@ func GenerateBriefing(opts BriefingOptions) (*BriefingReport, error) {
 		version = "0.24.0"
 	}
 
-	telemetry := ComputeTelemetryWebhook(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations, opts.GatewayViolations, opts.AttestViolations, opts.FleetViolations, opts.SPIFFEViolations, opts.SBOMViolations, opts.HSMViolations, opts.BPFViolations, opts.PQCViolations, opts.SandboxViolations, opts.RemediateFindings, opts.LSMViolations, opts.ReplicationViolations, opts.FastPathViolations, opts.EnclaveViolations, opts.WebhookViolations)
+	telemetry := ComputeTelemetryImpermanence(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations, opts.GatewayViolations, opts.AttestViolations, opts.FleetViolations, opts.SPIFFEViolations, opts.SBOMViolations, opts.HSMViolations, opts.BPFViolations, opts.PQCViolations, opts.SandboxViolations, opts.RemediateFindings, opts.LSMViolations, opts.ReplicationViolations, opts.FastPathViolations, opts.EnclaveViolations, opts.WebhookViolations, opts.ImpermanenceViolations)
 
 	var buf bytes.Buffer
 
@@ -818,7 +822,33 @@ func GenerateBriefing(opts BriefingOptions) (*BriefingReport, error) {
 		buf.WriteString("---\n\n")
 	}
 
-	// 25. Action Items Checklist
+	// 25. NixOS Immutable Root & Impermanence Ephemerality Radar
+	if opts.ImpermanenceSummary != nil || len(opts.ImpermanenceViolations) > 0 {
+		buf.WriteString("## ❄️ NixOS Immutable Root & Impermanence Ephemerality Radar\n\n")
+		if sum := opts.ImpermanenceSummary; sum != nil {
+			buf.WriteString(fmt.Sprintf("**Posture Score:** `%.1f%%` | **Hosts Scanned:** %d (%d Compliant) | **Ephemeral Roots:** %d | **Mutable Roots:** %d | **Unencrypted Swap Risks:** %d | **Missing Wipe Hooks:** %d\n\n",
+				sum.ComplianceScore, sum.TotalHostsScanned, sum.CompliantHosts, sum.EphemeralRootCount, sum.MutableRootCount, sum.UnencryptedSwapCount, sum.WipeHookMissingCount))
+			buf.WriteString(fmt.Sprintf("**Severity Breakdown:** %d Critical | %d High | %d Medium | %d Low\n\n",
+				sum.CriticalCount, sum.HighCount, sum.MediumCount, sum.LowCount))
+		}
+		if len(opts.ImpermanenceViolations) > 0 {
+			buf.WriteString(fmt.Sprintf("⚠️ **%d impermanence & ephemeral storage violations identified:**\n\n", len(opts.ImpermanenceViolations)))
+			buf.WriteString("| Rule ID | Host Name | Target Path | Severity | CVSS | Finding & Threat Details | CVE | Remediation Action |\n")
+			buf.WriteString("| :--- | :--- | :--- | :---: | :---: | :--- | :---: | :--- |\n")
+			for _, iv := range opts.ImpermanenceViolations {
+				cveTag := "-"
+				if iv.MatchedCVE != "" {
+					cveTag = fmt.Sprintf("`%s`", iv.MatchedCVE)
+				}
+				buf.WriteString(fmt.Sprintf("| `%s` | `%s` | `%s` | **%s** | %.1f | %s | %s | %s |\n",
+					iv.RuleID, iv.HostName, iv.TargetPath, iv.Severity, iv.CVSSScore, iv.Description, cveTag, iv.Remediation))
+			}
+			buf.WriteString("\n")
+		}
+		buf.WriteString("---\n\n")
+	}
+
+	// 26. Action Items Checklist
 	buf.WriteString("## 📋 SecOps & SRE Operational Checklist\n\n")
 	buf.WriteString("- [ ] Review high and critical severity advisories against production deployment manifests.\n")
 	buf.WriteString("- [ ] Verify that ingress controllers enforce URI path normalization and snippet guards.\n")
@@ -842,6 +872,7 @@ func GenerateBriefing(opts BriefingOptions) (*BriefingReport, error) {
 	buf.WriteString("- [ ] Profile WireGuard kernel cryptographic throughput, enable AVX-512/ARM Neon vector acceleration, and configure 100GbE NIC ring buffers to prevent packet loss under high load.\n")
 	buf.WriteString("- [ ] Bind WireGuard ephemeral session keys to AMD SEV-SNP VCEK and Intel TDX attestation reports and reject peers with deviated boot PCRs.\n")
 	buf.WriteString("- [ ] Enforce ValidatingWebhookConfiguration failurePolicy: Fail, timeoutSeconds <= 3s, exempt kube-system, and establish cert-manager automated CA rotation.\n")
+	buf.WriteString("- [ ] Audit NixOS impermanence configurations (environment.persistence), verify tmpfs/snapshot root ephemerality, and enforce encrypted swap (swapDevices.*.randomEncryption).\n")
 	buf.WriteString("- [ ] Archive this briefing record into security audit ledger.\n")
 
 	report := &BriefingReport{

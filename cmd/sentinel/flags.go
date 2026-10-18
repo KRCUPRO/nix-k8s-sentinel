@@ -64,11 +64,16 @@ type SentinelConfig struct {
 	EnclaveTelemetry  string
 	EnclaveSynthOut   string
 	EnclaveStrict     bool
-	WebhookPath       string
-	WebhookTelemetry  string
-	WebhookSynthOut   string
-	WebhookStrict     bool
-	Briefing          bool
+	WebhookPath           string
+	WebhookTelemetry      string
+	WebhookSynthOut       string
+	WebhookStrict         bool
+	ImpermanencePath      string
+	EphemeralRoot         bool
+	ImpermanenceTelemetry string
+	ImpermanenceSynthOut  string
+	ImpermanenceStrict    bool
+	Briefing              bool
 	BriefingDir       string
 	BriefingFile      string
 	PolicyOut         string
@@ -165,6 +170,11 @@ func parseCLI() SentinelConfig {
 	webhookTelemetry := flag.String("webhook-telemetry", "", "Path to runtime admission webhook and CA rotation telemetry JSON to inspect")
 	webhookSynthOut := flag.String("webhook-synth-out", "", "Output directory to write synthesized hardened WebhookConfiguration, cert-manager CA renewal, and PrometheusRule alert policies")
 	webhookStrict := flag.Bool("webhook-strict", false, "Enforce strict zero-warning admission webhook and CA rotation compliance")
+	impermanencePath := flag.String("impermanence", "", "Path to NixOS impermanence configuration file or directory to audit")
+	ephemeralRootShort := flag.String("ephemeral-root", "", "Alias for --impermanence")
+	impermanenceTelemetry := flag.String("impermanence-telemetry", "", "Path to runtime ephemeral storage and memory telemetry JSON to inspect")
+	impermanenceSynthOut := flag.String("impermanence-synth-out", "", "Output directory to write synthesized hardened NixOS impermanence modules, wipe hooks, and Prometheus alerts")
+	impermanenceStrict := flag.Bool("impermanence-strict", false, "Enforce strict zero-warning impermanence and ephemeral root compliance")
 	briefing := flag.Bool("briefing", false, "Generate automated Markdown threat intelligence briefing")
 	briefingDir := flag.String("briefing-dir", "intel/briefings", "Output directory for threat briefings")
 	briefingFile := flag.String("briefing-file", "", "Custom filename for threat briefing markdown")
@@ -246,6 +256,9 @@ func parseCLI() SentinelConfig {
 	if *webhookPath == "" && *webhookShort != "" {
 		*webhookPath = *webhookShort
 	}
+	if *impermanencePath == "" && *ephemeralRootShort != "" {
+		*impermanencePath = *ephemeralRootShort
+	}
 	if *outFile == "" && *outShort != "" {
 		*outFile = *outShort
 	}
@@ -312,11 +325,16 @@ func parseCLI() SentinelConfig {
 		EnclaveTelemetry:  *enclaveTelemetry,
 		EnclaveSynthOut:   *enclaveSynthOut,
 		EnclaveStrict:     *enclaveStrict,
-		WebhookPath:       *webhookPath,
-		WebhookTelemetry:  *webhookTelemetry,
-		WebhookSynthOut:   *webhookSynthOut,
-		WebhookStrict:     *webhookStrict,
-		Briefing:          *briefing,
+		WebhookPath:           *webhookPath,
+		WebhookTelemetry:      *webhookTelemetry,
+		WebhookSynthOut:       *webhookSynthOut,
+		WebhookStrict:         *webhookStrict,
+		ImpermanencePath:      *impermanencePath,
+		EphemeralRoot:         *ephemeralRootShort != "",
+		ImpermanenceTelemetry: *impermanenceTelemetry,
+		ImpermanenceSynthOut:  *impermanenceSynthOut,
+		ImpermanenceStrict:    *impermanenceStrict,
+		Briefing:              *briefing,
 		BriefingDir:       *briefingDir,
 		BriefingFile:      *briefingFile,
 		PolicyOut:         *policyOut,

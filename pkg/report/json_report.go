@@ -13,6 +13,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/fleet"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/gateway"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/hsm"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/impermanence"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/intel"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/k8s"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/lsm"
@@ -84,9 +85,12 @@ type JSONAuditReport struct {
 	EnclaveSummary          *wgenclave.WGEnclaveSummary     `json:"enclave_summary,omitempty"`
 	EnclaveReports          []wgenclave.AttestationReport   `json:"enclave_reports,omitempty"`
 	EnclavePeers            []wgenclave.PeerTunnelStatus    `json:"enclave_peers,omitempty"`
-	WebhookViolations       []webhook.WebhookViolation      `json:"webhook_violations,omitempty"`
-	WebhookSummary          *webhook.WebhookSummary         `json:"webhook_summary,omitempty"`
-	WebhookTelemetry        *webhook.WebhookTelemetry       `json:"webhook_telemetry,omitempty"`
+	WebhookViolations          []webhook.WebhookViolation              `json:"webhook_violations,omitempty"`
+	WebhookSummary             *webhook.WebhookSummary                 `json:"webhook_summary,omitempty"`
+	WebhookTelemetry           *webhook.WebhookTelemetry               `json:"webhook_telemetry,omitempty"`
+	ImpermanenceViolations     []impermanence.ImpermanenceViolation   `json:"impermanence_violations,omitempty"`
+	ImpermanenceSummary        *impermanence.ImpermanenceSummary       `json:"impermanence_summary,omitempty"`
+	ImpermanenceTelemetry      *impermanence.EphemeralStorageTelemetry `json:"impermanence_telemetry,omitempty"`
 }
 
 // BuildJSONReport compiles the consolidated JSON audit report from provided audit data.
@@ -217,8 +221,17 @@ func BuildJSONReport(opts ReportOptions) (*JSONAuditReport, error) {
 	if opts.WebhookSynthOut != "" {
 		scanned = append(scanned, opts.WebhookSynthOut)
 	}
+	if opts.ImpermanencePath != "" {
+		scanned = append(scanned, opts.ImpermanencePath)
+	}
+	if opts.ImpermanenceTelemetryPath != "" {
+		scanned = append(scanned, opts.ImpermanenceTelemetryPath)
+	}
+	if opts.ImpermanenceSynthOut != "" {
+		scanned = append(scanned, opts.ImpermanenceSynthOut)
+	}
 
-	telemetry := ComputeTelemetryWebhook(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations, opts.GatewayViolations, opts.AttestViolations, opts.FleetViolations, opts.SPIFFEViolations, opts.SBOMViolations, opts.HSMViolations, opts.BPFViolations, opts.PQCViolations, opts.SandboxViolations, opts.RemediateFindings, opts.LSMViolations, opts.ReplicationViolations, opts.FastPathViolations, opts.EnclaveViolations, opts.WebhookViolations)
+	telemetry := ComputeTelemetryImpermanence(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations, opts.GatewayViolations, opts.AttestViolations, opts.FleetViolations, opts.SPIFFEViolations, opts.SBOMViolations, opts.HSMViolations, opts.BPFViolations, opts.PQCViolations, opts.SandboxViolations, opts.RemediateFindings, opts.LSMViolations, opts.ReplicationViolations, opts.FastPathViolations, opts.EnclaveViolations, opts.WebhookViolations, opts.ImpermanenceViolations)
 
 	var advisories []intel.ThreatItem
 	if opts.Feed != nil {
@@ -281,9 +294,12 @@ func BuildJSONReport(opts ReportOptions) (*JSONAuditReport, error) {
 		EnclaveSummary:          opts.EnclaveSummary,
 		EnclaveReports:          opts.EnclaveReports,
 		EnclavePeers:            opts.EnclavePeers,
-		WebhookViolations:       opts.WebhookViolations,
-		WebhookSummary:          opts.WebhookSummary,
-		WebhookTelemetry:        opts.WebhookTelemetry,
+		WebhookViolations:          opts.WebhookViolations,
+		WebhookSummary:             opts.WebhookSummary,
+		WebhookTelemetry:           opts.WebhookTelemetry,
+		ImpermanenceViolations:     opts.ImpermanenceViolations,
+		ImpermanenceSummary:        opts.ImpermanenceSummary,
+		ImpermanenceTelemetry:      opts.ImpermanenceTelemetry,
 	}
 
 	return rep, nil

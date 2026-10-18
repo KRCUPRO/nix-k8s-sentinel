@@ -212,9 +212,17 @@ Automated generation of defense-in-depth rules:
 - [x] Full CLI integration (`--webhook`, `--admission-webhook`, `--webhook-telemetry`, `--webhook-synth-out`, `--webhook-strict`) with unified SARIF v2.1.0 code scanning, JSON audit telemetry, and Markdown briefing exports (`cmd/sentinel/webhook_runner.go`, `cmd/sentinel/flags.go`).
 - [x] Production sample fixtures (`fixtures/k8s-admission-webhook.yaml`, `fixtures/k8s-admission-webhook-vulnerable.yaml`, `fixtures/webhook-telemetry.json`) and threat feed correlation with `CVE-2026-52194`.
 
-### Version 0.26.0 — NixOS Immutable Root & Impermanence Storage Ephemerality Verifier (Planned)
-- [ ] Audit NixOS impermanence configurations (`environment.persistence`) against cluster storage mounts.
-- [ ] Ensure stateless node reboot sanitization and transient secret memory wiping.
+### Version 0.26.0 — NixOS Immutable Root & Impermanence Storage Ephemerality Verifier (Completed)
+- [x] Multi-document streaming line parser for NixOS impermanence configurations (`environment.persistence`), Kubernetes `hostPath` cluster storage mounts, and live runtime JSON ephemeral storage telemetry (`pkg/impermanence/parser.go`).
+- [x] Canonical rule catalog `IMP-ROOT-001` through `IMP-ROOT-012` detecting unmanaged writeable root filesystems (`CVE-2026-61842`), missing `/persist` path prefix, unencrypted swap devices, missing rollback-blank initrd hooks, Kubelet directory persistence absence, machine-id persistence failure, hostPath escaping ephemeral root, unmasked root in persistence, permissive directory permissions, ephemeral storage exhaustion (> 85%), and unmonitored persistent storage (`pkg/impermanence/rules.go`).
+- [x] Stateless root auditor and deterministic compliance scoring engine (0.0% to 100.0%) evaluating host storage ephemerality and live storage usage (`pkg/impermanence/auditor.go`).
+- [x] Declarative policy synthesizer generating production-hardened NixOS modules (`impermanence-hardened.nix`), wipe-on-reboot initrd hooks (`wipe-on-reboot-zfs.nix`), and Prometheus alert rules (`impermanence-alerts.yaml`) (`pkg/impermanence/synth.go`).
+- [x] Full CLI integration (`--impermanence`, `--ephemeral-root`, `--impermanence-telemetry`, `--impermanence-synth-out`, `--impermanence-strict`) with unified SARIF v2.1.0 code scanning, JSON audit telemetry, and Markdown briefing exports (`cmd/sentinel/impermanence_runner.go`, `cmd/sentinel/flags.go`).
+- [x] Production sample fixtures (`fixtures/nixos-impermanence.nix`, `fixtures/nixos-impermanence-vulnerable.nix`, `fixtures/impermanence-telemetry.json`) and threat feed correlation with `CVE-2026-61842`.
+
+### Version 0.27.0 — Linux Kernel eBPF LSM Socket Buffer Backpressure Sentinel (Planned)
+- [ ] Inspect BPF ring buffer watermarks, epoll event loops, and per-CPU perf buffer drops across high-throughput nodes.
+- [ ] Dynamically synthesize adaptive sampling policies and kernel sysctl socket buffer auto-scaling overrides.
 
 ### Version 1.0.0 — Enterprise Workload Identity & Ephemeral Detonation Pipeline (Planned)
 - [ ] Full end-to-end integration of SPIFFE/SPIRE workload attestation, In-Toto provenance, and HSM envelope encryption.

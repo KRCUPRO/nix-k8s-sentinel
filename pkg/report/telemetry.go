@@ -11,6 +11,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/fleet"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/gateway"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/hsm"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/impermanence"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/intel"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/k8s"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/lsm"
@@ -59,6 +60,7 @@ type TelemetrySummary struct {
 	TotalFastPathViolations    int            `json:"total_fastpath_violations"`
 	TotalEnclaveViolations     int            `json:"total_enclave_violations"`
 	TotalWebhookViolations     int            `json:"total_webhook_violations"`
+	TotalImpermanenceViolations int           `json:"total_impermanence_violations"`
 }
 
 // ComputeTelemetry aggregates CVSS metrics from the threat feed, K8s violations, and Nix flake matches.
@@ -346,6 +348,35 @@ func ComputeTelemetryWebhook(feed *intel.Feed, k8sReport *k8s.ManifestAuditRepor
 				summary.MaxCVSS = wv.CVSSScore
 			}
 			switch wv.Severity {
+			case intel.SeverityCritical:
+				summary.CriticalCount++
+			case intel.SeverityHigh:
+				summary.HighCount++
+			case intel.SeverityMedium:
+				summary.MediumCount++
+			default:
+				summary.LowCount++
+			}
+		}
+	}
+
+	return summary
+}
+
+// ComputeTelemetryImpermanence aggregates CVSS metrics across all domains including NixOS Impermanence findings.
+func ComputeTelemetryImpermanence(feed *intel.Feed, k8sReport *k8s.ManifestAuditReport, flakeMatches []nix.FlakeVulnerabilityMatch, storageViolations []storage.StorageViolation, wireguardViolations []wireguard.WireGuardViolation, cisViolations []bench.CISViolation, gatewayViolations []gateway.GatewayViolation, attestViolations []attest.AttestationViolation, fleetViolations []fleet.FleetViolation, spiffeViolations []spiffe.SPIFFEViolation, sbomViolations []sbom.SBOMViolation, hsmViolations []hsm.HSMViolation, bpfViolations []bpf.BPFViolation, pqcViolations []pqc.PQCViolation, sandboxViolations []sandbox.SandboxViolation, remediateFindings []remediate.RemediationFinding, lsmViolations []lsm.LSMViolation, replicationViolations []replication.ReplicationViolation, fastPathViolations []wgfastpath.WGFastPathViolation, enclaveViolations []wgenclave.WGEnclaveViolation, webhookViolations []webhook.WebhookViolation, impermanenceViolations []impermanence.ImpermanenceViolation) TelemetrySummary {
+	summary := ComputeTelemetryWebhook(feed, k8sReport, flakeMatches, storageViolations, wireguardViolations, cisViolations, gatewayViolations, attestViolations, fleetViolations, spiffeViolations, sbomViolations, hsmViolations, bpfViolations, pqcViolations, sandboxViolations, remediateFindings, lsmViolations, replicationViolations, fastPathViolations, enclaveViolations, webhookViolations)
+
+	if len(impermanenceViolations) > 0 {
+		summary.TotalImpermanenceViolations = len(impermanenceViolations)
+		for _, iv := range impermanenceViolations {
+			summary.TotalViolations++
+			summary.TargetDistribution["nixos"]++
+			summary.ComponentDistribution["nixos-impermanence"]++
+			if iv.CVSSScore > summary.MaxCVSS {
+				summary.MaxCVSS = iv.CVSSScore
+			}
+			switch iv.Severity {
 			case intel.SeverityCritical:
 				summary.CriticalCount++
 			case intel.SeverityHigh:
