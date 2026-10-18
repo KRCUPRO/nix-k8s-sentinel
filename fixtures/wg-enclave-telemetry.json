@@ -1,0 +1,83 @@
+{
+  "timestamp": "2026-10-18T10:00:00Z",
+  "cluster_id": "nixos-k8s-prod-us-east",
+  "node_id": "control-plane-01",
+  "reports": [
+    {
+      "report_id": "rep-sev-snp-01",
+      "platform": "AMD_SEV_SNP",
+      "node_id": "worker-sev-snp-01",
+      "peer_public_key": "K3vL8zP8sY4w8Qv8K3vL8zP8sY4w8Qv8K3vL8zP8sY4=",
+      "report_data_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "tcb_svn": 5,
+      "debug_allowed": false,
+      "vcek_cert_chain_valid": true,
+      "tdx_quote_valid": false,
+      "timestamp": "2026-10-18T09:45:00Z",
+      "raw_quote_length": 1184,
+      "measured_pcrs": {
+        "0": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "2": "c24f6e4a8b1c9d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e",
+        "4": "b1a2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2",
+        "7": "d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5"
+      }
+    },
+    {
+      "report_id": "rep-tdx-deviated-02",
+      "platform": "INTEL_TDX",
+      "node_id": "worker-tdx-02",
+      "peer_public_key": "TDXk8zP8sY4w8Qv8K3vL8zP8sY4w8Qv8K3vL8zP8sTD=",
+      "report_data_hash": "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2",
+      "tcb_svn": 5,
+      "debug_allowed": false,
+      "vcek_cert_chain_valid": false,
+      "tdx_quote_valid": true,
+      "timestamp": "2026-10-18T09:50:00Z",
+      "raw_quote_length": 4096,
+      "measured_pcrs": {
+        "0": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "2": "c24f6e4a8b1c9d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e",
+        "4": "b1a2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2",
+        "7": "DEVIATED_COMPROMISED_PCR7_BOOT_DIGEST_UNAUTHORIZED_MUTATION"
+      },
+      "measured_rtmrs": {
+        "0": "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2",
+        "1": "f1e2d3c4b5a6f7e8d9c0b1a2f3e4d5c6b7a8f9e0d1c2b3a4f5e6d7c8b9a0f1e2"
+      }
+    }
+  ],
+  "peers": [
+    {
+      "interface_name": "wg0",
+      "peer_public_key": "K3vL8zP8sY4w8Qv8K3vL8zP8sY4w8Qv8K3vL8zP8sY4=",
+      "peer_name": "worker-sev-snp-01",
+      "tunnel_state": "ESTABLISHED",
+      "active_session_key_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bound_report_id": "rep-sev-snp-01",
+      "attestation_valid": true,
+      "last_attestation": "2026-10-18T09:45:00Z"
+    },
+    {
+      "interface_name": "wg0",
+      "peer_public_key": "TDXk8zP8sY4w8Qv8K3vL8zP8sY4w8Qv8K3vL8zP8sTD=",
+      "peer_name": "worker-tdx-02",
+      "tunnel_state": "ESTABLISHED",
+      "active_session_key_hash": "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2",
+      "bound_report_id": "rep-tdx-deviated-02",
+      "attestation_valid": false,
+      "rejection_reason": "Node measured boot PCR 7 deviates from golden reference",
+      "last_attestation": "2026-10-18T09:50:00Z"
+    },
+    {
+      "interface_name": "wg0",
+      "peer_public_key": "VU5WRVJJRklFRFBMQUlOVEVYVFdJUkVHVUFSRFBFRVI=",
+      "peer_name": "unverified-plain-peer",
+      "tunnel_state": "ESTABLISHED",
+      "active_session_key_hash": "unbound_session_key_hash_without_quote",
+      "bound_report_id": "",
+      "attestation_valid": false,
+      "rejection_reason": "Missing hardware enclave attestation report",
+      "last_attestation": "0001-01-01T00:00:00Z"
+    }
+  ]
+}

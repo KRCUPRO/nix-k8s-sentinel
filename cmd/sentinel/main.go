@@ -23,12 +23,13 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/sbom"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/spiffe"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/storage"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/wgenclave"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/wgfastpath"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/wireguard"
 )
 
 var (
-	version = "0.23.0"
+	version = "0.24.0"
 )
 
 func main() {
@@ -96,6 +97,10 @@ func main() {
 	var fastpathSummary *wgfastpath.WGFastPathSummary
 	var fastpathTelemetry []wgfastpath.FastPathTelemetry
 	var fastpathCrypto []wgfastpath.CryptoBenchmarkTelemetry
+	var enclaveViolations []wgenclave.WGEnclaveViolation
+	var enclaveSummary *wgenclave.WGEnclaveSummary
+	var enclaveReports []wgenclave.AttestationReport
+	var enclavePeers []wgenclave.PeerTunnelStatus
 
 	// 1. Audit Nix Flake
 	if cfg.FlakePath != "" {
@@ -197,7 +202,20 @@ func main() {
 		fastpathViolations, fastpathSummary, fastpathTelemetry, fastpathCrypto = runFastPathAudit(cfg.FastPathManifests, cfg.FastPathTelemetry, cfg.FastPathSynthOut, cfg.FastPathStrict, feed, logInfo, logErr)
 	}
 
-	// 21. Generate Threat Briefing if --briefing is requested
+	// 21. Audit Confidential VM & Secure Enclave WireGuard Peer Attestation
+	if cfg.EnclaveManifests != "" || cfg.EnclaveTelemetry != "" || cfg.EnclaveSynthOut != "" {
+		enclaveViolations, enclaveSummary, enclaveReports, enclavePeers = runEnclaveAudit(
+			cfg.EnclaveManifests,
+			cfg.EnclaveTelemetry,
+			cfg.EnclaveSynthOut,
+			cfg.EnclaveStrict,
+			feed,
+			logInfo,
+			logErr,
+		)
+	}
+
+	// 22. Generate Threat Briefing if --briefing is requested
 	if cfg.Briefing {
 		logInfo("[+] Synthesizing Threat Intelligence Briefing...\n")
 		briefingOpts := report.BriefingOptions{
@@ -241,6 +259,9 @@ func main() {
 			FastPathViolations:      fastpathViolations,
 			FastPathSummary:         fastpathSummary,
 			FastPathTelemetry:       fastpathTelemetry,
+			EnclaveViolations:       enclaveViolations,
+			EnclaveSummary:          enclaveSummary,
+			EnclaveReports:          enclaveReports,
 			OutputDir:               cfg.BriefingDir,
 			CustomFilename:          cfg.BriefingFile,
 		}
@@ -348,6 +369,13 @@ func main() {
 			FastPathManifestPath:    cfg.FastPathManifests,
 			FastPathTelemetryPath:   cfg.FastPathTelemetry,
 			FastPathSynthOut:        cfg.FastPathSynthOut,
+			EnclaveViolations:       enclaveViolations,
+			EnclaveSummary:          enclaveSummary,
+			EnclaveReports:          enclaveReports,
+			EnclavePeers:            enclavePeers,
+			EnclaveManifestPath:     cfg.EnclaveManifests,
+			EnclaveTelemetryPath:    cfg.EnclaveTelemetry,
+			EnclaveSynthOut:         cfg.EnclaveSynthOut,
 			TargetFilter:            cfg.TargetFilter,
 			Pretty:                  true,
 		}
@@ -401,8 +429,8 @@ func main() {
 		}
 	}
 
-	// 20. Default feed summary (when no specific audit target was requested)
-	if cfg.FlakePath == "" && cfg.K8sPath == "" && cfg.PolicyOut == "" && !cfg.ProbeFlag && cfg.CephPath == "" && cfg.CephTelemetry == "" && cfg.WgPath == "" && cfg.WgTelemetry == "" && cfg.CISPath == "" && cfg.GwPath == "" && cfg.AttestPath == "" && cfg.AttestTelemetry == "" && cfg.FleetPath == "" && cfg.FleetTelemetry == "" && cfg.SpiffePath == "" && cfg.SvidTelemetry == "" && cfg.SpiffePolicyOut == "" && cfg.SbomPath == "" && cfg.AttestFile == "" && cfg.RuntimePath == "" && cfg.HsmPath == "" && cfg.HsmTelemetry == "" && cfg.BpfPath == "" && cfg.BpfTelemetry == "" && cfg.BpfSynthOut == "" && cfg.PqcPath == "" && cfg.PqcTelemetry == "" && cfg.PqcSynthOut == "" && cfg.SandboxPath == "" && cfg.SandboxTelemetry == "" && cfg.SandboxSynthOut == "" && cfg.RemediatePath == "" && cfg.RemediateSynthOut == "" && cfg.LSMPath == "" && cfg.LSMTelemetry == "" && cfg.LSMSynthOut == "" && cfg.DRManifests == "" && cfg.DRTelemetry == "" && cfg.DRSynthOut == "" && cfg.FastPathManifests == "" && cfg.FastPathTelemetry == "" && cfg.FastPathSynthOut == "" {
+	// 23. Default feed summary (when no specific audit target was requested)
+	if cfg.FlakePath == "" && cfg.K8sPath == "" && cfg.PolicyOut == "" && !cfg.ProbeFlag && cfg.CephPath == "" && cfg.CephTelemetry == "" && cfg.WgPath == "" && cfg.WgTelemetry == "" && cfg.CISPath == "" && cfg.GwPath == "" && cfg.AttestPath == "" && cfg.AttestTelemetry == "" && cfg.FleetPath == "" && cfg.FleetTelemetry == "" && cfg.SpiffePath == "" && cfg.SvidTelemetry == "" && cfg.SpiffePolicyOut == "" && cfg.SbomPath == "" && cfg.AttestFile == "" && cfg.RuntimePath == "" && cfg.HsmPath == "" && cfg.HsmTelemetry == "" && cfg.BpfPath == "" && cfg.BpfTelemetry == "" && cfg.BpfSynthOut == "" && cfg.PqcPath == "" && cfg.PqcTelemetry == "" && cfg.PqcSynthOut == "" && cfg.SandboxPath == "" && cfg.SandboxTelemetry == "" && cfg.SandboxSynthOut == "" && cfg.RemediatePath == "" && cfg.RemediateSynthOut == "" && cfg.LSMPath == "" && cfg.LSMTelemetry == "" && cfg.LSMSynthOut == "" && cfg.DRManifests == "" && cfg.DRTelemetry == "" && cfg.DRSynthOut == "" && cfg.FastPathManifests == "" && cfg.FastPathTelemetry == "" && cfg.FastPathSynthOut == "" && cfg.EnclaveManifests == "" && cfg.EnclaveTelemetry == "" && cfg.EnclaveSynthOut == "" {
 		items := feed.Items
 		if cfg.TargetFilter != "" {
 			items = feed.FilterByTarget(cfg.TargetFilter)

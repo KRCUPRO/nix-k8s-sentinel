@@ -26,6 +26,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/sbom"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/spiffe"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/storage"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/wgenclave"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/wgfastpath"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/wireguard"
 )
@@ -74,6 +75,9 @@ type BriefingOptions struct {
 	FastPathViolations      []wgfastpath.WGFastPathViolation
 	FastPathSummary         *wgfastpath.WGFastPathSummary
 	FastPathTelemetry       []wgfastpath.FastPathTelemetry
+	EnclaveViolations       []wgenclave.WGEnclaveViolation
+	EnclaveSummary          *wgenclave.WGEnclaveSummary
+	EnclaveReports          []wgenclave.AttestationReport
 	OutputDir               string
 	CustomFilename          string
 }
@@ -103,10 +107,10 @@ func GenerateBriefing(opts BriefingOptions) (*BriefingReport, error) {
 
 	version := opts.Version
 	if version == "" {
-		version = "0.23.0"
+		version = "0.24.0"
 	}
 
-	telemetry := ComputeTelemetryFastPath(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations, opts.GatewayViolations, opts.AttestViolations, opts.FleetViolations, opts.SPIFFEViolations, opts.SBOMViolations, opts.HSMViolations, opts.BPFViolations, opts.PQCViolations, opts.SandboxViolations, opts.RemediateFindings, opts.LSMViolations, opts.ReplicationViolations, opts.FastPathViolations)
+	telemetry := ComputeTelemetryEnclave(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations, opts.GatewayViolations, opts.AttestViolations, opts.FleetViolations, opts.SPIFFEViolations, opts.SBOMViolations, opts.HSMViolations, opts.BPFViolations, opts.PQCViolations, opts.SandboxViolations, opts.RemediateFindings, opts.LSMViolations, opts.ReplicationViolations, opts.FastPathViolations, opts.EnclaveViolations)
 
 	var buf bytes.Buffer
 
@@ -756,7 +760,34 @@ func GenerateBriefing(opts BriefingOptions) (*BriefingReport, error) {
 		buf.WriteString("---\n\n")
 	}
 
-	// 23. Action Items Checklist
+	// 23. Confidential VM & WireGuard Enclave Peer Attestation Posture
+	if len(opts.EnclaveViolations) > 0 || opts.EnclaveSummary != nil {
+		buf.WriteString("## 🔐 Confidential VM & WireGuard Enclave Peer Attestation Posture\n\n")
+		if opts.EnclaveSummary != nil {
+			sum := opts.EnclaveSummary
+			buf.WriteString(fmt.Sprintf("**Enclave Compliance Score:** `%.1f%%` | **AMD SEV-SNP Verified:** `%t` | **Intel TDX Verified:** `%t` | **Tunnels Scanned:** %d | **Rejected:** %d | **PCR Deviations:** %d\n",
+				sum.ComplianceScore, sum.SEVSNPVerified, sum.TDXVerified, sum.TotalPeersScanned, sum.RejectedPeers, sum.PCRDeviationsDetected))
+			buf.WriteString(fmt.Sprintf("**Severity Breakdown:** %d Critical | %d High | %d Medium | %d Low\n\n",
+				sum.CriticalCount, sum.HighCount, sum.MediumCount, sum.LowCount))
+		}
+		if len(opts.EnclaveViolations) > 0 {
+			buf.WriteString(fmt.Sprintf("⚠️ **%d WireGuard enclave peer attestation anomalies detected:**\n\n", len(opts.EnclaveViolations)))
+			buf.WriteString("| Rule ID | Interface / Peer | Severity | CVSS | Anomaly & Threat Details | CVE | Remediation Action |\n")
+			buf.WriteString("| :--- | :--- | :---: | :---: | :--- | :---: | :--- |\n")
+			for _, ev := range opts.EnclaveViolations {
+				cveTag := "-"
+				if ev.MatchedCVE != "" {
+					cveTag = fmt.Sprintf("`%s`", ev.MatchedCVE)
+				}
+				buf.WriteString(fmt.Sprintf("| `%s` | `%s/%s` | **%s** | %.1f | %s | %s | %s |\n",
+					ev.RuleID, ev.InterfaceName, ev.PeerName, ev.Severity, ev.CVSSScore, ev.Description, cveTag, ev.Remediation))
+			}
+			buf.WriteString("\n")
+		}
+		buf.WriteString("---\n\n")
+	}
+
+	// 24. Action Items Checklist
 	buf.WriteString("## 📋 SecOps & SRE Operational Checklist\n\n")
 	buf.WriteString("- [ ] Review high and critical severity advisories against production deployment manifests.\n")
 	buf.WriteString("- [ ] Verify that ingress controllers enforce URI path normalization and snippet guards.\n")
@@ -778,6 +809,7 @@ func GenerateBriefing(opts BriefingOptions) (*BriefingReport, error) {
 	buf.WriteString("- [ ] Attach eBPF LSM mandatory access control hooks to restrict container syscalls, unprivileged BPF loading, and root privilege escalations.\n")
 	buf.WriteString("- [ ] Enforce declarative VolumeSnapshotClass retention policies and verify cross-region volume replication delta sync within RPO targets.\n")
 	buf.WriteString("- [ ] Profile WireGuard kernel cryptographic throughput, enable AVX-512/ARM Neon vector acceleration, and configure 100GbE NIC ring buffers to prevent packet loss under high load.\n")
+	buf.WriteString("- [ ] Bind WireGuard ephemeral session keys to AMD SEV-SNP VCEK and Intel TDX attestation reports and reject peers with deviated boot PCRs.\n")
 	buf.WriteString("- [ ] Archive this briefing record into security audit ledger.\n")
 
 	report := &BriefingReport{

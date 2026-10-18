@@ -25,6 +25,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/sbom"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/spiffe"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/storage"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/wgenclave"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/wgfastpath"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/wireguard"
 )
@@ -78,6 +79,10 @@ type JSONAuditReport struct {
 	FastPathSummary         *wgfastpath.WGFastPathSummary   `json:"fastpath_summary,omitempty"`
 	FastPathTelemetry       []wgfastpath.FastPathTelemetry  `json:"fastpath_telemetry,omitempty"`
 	FastPathCrypto          []wgfastpath.CryptoBenchmarkTelemetry `json:"fastpath_crypto,omitempty"`
+	EnclaveViolations       []wgenclave.WGEnclaveViolation  `json:"enclave_violations,omitempty"`
+	EnclaveSummary          *wgenclave.WGEnclaveSummary     `json:"enclave_summary,omitempty"`
+	EnclaveReports          []wgenclave.AttestationReport   `json:"enclave_reports,omitempty"`
+	EnclavePeers            []wgenclave.PeerTunnelStatus    `json:"enclave_peers,omitempty"`
 }
 
 // BuildJSONReport compiles the consolidated JSON audit report from provided audit data.
@@ -190,8 +195,17 @@ func BuildJSONReport(opts ReportOptions) (*JSONAuditReport, error) {
 	if opts.FastPathSynthOut != "" {
 		scanned = append(scanned, opts.FastPathSynthOut)
 	}
+	if opts.EnclaveManifestPath != "" {
+		scanned = append(scanned, opts.EnclaveManifestPath)
+	}
+	if opts.EnclaveTelemetryPath != "" {
+		scanned = append(scanned, opts.EnclaveTelemetryPath)
+	}
+	if opts.EnclaveSynthOut != "" {
+		scanned = append(scanned, opts.EnclaveSynthOut)
+	}
 
-	telemetry := ComputeTelemetryFastPath(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations, opts.GatewayViolations, opts.AttestViolations, opts.FleetViolations, opts.SPIFFEViolations, opts.SBOMViolations, opts.HSMViolations, opts.BPFViolations, opts.PQCViolations, opts.SandboxViolations, opts.RemediateFindings, opts.LSMViolations, opts.ReplicationViolations, opts.FastPathViolations)
+	telemetry := ComputeTelemetryEnclave(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations, opts.GatewayViolations, opts.AttestViolations, opts.FleetViolations, opts.SPIFFEViolations, opts.SBOMViolations, opts.HSMViolations, opts.BPFViolations, opts.PQCViolations, opts.SandboxViolations, opts.RemediateFindings, opts.LSMViolations, opts.ReplicationViolations, opts.FastPathViolations, opts.EnclaveViolations)
 
 	var advisories []intel.ThreatItem
 	if opts.Feed != nil {
@@ -250,6 +264,10 @@ func BuildJSONReport(opts ReportOptions) (*JSONAuditReport, error) {
 		FastPathSummary:         opts.FastPathSummary,
 		FastPathTelemetry:       opts.FastPathTelemetry,
 		FastPathCrypto:          opts.FastPathCrypto,
+		EnclaveViolations:       opts.EnclaveViolations,
+		EnclaveSummary:          opts.EnclaveSummary,
+		EnclaveReports:          opts.EnclaveReports,
+		EnclavePeers:            opts.EnclavePeers,
 	}
 
 	return rep, nil
