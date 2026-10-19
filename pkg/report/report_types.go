@@ -9,6 +9,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/bgp"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/bpf"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/fleet"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/flow"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/gateway"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/hsm"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/impermanence"
@@ -107,6 +108,9 @@ type ReportOptions struct {
 	LockdownViolations         []lockdown.LockdownViolation
 	LockdownSummary            *lockdown.LockdownSummary
 	LockdownTelemetry          *lockdown.LockdownTelemetryReport
+	FlowViolations             []flow.FlowViolation
+	FlowSummary                *flow.FlowSummary
+	FlowTelemetry              *flow.FlowTelemetryReport
 	FlakePath                  string
 	K8sPath                    string
 	StoragePath                string
@@ -159,6 +163,9 @@ type ReportOptions struct {
 	LockdownPath               string
 	LockdownTelemetryPath      string
 	LockdownSynthOut           string
+	FlowPath                   string
+	FlowTelemetryPath          string
+	FlowSynthOut               string
 	TargetFilter               string
 	Pretty                     bool
 }

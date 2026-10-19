@@ -1,0 +1,89 @@
+{
+  "host_name": "sentinel-worker-01",
+  "cluster_name": "k8s-sentinel-fleet",
+  "collected_at": "2026-10-19T22:30:00Z",
+  "total_dns_queries": 4500,
+  "suspicious_queries": 18,
+  "nxdomain_count": 180,
+  "nxdomain_rate_percent": 4.0,
+  "peak_socket_connect_rate": 320,
+  "dropped_packets": 0,
+  "buffer_overruns": 0,
+  "drop_rate_percent": 0.0,
+  "queries": [
+    {
+      "timestamp": "2026-10-19T22:15:00Z",
+      "client_pod": "checkout-svc-784f9b",
+      "namespace": "finance",
+      "client_ip": "10.244.2.45",
+      "server_ip": "10.96.0.10",
+      "query_name": "api.stripe.com",
+      "record_type": "A",
+      "entropy": 2.85,
+      "query_length": 14,
+      "max_label_length": 6,
+      "response_code": "NOERROR",
+      "ttl": 300,
+      "vector": "NONE",
+      "is_anomaly": false
+    },
+    {
+      "timestamp": "2026-10-19T22:20:10Z",
+      "client_pod": "analytics-collector-9b2c",
+      "namespace": "telemetry",
+      "client_ip": "10.244.3.18",
+      "server_ip": "10.96.0.10",
+      "query_name": "a4f89d0c2e1b74a3f89e2c1d0b589f1a2e.tunnel.exfil-c2.net",
+      "record_type": "TXT",
+      "entropy": 4.12,
+      "query_length": 55,
+      "max_label_length": 34,
+      "response_code": "NOERROR",
+      "ttl": 60,
+      "vector": "DNS_TUNNELING",
+      "is_anomaly": true
+    },
+    {
+      "timestamp": "2026-10-19T22:22:45Z",
+      "client_pod": "compromised-batch-worker",
+      "namespace": "batch",
+      "client_ip": "10.244.4.88",
+      "server_ip": "1.1.1.1",
+      "query_name": "bcfgzjklmnpqrstvwxyz89012.evil-dga-domain.org",
+      "record_type": "A",
+      "entropy": 3.92,
+      "query_length": 46,
+      "max_label_length": 25,
+      "response_code": "NXDOMAIN",
+      "ttl": 5,
+      "vector": "DGA_BEACONING",
+      "is_anomaly": true
+    }
+  ],
+  "socket_events": [
+    {
+      "timestamp": "2026-10-19T22:18:00Z",
+      "source_pod": "checkout-svc-784f9b",
+      "namespace": "finance",
+      "source_ip": "10.244.2.45",
+      "dest_ip": "54.187.12.34",
+      "dest_port": 443,
+      "protocol": "TCP",
+      "connects_per_sec": 45,
+      "cgroup_path": "/kubepods.slice/kubepods-burstable.slice/podfinance-checkout",
+      "is_anomaly": false
+    },
+    {
+      "timestamp": "2026-10-19T22:28:12Z",
+      "source_pod": "recon-sidecar",
+      "namespace": "untrusted",
+      "source_ip": "10.244.5.12",
+      "dest_ip": "10.244.1.1",
+      "dest_port": 445,
+      "protocol": "TCP",
+      "connects_per_sec": 520,
+      "cgroup_path": "/kubepods.slice/kubepods-besteffort.slice/podrecon",
+      "is_anomaly": true
+    }
+  ]
+}

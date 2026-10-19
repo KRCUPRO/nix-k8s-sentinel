@@ -1,0 +1,40 @@
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: payment-flow-hardened-hardened
+  namespace: finance
+  annotations:
+    io.cilium/enable-dns-proxy: "true"
+    security.k8s.io/hardened-by: "nix-k8s-sentinel"
+spec:
+  endpointSelector:
+    matchLabels:
+      app: secure-workload
+  egress:
+  # 1. Restrict DNS egress exclusively to kube-system CoreDNS with L7 inspection
+  - toEndpoints:
+    - matchLabels:
+        io.kubernetes.pod.namespace: kube-system
+        k8s-app: kube-dns
+    toPorts:
+    - ports:
+      - port: "53"
+        protocol: UDP
+      - port: "53"
+        protocol: TCP
+      rules:
+        dns:
+        - matchPattern: "*.internal.cluster.local"
+        - matchPattern: "*.svc.cluster.local"
+        - matchPattern: "api.github.com"
+        - matchPattern: "pkg.nixos.org"
+  # 2. Allow whitelisted HTTPS egress to attested endpoints
+  - toFQDNs:
+    - matchPattern: "*.internal.cluster.local"
+    - matchPattern: "*.svc.cluster.local"
+    - matchPattern: "api.github.com"
+    - matchPattern: "pkg.nixos.org"
+    toPorts:
+    - ports:
+      - port: "443"
+        protocol: TCP

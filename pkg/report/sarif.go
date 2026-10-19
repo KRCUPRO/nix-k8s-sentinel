@@ -1669,8 +1669,64 @@ func BuildSARIFReport(opts ReportOptions) (*SARIFLog, error) {
 		}
 	}
 
-	// 26. Process Standalone Feed Advisories (if no specific audit targets yielded findings)
-	if (opts.K8sReport == nil || len(opts.K8sReport.Violations) == 0) && len(opts.FlakeMatches) == 0 && len(opts.ProbeEvents) == 0 && len(opts.StorageViolations) == 0 && len(opts.WireGuardViolations) == 0 && len(opts.CISViolations) == 0 && len(opts.GatewayViolations) == 0 && len(opts.AttestViolations) == 0 && len(opts.FleetViolations) == 0 && len(opts.SPIFFEViolations) == 0 && len(opts.SBOMViolations) == 0 && len(opts.HSMViolations) == 0 && len(opts.BPFViolations) == 0 && len(opts.PQCViolations) == 0 && len(opts.SandboxViolations) == 0 && len(opts.RemediateFindings) == 0 && len(opts.LSMViolations) == 0 && len(opts.ReplicationViolations) == 0 && len(opts.FastPathViolations) == 0 && len(opts.EnclaveViolations) == 0 && len(opts.WebhookViolations) == 0 && len(opts.ImpermanenceViolations) == 0 && len(opts.BGPViolations) == 0 && len(opts.StoreViolations) == 0 && len(opts.LockdownViolations) == 0 && opts.Feed != nil {
+	// 26. Process Cluster-Wide eBPF Network Flow & DNS Exfiltration Violations
+	if len(opts.FlowViolations) > 0 {
+		for _, fv := range opts.FlowViolations {
+			tags := []string{"security", "ebpf", "network-flow", "dns-tunneling", "dga", "cilium"}
+			ruleIdx := getOrCreateRule(fv.RuleID, fv.Title, fv.Description, fv.Remediation, fv.Severity, fv.CVSSScore, tags)
+			level := SeverityToSARIFLevel(string(fv.Severity), fv.CVSSScore)
+
+			locURI := fv.FilePath
+			if locURI == "" {
+				locURI = opts.FlowPath
+			}
+			if locURI == "" {
+				locURI = opts.FlowTelemetryPath
+			}
+			if locURI == "" {
+				locURI = "cilium-flow-hardened.yaml"
+			}
+			locURI = filepath.ToSlash(locURI)
+
+			line := fv.StartLine
+			if line <= 0 {
+				line = 1
+			}
+
+			resMsg := fmt.Sprintf("[%s] %s: %s (Remediation: %s)", fv.RuleID, fv.Title, fv.Description, fv.Remediation)
+
+			results = append(results, SARIFResult{
+				RuleID:    fv.RuleID,
+				RuleIndex: ruleIdx,
+				Level:     level,
+				Message:   SARIFMessage{Text: resMsg},
+				Locations: []SARIFLocation{
+					{
+						PhysicalLocation: &PhysicalLocation{
+							ArtifactLocation: ArtifactLocation{
+								URI:       locURI,
+								URIBaseID: "%SRCROOT%",
+							},
+							Region: &Region{
+								StartLine:   line,
+								StartColumn: 1,
+							},
+						},
+						LogicalLocations: []LogicalLocation{
+							{
+								Name:               fv.RuleID,
+								Kind:               "FlowRule",
+								FullyQualifiedName: fmt.Sprintf("flow/%s", fv.RuleID),
+							},
+						},
+					},
+				},
+			})
+		}
+	}
+
+	// 27. Process Standalone Feed Advisories (if no specific audit targets yielded findings)
+	if (opts.K8sReport == nil || len(opts.K8sReport.Violations) == 0) && len(opts.FlakeMatches) == 0 && len(opts.ProbeEvents) == 0 && len(opts.StorageViolations) == 0 && len(opts.WireGuardViolations) == 0 && len(opts.CISViolations) == 0 && len(opts.GatewayViolations) == 0 && len(opts.AttestViolations) == 0 && len(opts.FleetViolations) == 0 && len(opts.SPIFFEViolations) == 0 && len(opts.SBOMViolations) == 0 && len(opts.HSMViolations) == 0 && len(opts.BPFViolations) == 0 && len(opts.PQCViolations) == 0 && len(opts.SandboxViolations) == 0 && len(opts.RemediateFindings) == 0 && len(opts.LSMViolations) == 0 && len(opts.ReplicationViolations) == 0 && len(opts.FastPathViolations) == 0 && len(opts.EnclaveViolations) == 0 && len(opts.WebhookViolations) == 0 && len(opts.ImpermanenceViolations) == 0 && len(opts.BGPViolations) == 0 && len(opts.StoreViolations) == 0 && len(opts.LockdownViolations) == 0 && len(opts.FlowViolations) == 0 && opts.Feed != nil {
 		feedItems := opts.Feed.Items
 		if opts.TargetFilter != "" {
 			feedItems = opts.Feed.FilterByTarget(opts.TargetFilter)

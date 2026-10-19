@@ -1,0 +1,33 @@
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: payment-flow-vulnerable
+  namespace: finance
+  annotations:
+    io.cilium/enable-dns-proxy: "false"
+spec:
+  endpointSelector:
+    matchLabels:
+      app: payment-gateway
+  egress:
+  # Vulnerable: Unrestricted port 53 UDP traffic to 0.0.0.0/0 without L7 proxy
+  - toPorts:
+    - ports:
+      - port: "53"
+        protocol: UDP
+    toCIDRs:
+    - "0.0.0.0/0"
+  # Vulnerable: Wildcard FQDN pattern allows arbitrary C2 domains
+  - toFQDNs:
+    - matchPattern: "*"
+    toPorts:
+    - ports:
+      - port: "443"
+        protocol: TCP
+  # Vulnerable: Non-standard port egress to external IP without protocol inspection
+  - toPorts:
+    - ports:
+      - port: "6667"
+        protocol: TCP
+    toCIDRs:
+    - "0.0.0.0/0"
