@@ -14,6 +14,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/impermanence"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/intel"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/k8s"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/lockdown"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/lsm"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nix"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nixstore"
@@ -33,7 +34,7 @@ import (
 )
 
 var (
-	version = "0.28.0"
+	version = "0.29.0"
 )
 
 func main() {
@@ -116,6 +117,9 @@ func main() {
 		storeViolations         []nixstore.StoreViolation
 		storeSummary            *nixstore.StoreSummary
 		storeTelemetry          *nixstore.NixStoreTelemetryReport
+		lockdownViolations      []lockdown.LockdownViolation
+		lockdownSummary         *lockdown.LockdownSummary
+		lockdownTelemetry       *lockdown.LockdownTelemetryReport
 	)
 
 	// 1. Audit Nix Flake
@@ -253,7 +257,14 @@ func main() {
 		)
 	}
 
-	// 26. Generate Threat Briefing if --briefing is requested
+	// 26. Audit Linux Kernel Lockdown & UEFI Secure Boot DBX Revocation List
+	if cfg.LockdownPath != "" || cfg.LockdownTelemetry != "" || cfg.LockdownSynthOut != "" {
+		lockdownViolations, lockdownSummary, lockdownTelemetry = runLockdownAudit(
+			cfg.LockdownPath, cfg.LockdownTelemetry, cfg.LockdownSynthOut, cfg.LockdownStrict, feed, logInfo, logErr,
+		)
+	}
+
+	// 27. Generate Threat Briefing if --briefing is requested
 	if cfg.Briefing {
 		logInfo("[+] Synthesizing Threat Intelligence Briefing...\n")
 		briefingOpts := report.BriefingOptions{
@@ -312,6 +323,9 @@ func main() {
 			StoreViolations:         storeViolations,
 			StoreSummary:            storeSummary,
 			StoreTelemetry:          storeTelemetry,
+			LockdownViolations:      lockdownViolations,
+			LockdownSummary:         lockdownSummary,
+			LockdownTelemetry:       lockdownTelemetry,
 			OutputDir:               cfg.BriefingDir,
 			CustomFilename:          cfg.BriefingFile,
 		}
@@ -445,6 +459,12 @@ func main() {
 			StorePath:                 cfg.StorePath,
 			StoreTelemetryPath:        cfg.StoreTelemetry,
 			StoreSynthOut:             cfg.StoreSynthOut,
+			LockdownViolations:        lockdownViolations,
+			LockdownSummary:           lockdownSummary,
+			LockdownTelemetry:         lockdownTelemetry,
+			LockdownPath:              cfg.LockdownPath,
+			LockdownTelemetryPath:     cfg.LockdownTelemetry,
+			LockdownSynthOut:          cfg.LockdownSynthOut,
 			TargetFilter:              cfg.TargetFilter,
 			Pretty:                    true,
 		}

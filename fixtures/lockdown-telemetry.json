@@ -1,0 +1,49 @@
+{
+  "host_name": "nixos-k8s-vulnerable-node-02",
+  "collected_at": "2026-10-19T18:00:00Z",
+  "live_lockdown_mode": "none [integrity] confidentiality",
+  "module_signature_enforced": false,
+  "secure_boot_status": "disabled",
+  "setup_mode_active": true,
+  "dbx_version": "UEFI-DBX-2024-03",
+  "dbx_release_date": "2024-03-15T00:00:00Z",
+  "dbx_total_revocations": 42,
+  "dbx_age_days": 190,
+  "active_bootloader_path": "/boot/EFI/BOOT/shimx64.efi",
+  "active_bootloader_sha256": "c026859345ee3a652cc596fc7c4ab59f77e20b33c16262bf6a992e5954a1be2e",
+  "active_bootloader_revoked": true,
+  "mok_list_x_revocations_count": 3,
+  "unsigned_module_load_denials": 4,
+  "direct_dev_mem_denials": 1,
+  "kexec_denials": 0,
+  "revocation_entries": [
+    {
+      "signature_owner": "Microsoft Windows Production PCA 2011",
+      "hash_type": "SHA256",
+      "digest_hex": "c026859345ee3a652cc596fc7c4ab59f77e20b33c16262bf6a992e5954a1be2e",
+      "matched_cve": "CVE-2023-40547"
+    },
+    {
+      "signature_owner": "Canonical Ltd. Master Certificate Authority",
+      "hash_type": "SHA256",
+      "digest_hex": "2f8087913de8f08a8a25c1b69472e505ab384fe84f2b1d6d84f86d63bc36ad18",
+      "matched_cve": "CVE-2020-10713"
+    }
+  ],
+  "events": [
+    {
+      "timestamp": "2026-10-19T17:45:10Z",
+      "event_type": "UNSIGNED_MODULE_DENIED",
+      "syscall": "finit_module",
+      "process": "insmod",
+      "details": "Denied unauthorized unsigned kernel module 'diamorphine.ko' execution in ring 0."
+    },
+    {
+      "timestamp": "2026-10-19T17:50:22Z",
+      "event_type": "DEVMEM_ACCESS_BLOCKED",
+      "syscall": "openat",
+      "process": "mem_dumper",
+      "details": "Blocked physical memory read attempt via /dev/mem by non-root process (UID 1000)."
+    }
+  ]
+}

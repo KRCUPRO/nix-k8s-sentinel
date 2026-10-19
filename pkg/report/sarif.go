@@ -1610,8 +1610,67 @@ func BuildSARIFReport(opts ReportOptions) (*SARIFLog, error) {
 		}
 	}
 
-	// 25. Process Standalone Feed Advisories (if no specific audit targets yielded findings)
-	if (opts.K8sReport == nil || len(opts.K8sReport.Violations) == 0) && len(opts.FlakeMatches) == 0 && len(opts.ProbeEvents) == 0 && len(opts.StorageViolations) == 0 && len(opts.WireGuardViolations) == 0 && len(opts.CISViolations) == 0 && len(opts.GatewayViolations) == 0 && len(opts.AttestViolations) == 0 && len(opts.FleetViolations) == 0 && len(opts.SPIFFEViolations) == 0 && len(opts.SBOMViolations) == 0 && len(opts.HSMViolations) == 0 && len(opts.BPFViolations) == 0 && len(opts.PQCViolations) == 0 && len(opts.SandboxViolations) == 0 && len(opts.RemediateFindings) == 0 && len(opts.LSMViolations) == 0 && len(opts.ReplicationViolations) == 0 && len(opts.FastPathViolations) == 0 && len(opts.EnclaveViolations) == 0 && len(opts.WebhookViolations) == 0 && len(opts.ImpermanenceViolations) == 0 && len(opts.BGPViolations) == 0 && len(opts.StoreViolations) == 0 && opts.Feed != nil {
+	// 25. Process Linux Kernel Lockdown & UEFI Secure Boot DBX Revocation List Findings
+	if len(opts.LockdownViolations) > 0 {
+		for _, lv := range opts.LockdownViolations {
+			tags := []string{"security", "nixos", "kernel-lockdown", "secure-boot", "uefi-dbx", "lanzaboote"}
+			if lv.MatchedCVE != "" {
+				tags = append(tags, lv.MatchedCVE)
+			}
+			ruleIdx := getOrCreateRule(lv.RuleID, lv.Title, lv.Description, lv.Remediation, lv.Severity, lv.CVSSScore, tags)
+			level := SeverityToSARIFLevel(string(lv.Severity), lv.CVSSScore)
+
+			locURI := lv.FilePath
+			if locURI == "" {
+				locURI = opts.LockdownPath
+			}
+			if locURI == "" {
+				locURI = opts.LockdownTelemetryPath
+			}
+			if locURI == "" {
+				locURI = "nixos-lockdown-hardened.nix"
+			}
+			locURI = filepath.ToSlash(locURI)
+
+			line := lv.StartLine
+			if line <= 0 {
+				line = 1
+			}
+
+			resMsg := fmt.Sprintf("[%s] %s: %s (Remediation: %s)", lv.RuleID, lv.Title, lv.Description, lv.Remediation)
+
+			results = append(results, SARIFResult{
+				RuleID:    lv.RuleID,
+				RuleIndex: ruleIdx,
+				Level:     level,
+				Message:   SARIFMessage{Text: resMsg},
+				Locations: []SARIFLocation{
+					{
+						PhysicalLocation: &PhysicalLocation{
+							ArtifactLocation: ArtifactLocation{
+								URI:       locURI,
+								URIBaseID: "%SRCROOT%",
+							},
+							Region: &Region{
+								StartLine:   line,
+								StartColumn: 1,
+							},
+						},
+						LogicalLocations: []LogicalLocation{
+							{
+								Name:               lv.RuleID,
+								Kind:               "LockdownRule",
+								FullyQualifiedName: fmt.Sprintf("lockdown/%s", lv.RuleID),
+							},
+						},
+					},
+				},
+			})
+		}
+	}
+
+	// 26. Process Standalone Feed Advisories (if no specific audit targets yielded findings)
+	if (opts.K8sReport == nil || len(opts.K8sReport.Violations) == 0) && len(opts.FlakeMatches) == 0 && len(opts.ProbeEvents) == 0 && len(opts.StorageViolations) == 0 && len(opts.WireGuardViolations) == 0 && len(opts.CISViolations) == 0 && len(opts.GatewayViolations) == 0 && len(opts.AttestViolations) == 0 && len(opts.FleetViolations) == 0 && len(opts.SPIFFEViolations) == 0 && len(opts.SBOMViolations) == 0 && len(opts.HSMViolations) == 0 && len(opts.BPFViolations) == 0 && len(opts.PQCViolations) == 0 && len(opts.SandboxViolations) == 0 && len(opts.RemediateFindings) == 0 && len(opts.LSMViolations) == 0 && len(opts.ReplicationViolations) == 0 && len(opts.FastPathViolations) == 0 && len(opts.EnclaveViolations) == 0 && len(opts.WebhookViolations) == 0 && len(opts.ImpermanenceViolations) == 0 && len(opts.BGPViolations) == 0 && len(opts.StoreViolations) == 0 && len(opts.LockdownViolations) == 0 && opts.Feed != nil {
 		feedItems := opts.Feed.Items
 		if opts.TargetFilter != "" {
 			feedItems = opts.Feed.FilterByTarget(opts.TargetFilter)

@@ -15,6 +15,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/impermanence"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/intel"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/k8s"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/lockdown"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/lsm"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nix"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nixstore"
@@ -65,6 +66,7 @@ type TelemetrySummary struct {
 	TotalImpermanenceViolations int           `json:"total_impermanence_violations"`
 	TotalBGPViolations         int            `json:"total_bgp_violations"`
 	TotalStoreViolations       int            `json:"total_store_violations"`
+	TotalLockdownViolations    int            `json:"total_lockdown_violations"`
 }
 
 // ComputeTelemetry aggregates CVSS metrics from the threat feed, K8s violations, and Nix flake matches.
@@ -439,6 +441,35 @@ func ComputeTelemetryStore(feed *intel.Feed, k8sReport *k8s.ManifestAuditReport,
 				summary.MaxCVSS = sv.CVSSScore
 			}
 			switch sv.Severity {
+			case intel.SeverityCritical:
+				summary.CriticalCount++
+			case intel.SeverityHigh:
+				summary.HighCount++
+			case intel.SeverityMedium:
+				summary.MediumCount++
+			default:
+				summary.LowCount++
+			}
+		}
+	}
+
+	return summary
+}
+
+// ComputeTelemetryLockdown aggregates CVSS metrics across all domains including Linux Kernel Lockdown & UEFI Secure Boot DBX findings.
+func ComputeTelemetryLockdown(feed *intel.Feed, k8sReport *k8s.ManifestAuditReport, flakeMatches []nix.FlakeVulnerabilityMatch, storageViolations []storage.StorageViolation, wireguardViolations []wireguard.WireGuardViolation, cisViolations []bench.CISViolation, gatewayViolations []gateway.GatewayViolation, attestViolations []attest.AttestationViolation, fleetViolations []fleet.FleetViolation, spiffeViolations []spiffe.SPIFFEViolation, sbomViolations []sbom.SBOMViolation, hsmViolations []hsm.HSMViolation, bpfViolations []bpf.BPFViolation, pqcViolations []pqc.PQCViolation, sandboxViolations []sandbox.SandboxViolation, remediateFindings []remediate.RemediationFinding, lsmViolations []lsm.LSMViolation, replicationViolations []replication.ReplicationViolation, fastPathViolations []wgfastpath.WGFastPathViolation, enclaveViolations []wgenclave.WGEnclaveViolation, webhookViolations []webhook.WebhookViolation, impermanenceViolations []impermanence.ImpermanenceViolation, bgpViolations []bgp.BGPViolation, storeViolations []nixstore.StoreViolation, lockdownViolations []lockdown.LockdownViolation) TelemetrySummary {
+	summary := ComputeTelemetryStore(feed, k8sReport, flakeMatches, storageViolations, wireguardViolations, cisViolations, gatewayViolations, attestViolations, fleetViolations, spiffeViolations, sbomViolations, hsmViolations, bpfViolations, pqcViolations, sandboxViolations, remediateFindings, lsmViolations, replicationViolations, fastPathViolations, enclaveViolations, webhookViolations, impermanenceViolations, bgpViolations, storeViolations)
+
+	if len(lockdownViolations) > 0 {
+		summary.TotalLockdownViolations = len(lockdownViolations)
+		for _, lv := range lockdownViolations {
+			summary.TotalViolations++
+			summary.TargetDistribution["nixos"]++
+			summary.ComponentDistribution["kernel-lockdown"]++
+			if lv.CVSSScore > summary.MaxCVSS {
+				summary.MaxCVSS = lv.CVSSScore
+			}
+			switch lv.Severity {
 			case intel.SeverityCritical:
 				summary.CriticalCount++
 			case intel.SeverityHigh:
