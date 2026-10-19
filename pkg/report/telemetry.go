@@ -17,6 +17,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/k8s"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/lsm"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nix"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nixstore"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/pqc"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/remediate"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/replication"
@@ -63,6 +64,7 @@ type TelemetrySummary struct {
 	TotalWebhookViolations     int            `json:"total_webhook_violations"`
 	TotalImpermanenceViolations int           `json:"total_impermanence_violations"`
 	TotalBGPViolations         int            `json:"total_bgp_violations"`
+	TotalStoreViolations       int            `json:"total_store_violations"`
 }
 
 // ComputeTelemetry aggregates CVSS metrics from the threat feed, K8s violations, and Nix flake matches.
@@ -408,6 +410,35 @@ func ComputeTelemetryBGP(feed *intel.Feed, k8sReport *k8s.ManifestAuditReport, f
 				summary.MaxCVSS = bv.CVSSScore
 			}
 			switch bv.Severity {
+			case intel.SeverityCritical:
+				summary.CriticalCount++
+			case intel.SeverityHigh:
+				summary.HighCount++
+			case intel.SeverityMedium:
+				summary.MediumCount++
+			default:
+				summary.LowCount++
+			}
+		}
+	}
+
+	return summary
+}
+
+// ComputeTelemetryStore aggregates CVSS metrics across all domains including Nix Store Signature & Binary Cache Isolation Gate findings.
+func ComputeTelemetryStore(feed *intel.Feed, k8sReport *k8s.ManifestAuditReport, flakeMatches []nix.FlakeVulnerabilityMatch, storageViolations []storage.StorageViolation, wireguardViolations []wireguard.WireGuardViolation, cisViolations []bench.CISViolation, gatewayViolations []gateway.GatewayViolation, attestViolations []attest.AttestationViolation, fleetViolations []fleet.FleetViolation, spiffeViolations []spiffe.SPIFFEViolation, sbomViolations []sbom.SBOMViolation, hsmViolations []hsm.HSMViolation, bpfViolations []bpf.BPFViolation, pqcViolations []pqc.PQCViolation, sandboxViolations []sandbox.SandboxViolation, remediateFindings []remediate.RemediationFinding, lsmViolations []lsm.LSMViolation, replicationViolations []replication.ReplicationViolation, fastPathViolations []wgfastpath.WGFastPathViolation, enclaveViolations []wgenclave.WGEnclaveViolation, webhookViolations []webhook.WebhookViolation, impermanenceViolations []impermanence.ImpermanenceViolation, bgpViolations []bgp.BGPViolation, storeViolations []nixstore.StoreViolation) TelemetrySummary {
+	summary := ComputeTelemetryBGP(feed, k8sReport, flakeMatches, storageViolations, wireguardViolations, cisViolations, gatewayViolations, attestViolations, fleetViolations, spiffeViolations, sbomViolations, hsmViolations, bpfViolations, pqcViolations, sandboxViolations, remediateFindings, lsmViolations, replicationViolations, fastPathViolations, enclaveViolations, webhookViolations, impermanenceViolations, bgpViolations)
+
+	if len(storeViolations) > 0 {
+		summary.TotalStoreViolations = len(storeViolations)
+		for _, sv := range storeViolations {
+			summary.TotalViolations++
+			summary.TargetDistribution["nixos"]++
+			summary.ComponentDistribution["nix-daemon"]++
+			if sv.CVSSScore > summary.MaxCVSS {
+				summary.MaxCVSS = sv.CVSSScore
+			}
+			switch sv.Severity {
 			case intel.SeverityCritical:
 				summary.CriticalCount++
 			case intel.SeverityHigh:

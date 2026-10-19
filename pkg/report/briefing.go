@@ -20,6 +20,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/k8s"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/lsm"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nix"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nixstore"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/pqc"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/probe"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/remediate"
@@ -90,6 +91,9 @@ type BriefingOptions struct {
 	BGPViolations              []bgp.BGPViolation
 	BGPSummary                 *bgp.BGPSummary
 	BGPTelemetry               *bgp.BGPTelemetryReport
+	StoreViolations            []nixstore.StoreViolation
+	StoreSummary               *nixstore.StoreSummary
+	StoreTelemetry             *nixstore.NixStoreTelemetryReport
 	OutputDir                  string
 	CustomFilename             string
 }
@@ -119,10 +123,10 @@ func GenerateBriefing(opts BriefingOptions) (*BriefingReport, error) {
 
 	version := opts.Version
 	if version == "" {
-		version = "0.27.0"
+		version = "0.28.0"
 	}
 
-	telemetry := ComputeTelemetryBGP(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations, opts.GatewayViolations, opts.AttestViolations, opts.FleetViolations, opts.SPIFFEViolations, opts.SBOMViolations, opts.HSMViolations, opts.BPFViolations, opts.PQCViolations, opts.SandboxViolations, opts.RemediateFindings, opts.LSMViolations, opts.ReplicationViolations, opts.FastPathViolations, opts.EnclaveViolations, opts.WebhookViolations, opts.ImpermanenceViolations, opts.BGPViolations)
+	telemetry := ComputeTelemetryStore(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations, opts.GatewayViolations, opts.AttestViolations, opts.FleetViolations, opts.SPIFFEViolations, opts.SBOMViolations, opts.HSMViolations, opts.BPFViolations, opts.PQCViolations, opts.SandboxViolations, opts.RemediateFindings, opts.LSMViolations, opts.ReplicationViolations, opts.FastPathViolations, opts.EnclaveViolations, opts.WebhookViolations, opts.ImpermanenceViolations, opts.BGPViolations, opts.StoreViolations)
 
 	var buf bytes.Buffer
 
@@ -926,7 +930,62 @@ func GenerateBriefing(opts BriefingOptions) (*BriefingReport, error) {
 		buf.WriteString("---\n\n")
 	}
 
-	// 27. Action Items Checklist
+	// 27. Nix Store Signature & Binary Cache Isolation Gate
+	if len(opts.StoreViolations) > 0 || opts.StoreSummary != nil || opts.StoreTelemetry != nil {
+		buf.WriteString("## 📦 Nix Store Signature & Binary Cache Isolation Gate\n\n")
+
+		if opts.StoreSummary != nil {
+			buf.WriteString("| Audit Dimension | Evaluation Result | Compliance Benchmark |\n")
+			buf.WriteString("| :--- | :---: | :--- |\n")
+			buf.WriteString(fmt.Sprintf("| **Compliance Score** | **%.1f%%** | >= 80.0%% (Target 100.0%%) |\n", opts.StoreSummary.ComplianceScore))
+			buf.WriteString(fmt.Sprintf("| **Ed25519 Signatures** | `%t` | Mandatory require-sigs = true |\n", opts.StoreSummary.SignaturesEnforced))
+			buf.WriteString(fmt.Sprintf("| **Namespace Sandboxing** | `%t` | sandbox = true, fallback = false |\n", opts.StoreSummary.SandboxingEnforced))
+			buf.WriteString(fmt.Sprintf("| **Configured Store Hosts** | `%d` | Total audited Nix configurations |\n", opts.StoreSummary.TotalConfigs))
+			buf.WriteString(fmt.Sprintf("| **Store Isolation Posture** | **%s** | Zero Critical Vulnerabilities |\n\n", func() string {
+				if opts.StoreSummary.ComplianceScore >= 80.0 && opts.StoreSummary.CriticalCount == 0 {
+					return "COMPLIANT [PASS]"
+				}
+				return "DEGRADED"
+			}()))
+		}
+
+		if len(opts.StoreViolations) > 0 {
+			buf.WriteString("### 🚨 Detected Nix Store & Binary Cache Vulnerabilities\n\n")
+			buf.WriteString("| Rule ID | Host / Config | Severity | CVSS | Description | Matched CVE | Remediation Target |\n")
+			buf.WriteString("| :--- | :--- | :---: | :---: | :--- | :---: | :--- |\n")
+			for _, sv := range opts.StoreViolations {
+				cveTag := "None"
+				if sv.MatchedCVE != "" {
+					cveTag = fmt.Sprintf("`%s`", sv.MatchedCVE)
+				}
+				buf.WriteString(fmt.Sprintf("| `%s` | `%s` | **%s** | %.1f | %s | %s | %s |\n",
+					sv.RuleID, sv.ConfigTarget, sv.Severity, sv.CVSSScore, sv.Description, cveTag, sv.Remediation))
+			}
+			buf.WriteString("\n")
+		}
+
+		if opts.StoreTelemetry != nil {
+			buf.WriteString("### 📡 Live Nix Store & Substitute Verification Telemetry\n\n")
+			buf.WriteString("| Host Name | Store Paths | Used / Capacity | Usage % | Signatures (Rej / Total) | Rejection % | NAR Mismatches | P95 Latency |\n")
+			buf.WriteString("| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |\n")
+			buf.WriteString(fmt.Sprintf("| `%s` | `%d` | `%.1f GB / %.1f GB` | **%.1f%%** | `%d / %d` | **%.1f%%** | `%d` | `%.1f ms` |\n\n",
+				opts.StoreTelemetry.HostName,
+				opts.StoreTelemetry.StorePathCount,
+				float64(opts.StoreTelemetry.StoreUsedBytes)/(1024*1024*1024),
+				float64(opts.StoreTelemetry.StoreCapacityBytes)/(1024*1024*1024),
+				opts.StoreTelemetry.StoreUsagePercent,
+				opts.StoreTelemetry.SignatureRejectionsCount,
+				opts.StoreTelemetry.SignatureVerificationsTotal,
+				opts.StoreTelemetry.SignatureRejectionRate,
+				opts.StoreTelemetry.NARChecksumFailuresCount,
+				opts.StoreTelemetry.DownloadP95LatencyMs,
+			))
+		}
+
+		buf.WriteString("---\n\n")
+	}
+
+	// 28. Action Items Checklist
 	buf.WriteString("## 📋 SecOps & SRE Operational Checklist\n\n")
 	buf.WriteString("- [ ] Review high and critical severity advisories against production deployment manifests.\n")
 	buf.WriteString("- [ ] Verify that ingress controllers enforce URI path normalization and snippet guards.\n")
@@ -952,6 +1011,7 @@ func GenerateBriefing(opts BriefingOptions) (*BriefingReport, error) {
 	buf.WriteString("- [ ] Enforce ValidatingWebhookConfiguration failurePolicy: Fail, timeoutSeconds <= 3s, exempt kube-system, and establish cert-manager automated CA rotation.\n")
 	buf.WriteString("- [ ] Audit NixOS impermanence configurations (environment.persistence), verify tmpfs/snapshot root ephemerality, and enforce encrypted swap (swapDevices.*.randomEncryption).\n")
 	buf.WriteString("- [ ] Mandate TCP MD5 / TCP-AO authentication for Cilium BGP peers, advertise dual-stack IPv6 routes, and enforce prefix-list filters to prevent prefix hijacks.\n")
+	buf.WriteString("- [ ] Enforce require-sigs = true in Nix daemon, declare explicit Ed25519 public keys, mandate namespace-scoped sandboxing, and verify NAR checksums on all binary cache substitutes.\n")
 	buf.WriteString("- [ ] Archive this briefing record into security audit ledger.\n")
 
 	report := &BriefingReport{

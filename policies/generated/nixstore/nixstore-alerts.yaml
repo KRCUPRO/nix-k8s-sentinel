@@ -1,0 +1,34 @@
+groups:
+  - name: nix-store-security-alerts
+    rules:
+      - alert: NixStoreSignatureRejectionsHigh
+        expr: (rate(nix_substitute_signatures_rejected_total[5m]) / rate(nix_substitute_signatures_verified_total[5m])) > 0.05
+        for: 2m
+        labels:
+          severity: critical
+          threat_id: NIX-STORE-009
+          cve: CVE-2026-81930
+        annotations:
+          summary: "High binary cache Ed25519 signature rejection rate detected"
+          description: "Over 5% of binary cache substitutes were rejected due to invalid Ed25519 signatures, indicating cache poisoning attempts."
+
+      - alert: NixStoreNARChecksumFailuresCritical
+        expr: increase(nix_substitute_nar_checksum_mismatches_total[5m]) > 0
+        for: 1m
+        labels:
+          severity: critical
+          threat_id: NIX-STORE-010
+          cve: CVE-2026-81930
+        annotations:
+          summary: "NAR archive checksum mismatch detected on substitute download"
+          description: "Downloaded substitute NAR archive failed cryptographic SHA-256 integrity verification."
+
+      - alert: NixStoreDiskExhaustionCritical
+        expr: (node_filesystem_avail_bytes{mountpoint="/nix/store"} / node_filesystem_size_bytes{mountpoint="/nix/store"}) < 0.15
+        for: 5m
+        labels:
+          severity: high
+          threat_id: NIX-STORE-012
+        annotations:
+          summary: "Nix store volume utilization exceeds 85%"
+          description: "Available disk space in /nix/store is under 15%, risking builder starvation."

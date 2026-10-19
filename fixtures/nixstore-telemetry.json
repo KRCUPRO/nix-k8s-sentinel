@@ -1,0 +1,55 @@
+{
+  "host_name": "nix-build-worker-01.infra.internal",
+  "collected_at": "2026-10-19T17:00:00Z",
+  "store_path_count": 42180,
+  "store_used_bytes": 450971566080,
+  "store_capacity_bytes": 500000000000,
+  "store_usage_percent": 90.2,
+  "active_substituters": [
+    {
+      "url": "https://cache.nixos.org",
+      "downloads_total": 12840,
+      "signatures_verified": 12838,
+      "signatures_rejected": 2,
+      "p95_latency_ms": 142.5,
+      "healthy": true
+    },
+    {
+      "url": "http://untrusted-mirror.local:8080",
+      "downloads_total": 450,
+      "signatures_verified": 320,
+      "signatures_rejected": 130,
+      "p95_latency_ms": 18500.0,
+      "healthy": false
+    }
+  ],
+  "signature_verifications_total": 13290,
+  "signature_rejections_count": 132,
+  "signature_rejection_rate": 8.5,
+  "nar_checksum_failures_count": 3,
+  "download_p95_latency_ms": 18500.0,
+  "unauthorized_elevation_attempts": 4,
+  "events": [
+    {
+      "timestamp": "2026-10-19T16:45:10Z",
+      "event_type": "SIGNATURE_REJECTED",
+      "substituter": "http://untrusted-mirror.local:8080",
+      "store_path": "/nix/store/1h3zpv874bcm1b162qg1-openssl-3.0.12",
+      "details": "Ed25519 signature verification failed: signature does not match any trusted key in trusted-public-keys"
+    },
+    {
+      "timestamp": "2026-10-19T16:50:22Z",
+      "event_type": "CHECKSUM_MISMATCH",
+      "substituter": "http://untrusted-mirror.local:8080",
+      "store_path": "/nix/store/9k2jzv456abc-glibc-2.38",
+      "details": "NAR SHA-256 digest 9a8b7c does not match expected narinfo digest 1a2b3c"
+    },
+    {
+      "timestamp": "2026-10-19T16:55:01Z",
+      "event_type": "UNAUTHORIZED_ELEVATION",
+      "substituter": "",
+      "store_path": "",
+      "details": "User 'developer-guest' attempted to register untrusted substituter without root privileges"
+    }
+  ]
+}
