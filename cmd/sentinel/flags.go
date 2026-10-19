@@ -88,6 +88,11 @@ type SentinelConfig struct {
 	LockdownTelemetry     string
 	LockdownSynthOut      string
 	LockdownStrict        bool
+	FlowPath              string
+	CiliumFlow            bool
+	FlowTelemetry         string
+	FlowSynthOut          string
+	FlowStrict            bool
 	Briefing              bool
 	BriefingDir       string
 	BriefingFile      string
@@ -205,6 +210,11 @@ func parseCLI() SentinelConfig {
 	lockdownTelemetry := flag.String("lockdown-telemetry", "", "Path to runtime kernel lockdown and UEFI DBX telemetry JSON to inspect")
 	lockdownSynthOut := flag.String("lockdown-synth-out", "", "Output directory to write synthesized hardened NixOS lockdown modules, DBX sync service, and Prometheus alert rules")
 	lockdownStrict := flag.Bool("lockdown-strict", false, "Enforce strict zero-warning kernel lockdown and UEFI DBX compliance")
+	flowPath := flag.String("flow", "", "Path to CiliumNetworkPolicy manifests or NixOS flow profiler configs")
+	ciliumFlowShort := flag.String("cilium-flow", "", "Alias for --flow")
+	flowTelemetry := flag.String("flow-telemetry", "", "Path to runtime eBPF network flow and DNS telemetry JSON to inspect")
+	flowSynthOut := flag.String("flow-synth-out", "", "Output directory to write synthesized hardened Cilium policies, NixOS flow modules, and Prometheus alert rules")
+	flowStrict := flag.Bool("flow-strict", false, "Enforce strict zero-warning network flow and DNS exfiltration compliance")
 	briefing := flag.Bool("briefing", false, "Generate automated Markdown threat intelligence briefing")
 	briefingDir := flag.String("briefing-dir", "intel/briefings", "Output directory for threat briefings")
 	briefingFile := flag.String("briefing-file", "", "Custom filename for threat briefing markdown")
@@ -298,6 +308,9 @@ func parseCLI() SentinelConfig {
 	if *lockdownPath == "" && *secureBootShort != "" {
 		*lockdownPath = *secureBootShort
 	}
+	if *flowPath == "" && *ciliumFlowShort != "" {
+		*flowPath = *ciliumFlowShort
+	}
 	if *outFile == "" && *outShort != "" {
 		*outFile = *outShort
 	}
@@ -388,6 +401,11 @@ func parseCLI() SentinelConfig {
 		LockdownTelemetry:     *lockdownTelemetry,
 		LockdownSynthOut:      *lockdownSynthOut,
 		LockdownStrict:        *lockdownStrict,
+		FlowPath:              *flowPath,
+		CiliumFlow:            *ciliumFlowShort != "" || *flowPath != "",
+		FlowTelemetry:         *flowTelemetry,
+		FlowSynthOut:          *flowSynthOut,
+		FlowStrict:            *flowStrict,
 		Briefing:              *briefing,
 		BriefingDir:       *briefingDir,
 		BriefingFile:      *briefingFile,
@@ -420,6 +438,7 @@ func (c SentinelConfig) HasAuditTargets() bool {
 		c.ImpermanencePath != "" || c.ImpermanenceTelemetry != "" || c.ImpermanenceSynthOut != "" ||
 		c.BGPPath != "" || c.BGPTelemetry != "" || c.BGPSynthOut != "" ||
 		c.StorePath != "" || c.StoreTelemetry != "" || c.StoreSynthOut != "" ||
-		c.LockdownPath != "" || c.LockdownTelemetry != "" || c.LockdownSynthOut != ""
+		c.LockdownPath != "" || c.LockdownTelemetry != "" || c.LockdownSynthOut != "" ||
+		c.FlowPath != "" || c.FlowTelemetry != "" || c.FlowSynthOut != ""
 }
 

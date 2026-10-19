@@ -10,6 +10,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/bgp"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/bpf"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/fleet"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/flow"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/gateway"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/hsm"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/impermanence"
@@ -67,6 +68,7 @@ type TelemetrySummary struct {
 	TotalBGPViolations         int            `json:"total_bgp_violations"`
 	TotalStoreViolations       int            `json:"total_store_violations"`
 	TotalLockdownViolations    int            `json:"total_lockdown_violations"`
+	TotalFlowViolations        int            `json:"total_flow_violations"`
 }
 
 // ComputeTelemetry aggregates CVSS metrics from the threat feed, K8s violations, and Nix flake matches.
@@ -470,6 +472,35 @@ func ComputeTelemetryLockdown(feed *intel.Feed, k8sReport *k8s.ManifestAuditRepo
 				summary.MaxCVSS = lv.CVSSScore
 			}
 			switch lv.Severity {
+			case intel.SeverityCritical:
+				summary.CriticalCount++
+			case intel.SeverityHigh:
+				summary.HighCount++
+			case intel.SeverityMedium:
+				summary.MediumCount++
+			default:
+				summary.LowCount++
+			}
+		}
+	}
+
+	return summary
+}
+
+// ComputeTelemetryFlow aggregates CVSS metrics across all domains including Cluster-Wide eBPF Network Flow & DNS Exfiltration findings.
+func ComputeTelemetryFlow(feed *intel.Feed, k8sReport *k8s.ManifestAuditReport, flakeMatches []nix.FlakeVulnerabilityMatch, storageViolations []storage.StorageViolation, wireguardViolations []wireguard.WireGuardViolation, cisViolations []bench.CISViolation, gatewayViolations []gateway.GatewayViolation, attestViolations []attest.AttestationViolation, fleetViolations []fleet.FleetViolation, spiffeViolations []spiffe.SPIFFEViolation, sbomViolations []sbom.SBOMViolation, hsmViolations []hsm.HSMViolation, bpfViolations []bpf.BPFViolation, pqcViolations []pqc.PQCViolation, sandboxViolations []sandbox.SandboxViolation, remediateFindings []remediate.RemediationFinding, lsmViolations []lsm.LSMViolation, replicationViolations []replication.ReplicationViolation, fastPathViolations []wgfastpath.WGFastPathViolation, enclaveViolations []wgenclave.WGEnclaveViolation, webhookViolations []webhook.WebhookViolation, impermanenceViolations []impermanence.ImpermanenceViolation, bgpViolations []bgp.BGPViolation, storeViolations []nixstore.StoreViolation, lockdownViolations []lockdown.LockdownViolation, flowViolations []flow.FlowViolation) TelemetrySummary {
+	summary := ComputeTelemetryLockdown(feed, k8sReport, flakeMatches, storageViolations, wireguardViolations, cisViolations, gatewayViolations, attestViolations, fleetViolations, spiffeViolations, sbomViolations, hsmViolations, bpfViolations, pqcViolations, sandboxViolations, remediateFindings, lsmViolations, replicationViolations, fastPathViolations, enclaveViolations, webhookViolations, impermanenceViolations, bgpViolations, storeViolations, lockdownViolations)
+
+	if len(flowViolations) > 0 {
+		summary.TotalFlowViolations = len(flowViolations)
+		for _, fv := range flowViolations {
+			summary.TotalViolations++
+			summary.TargetDistribution["kubernetes"]++
+			summary.ComponentDistribution["cilium-flow"]++
+			if fv.CVSSScore > summary.MaxCVSS {
+				summary.MaxCVSS = fv.CVSSScore
+			}
+			switch fv.Severity {
 			case intel.SeverityCritical:
 				summary.CriticalCount++
 			case intel.SeverityHigh:

@@ -244,9 +244,19 @@ Automated generation of defense-in-depth rules:
 - [x] Full CLI integration (`--lockdown`, `--secure-boot`, `--lockdown-telemetry`, `--lockdown-synth-out`, `--lockdown-strict`) with unified SARIF v2.1.0 code scanning, JSON audit telemetry, and Markdown briefing exports (`cmd/sentinel/lockdown_runner.go`, `cmd/sentinel/flags.go`).
 - [x] Production sample fixtures (`fixtures/nixos-lockdown-hardened.nix`, `fixtures/nixos-lockdown-vulnerable.nix`, `fixtures/lockdown-telemetry.json`) and threat feed correlation with `CVE-2026-92814`.
 
-### Version 0.30.0 — Cluster-Wide eBPF Network Flow & DNS Exfiltration Anomaly Profiler (Planned)
-- [ ] Profile kernel socket connect rates and correlate high-entropy DNS tunnel queries across cluster worker nodes.
-- [ ] Synthesize real-time Cilium Network Policies dynamically mitigating domain generation algorithm (DGA) exfiltration vectors.
+### Version 0.30.0 — Cluster-Wide eBPF Network Flow & DNS Exfiltration Anomaly Profiler (Completed)
+- [x] High-throughput eBPF network socket connect and DNS query event forensic analyzer (`pkg/flow/parser.go`).
+- [x] Authoritative canonical rule catalog `FLOW-RADAR-001` through `FLOW-RADAR-012` detecting unrestricted egress port 53 without L7 proxy (`CVE-2026-10392`), high Shannon entropy DNS tunneling queries ($H > 4.2$), DGA query bursts (> 15 queries/min), socket connection spikes (> 500 conn/s), unmonitored raw TCP/UDP outbound sockets, unmanaged cross-pod DNS proxy bypass, unconfined public DNS resolvers (8.8.8.8/1.1.1.1), non-standard port DNS traffic, eBPF socket map drop spikes (> 50 drops/s), DNS tunneling TXT query amplification, packet rate asymmetry, and eBPF network flow profiler probe detachment (`pkg/flow/rules.go`).
+- [x] Shannon entropy forensic calculator ($H = -\sum p_i \log_2 p_i$), domain query classifier, and multi-format streaming parser for `CiliumNetworkPolicy`, NixOS flow profiler modules (`nixos-flow-profiler.nix`), and runtime JSON flow/DNS telemetry with memory bounds (`pkg/flow/parser.go`).
+- [x] Static network policy auditor and runtime eBPF telemetry reconciler calculating deterministic compliance scores (0.0% to 100.0%) (`pkg/flow/auditor.go`).
+- [x] Declarative policy synthesizer generating hardened `CiliumNetworkPolicy` (L7 DNS proxy with FQDN regex restrictions), NixOS eBPF flow profiler host modules (`nixos-flow-profiler-hardened.nix`), and Prometheus network flow alert rules (`flow-alerts.yaml`) (`pkg/flow/synth.go`).
+- [x] Dedicated CLI runners (`cmd/sentinel/flow_runner.go`, `cmd/sentinel/briefing_runner.go`) and flag integration (`--flow`, `--cilium-flow`, `--flow-telemetry`, `--flow-synth-out`, `--flow-strict`), maintaining `cmd/sentinel/main.go` under the 500-line soft ceiling (`pkg/flow/scanner.go`, `cmd/sentinel/flags.go`).
+- [x] Production sample fixtures (`fixtures/cilium-flow-hardened.yaml`, `fixtures/cilium-flow-vulnerable.yaml`, `fixtures/nixos-flow-profiler.nix`, `fixtures/flow-telemetry.json`) and threat feed correlation with `CVE-2026-10392`.
+- [x] Unified exporter integration into OASIS SARIF v2.1.0 (Section 26), structured JSON audit telemetry (`flow_violations`, `flow_summary`, `flow_telemetry`), and hourly Markdown threat briefings (Section 29).
+
+### Version 0.31.0 — Multi-Tenant Cilium ClusterMesh & Global Service Discovery Auditor (Planned)
+- [ ] Audit Cilium ClusterMesh control plane interconnects, etcd synchronization endpoints, and cross-cluster service routing policies.
+- [ ] Detect global ServiceExport/ServiceImport namespace collisions and unencrypted cross-cloud VXLAN encapsulation tunnels.
 
 ### Version 1.0.0 — Enterprise Workload Identity & Ephemeral Detonation Pipeline (Planned)
 - [ ] Full end-to-end integration of SPIFFE/SPIRE workload attestation, In-Toto provenance, and HSM envelope encryption.

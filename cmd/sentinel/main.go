@@ -9,6 +9,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/bgp"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/bpf"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/fleet"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/flow"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/gateway"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/hsm"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/impermanence"
@@ -34,7 +35,7 @@ import (
 )
 
 var (
-	version = "0.29.0"
+	version = "0.30.0"
 )
 
 func main() {
@@ -120,6 +121,9 @@ func main() {
 		lockdownViolations      []lockdown.LockdownViolation
 		lockdownSummary         *lockdown.LockdownSummary
 		lockdownTelemetry       *lockdown.LockdownTelemetryReport
+		flowViolations          []flow.FlowViolation
+		flowSummary             *flow.FlowSummary
+		flowTelemetry           *flow.FlowTelemetryReport
 	)
 
 	// 1. Audit Nix Flake
@@ -264,7 +268,14 @@ func main() {
 		)
 	}
 
-	// 27. Generate Threat Briefing if --briefing is requested
+	// 27. Audit Cluster-Wide eBPF Network Flow & DNS Exfiltration Anomaly Profiler
+	if cfg.FlowPath != "" || cfg.FlowTelemetry != "" || cfg.FlowSynthOut != "" {
+		flowViolations, flowSummary, flowTelemetry = runFlowAudit(
+			cfg.FlowPath, cfg.FlowTelemetry, cfg.FlowSynthOut, cfg.FlowStrict, feed, logInfo, logErr,
+		)
+	}
+
+	// 28. Generate Threat Briefing if --briefing is requested
 	if cfg.Briefing {
 		logInfo("[+] Synthesizing Threat Intelligence Briefing...\n")
 		briefingOpts := report.BriefingOptions{
@@ -326,26 +337,14 @@ func main() {
 			LockdownViolations:      lockdownViolations,
 			LockdownSummary:         lockdownSummary,
 			LockdownTelemetry:       lockdownTelemetry,
+			FlowViolations:          flowViolations,
+			FlowSummary:             flowSummary,
+			FlowTelemetry:           flowTelemetry,
 			OutputDir:               cfg.BriefingDir,
 			CustomFilename:          cfg.BriefingFile,
 		}
 
-		rep, err := report.GenerateBriefing(briefingOpts)
-		if err != nil {
-			logErr("[-] Failed to generate threat briefing: %v\n", err)
-			os.Exit(1)
-		}
-
-		savedPath, err := report.WriteBriefingToFile(rep, cfg.BriefingDir, cfg.BriefingFile)
-		if err != nil {
-			logErr("[-] Failed to save briefing file: %v\n", err)
-			os.Exit(1)
-		}
-
-		logInfo("[+] Threat Briefing written to: %s\n", savedPath)
-		logInfo("    Telemetry: Total=%d | Critical=%d | High=%d | Medium=%d | Low=%d\n",
-			rep.Telemetry.TotalThreats, rep.Telemetry.CriticalCount, rep.Telemetry.HighCount, rep.Telemetry.MediumCount, rep.Telemetry.LowCount)
-		logInfo("    Fleet Risk: Peak CVSS=%.1f | Avg CVSS=%.1f\n", rep.Telemetry.MaxCVSS, rep.Telemetry.AverageCVSS)
+		runBriefingExport(cfg, briefingOpts, logInfo, logErr)
 		return
 	}
 
@@ -465,6 +464,12 @@ func main() {
 			LockdownPath:              cfg.LockdownPath,
 			LockdownTelemetryPath:     cfg.LockdownTelemetry,
 			LockdownSynthOut:          cfg.LockdownSynthOut,
+			FlowViolations:            flowViolations,
+			FlowSummary:               flowSummary,
+			FlowTelemetry:             flowTelemetry,
+			FlowPath:                  cfg.FlowPath,
+			FlowTelemetryPath:         cfg.FlowTelemetry,
+			FlowSynthOut:              cfg.FlowSynthOut,
 			TargetFilter:              cfg.TargetFilter,
 			Pretty:                    true,
 		}

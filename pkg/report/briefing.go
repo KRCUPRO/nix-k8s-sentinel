@@ -13,6 +13,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/bgp"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/bpf"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/fleet"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/flow"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/gateway"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/hsm"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/impermanence"
@@ -98,6 +99,9 @@ type BriefingOptions struct {
 	LockdownViolations         []lockdown.LockdownViolation
 	LockdownSummary            *lockdown.LockdownSummary
 	LockdownTelemetry          *lockdown.LockdownTelemetryReport
+	FlowViolations             []flow.FlowViolation
+	FlowSummary                *flow.FlowSummary
+	FlowTelemetry              *flow.FlowTelemetryReport
 	OutputDir                  string
 	CustomFilename             string
 }
@@ -130,7 +134,7 @@ func GenerateBriefing(opts BriefingOptions) (*BriefingReport, error) {
 		version = "0.28.0"
 	}
 
-	telemetry := ComputeTelemetryLockdown(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations, opts.GatewayViolations, opts.AttestViolations, opts.FleetViolations, opts.SPIFFEViolations, opts.SBOMViolations, opts.HSMViolations, opts.BPFViolations, opts.PQCViolations, opts.SandboxViolations, opts.RemediateFindings, opts.LSMViolations, opts.ReplicationViolations, opts.FastPathViolations, opts.EnclaveViolations, opts.WebhookViolations, opts.ImpermanenceViolations, opts.BGPViolations, opts.StoreViolations, opts.LockdownViolations)
+	telemetry := ComputeTelemetryFlow(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations, opts.GatewayViolations, opts.AttestViolations, opts.FleetViolations, opts.SPIFFEViolations, opts.SBOMViolations, opts.HSMViolations, opts.BPFViolations, opts.PQCViolations, opts.SandboxViolations, opts.RemediateFindings, opts.LSMViolations, opts.ReplicationViolations, opts.FastPathViolations, opts.EnclaveViolations, opts.WebhookViolations, opts.ImpermanenceViolations, opts.BGPViolations, opts.StoreViolations, opts.LockdownViolations, opts.FlowViolations)
 
 	var buf bytes.Buffer
 
@@ -1049,7 +1053,66 @@ func GenerateBriefing(opts BriefingOptions) (*BriefingReport, error) {
 		buf.WriteString("---\n\n")
 	}
 
-	// 29. Action Items Checklist
+	// 29. Cluster-Wide eBPF Network Flow & DNS Exfiltration Anomaly Profiler
+	if opts.FlowSummary != nil || len(opts.FlowViolations) > 0 || opts.FlowTelemetry != nil {
+		buf.WriteString("## 🌐 Cluster-Wide eBPF Network Flow & DNS Exfiltration Anomaly Profiler\n\n")
+		buf.WriteString("> Real-time kernel socket connect rate profiling, high-entropy DNS tunnel exfiltration interception, and DGA mitigation via Cilium Network Policies.\n\n")
+
+		if opts.FlowSummary != nil {
+			buf.WriteString("### 📊 Network Flow & DNS Exfiltration Compliance Summary\n\n")
+			buf.WriteString("| Metric | Value | Baseline Standard |\n")
+			buf.WriteString("| :--- | :---: | :--- |\n")
+			buf.WriteString(fmt.Sprintf("| **Compliance Score** | **%.1f%%** | >= 80.0%% (Target 100.0%%) |\n", opts.FlowSummary.ComplianceScore))
+			buf.WriteString(fmt.Sprintf("| **Total Configs Scanned** | `%d` | Total audited network policies and flow profilers |\n", opts.FlowSummary.TotalScanned))
+			buf.WriteString(fmt.Sprintf("| **Total Violations** | `%d` | Critical: %d, High: %d, Med: %d |\n",
+				opts.FlowSummary.ViolationCount,
+				opts.FlowSummary.CriticalCount,
+				opts.FlowSummary.HighCount,
+				opts.FlowSummary.MediumCount,
+			))
+			buf.WriteString(fmt.Sprintf("| **Flow Posture** | **%s** | Zero DNS Tunneling & Socket Storm Findings |\n\n", func() string {
+				if opts.FlowSummary.ComplianceScore >= 80.0 && opts.FlowSummary.CriticalCount == 0 {
+					return "COMPLIANT [PASS]"
+				}
+				return "DEGRADED"
+			}()))
+		}
+
+		if len(opts.FlowViolations) > 0 {
+			buf.WriteString("### 🚨 Detected Flow & DNS Exfiltration Vulnerabilities\n\n")
+			buf.WriteString("| Rule ID | File Path | Severity | CVSS | Description | Matched CVE | Remediation Target |\n")
+			buf.WriteString("| :--- | :--- | :---: | :---: | :--- | :---: | :--- |\n")
+			for _, fv := range opts.FlowViolations {
+				cveTag := "None"
+				if fv.MatchedCVE != "" {
+					cveTag = fmt.Sprintf("`%s`", fv.MatchedCVE)
+				}
+				buf.WriteString(fmt.Sprintf("| `%s` | `%s` | **%s** | %.1f | %s | %s | %s |\n",
+					fv.RuleID, fv.FilePath, fv.Severity, fv.CVSSScore, fv.Description, cveTag, fv.Remediation))
+			}
+			buf.WriteString("\n")
+		}
+
+		if opts.FlowTelemetry != nil {
+			buf.WriteString("### 📡 Live eBPF Network Flow & DNS Tunneling Telemetry\n\n")
+			buf.WriteString("| Host / Cluster | Total DNS Queries | Suspicious Queries | NXDOMAIN Rate % | Peak Socket Conn/s | Drop Rate % | Buffer Overruns |\n")
+			buf.WriteString("| :--- | :---: | :---: | :---: | :---: | :---: | :---: |\n")
+			buf.WriteString(fmt.Sprintf("| `%s / %s` | `%d` | `%d` | **%.1f%%** | `%d conn/s` | `%.2f%%` | `%d` |\n\n",
+				opts.FlowTelemetry.HostName,
+				opts.FlowTelemetry.ClusterName,
+				opts.FlowTelemetry.TotalDNSQueries,
+				opts.FlowTelemetry.SuspiciousQueries,
+				opts.FlowTelemetry.NXDomainRatePercent,
+				opts.FlowTelemetry.PeakSocketConnectRate,
+				opts.FlowTelemetry.DropRatePercent,
+				opts.FlowTelemetry.BufferOverruns,
+			))
+		}
+
+		buf.WriteString("---\n\n")
+	}
+
+	// 30. Action Items Checklist
 	buf.WriteString("## 📋 SecOps & SRE Operational Checklist\n\n")
 	buf.WriteString("- [ ] Review high and critical severity advisories against production deployment manifests.\n")
 	buf.WriteString("- [ ] Verify that ingress controllers enforce URI path normalization and snippet guards.\n")
@@ -1077,6 +1140,7 @@ func GenerateBriefing(opts BriefingOptions) (*BriefingReport, error) {
 	buf.WriteString("- [ ] Mandate TCP MD5 / TCP-AO authentication for Cilium BGP peers, advertise dual-stack IPv6 routes, and enforce prefix-list filters to prevent prefix hijacks.\n")
 	buf.WriteString("- [ ] Enforce require-sigs = true in Nix daemon, declare explicit Ed25519 public keys, mandate namespace-scoped sandboxing, and verify NAR checksums on all binary cache substitutes.\n")
 	buf.WriteString("- [ ] Configure boot.kernelParams with lockdown=confidentiality, module.sig_enforce=1, enable Lanzaboote UKI, and synchronize UEFI DBX forbidden signature databases.\n")
+	buf.WriteString("- [ ] Deploy CiliumNetworkPolicies restricting DNS egress to kube-system CoreDNS with L7 toFQDNs rules, intercept high-entropy DNS tunneling, and throttle anomalous socket connect storms.\n")
 	buf.WriteString("- [ ] Archive this briefing record into security audit ledger.\n")
 
 	report := &BriefingReport{

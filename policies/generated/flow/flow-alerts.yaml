@@ -1,0 +1,42 @@
+groups:
+- name: eBPFNetworkFlowAndDNSAlerts
+  rules:
+  - alert: DNSHighEntropyTunnelingDetected
+    expr: rate(cilium_dns_high_entropy_queries_total[2m]) > 5
+    for: 1m
+    labels:
+      severity: critical
+      subsystem: eBPF-flow-radar
+    annotations:
+      summary: "High-entropy DNS queries detected from internal pod"
+      description: "Pod is generating DNS queries with Shannon entropy > 3.85, indicating active data tunneling."
+
+  - alert: DGABeaconingBurstDetected
+    expr: rate(cilium_dns_nxdomain_responses_total[2m]) / rate(cilium_dns_queries_total[2m]) > 0.25
+    for: 2m
+    labels:
+      severity: critical
+      subsystem: eBPF-flow-radar
+    annotations:
+      summary: "Potential DGA C2 beaconing detected"
+      description: "NXDOMAIN response rate exceeds 25.0% of total DNS traffic across namespace."
+
+  - alert: SocketConnectStormAnomaly
+    expr: rate(ebpf_kernel_socket_connect_total[1m]) > 500
+    for: 30s
+    labels:
+      severity: warning
+      subsystem: eBPF-flow-radar
+    annotations:
+      summary: "Anomalous kernel socket connection storm"
+      description: "Container cgroup connect rate exceeds 500 connections/sec."
+
+  - alert: EBPFFlowRingBufferLoss
+    expr: rate(ebpf_flow_ring_buffer_overruns_total[2m]) > 0
+    for: 1m
+    labels:
+      severity: warning
+      subsystem: eBPF-flow-radar
+    annotations:
+      summary: "Kernel eBPF flow ring buffer event drops"
+      description: "Telemetry collector is dropping kernel flow traces due to buffer pressure."

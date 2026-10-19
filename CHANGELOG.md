@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.30.0] - 2026-10-19
+
+### Added
+- **Cluster-Wide eBPF Network Flow & DNS Exfiltration Anomaly Profiler** (`pkg/flow/scanner.go`): Autonomous security verification engine inspecting Kubernetes CiliumNetworkPolicy manifests, NixOS host eBPF flow profiler definitions (`services.flow-profiler.*`), and live eBPF kernel socket/DNS query telemetry across bare-metal NixOS and Kubernetes worker nodes.
+- **Authoritative Canonical Flow Radar Rules Catalog** (`pkg/flow/rules.go`): Suite of 12 canonical security rules (`FLOW-RADAR-001` through `FLOW-RADAR-012`) covering unrestricted egress port 53 without L7 proxy (`FLOW-RADAR-001`, mapped to `CVE-2026-10392`), high Shannon entropy DNS tunneling queries ($H > 4.2$) (`FLOW-RADAR-002`), DGA burst queries exceeding 15 queries/min (`FLOW-RADAR-003`), socket connection spikes exceeding 500 conn/s (`FLOW-RADAR-004`), unmonitored raw TCP/UDP outbound sockets (`FLOW-RADAR-005`), unmanaged cross-pod DNS proxy bypass (`FLOW-RADAR-006`), unconfined public DNS resolvers (`FLOW-RADAR-007`), non-standard port DNS traffic (`FLOW-RADAR-008`), eBPF socket map drop rate spikes > 50 drops/s (`FLOW-RADAR-009`), DNS tunneling TXT query amplification > 256 bytes (`FLOW-RADAR-010`), packet rate asymmetry signaling bulk exfiltration (`FLOW-RADAR-011`), and eBPF network flow profiler probe detachment (`FLOW-RADAR-012`).
+- **Shannon Entropy Calculator & Streaming Telemetry Parser** (`pkg/flow/parser.go`): Multi-format parser for CiliumNetworkPolicy manifests, NixOS expressions, domain query classifier (DGA / tunneling detection), and runtime JSON flow/DNS telemetry with 10MB manifest and 5MB telemetry defensive memory bounds.
+- **Static Network Policy Auditor & Runtime Telemetry Reconciler** (`pkg/flow/auditor.go`): Static policy auditor, live eBPF socket flow reconciler, DNS tunneling anomaly detector, and deterministic compliance scoring engine (0.0% to 100.0%).
+- **Declarative Flow Policy Synthesizer** (`pkg/flow/synth.go`): Synthesizes production-hardened `CiliumNetworkPolicy` (L7 DNS proxy with FQDN regex restrictions), NixOS eBPF flow profiler host modules (`nixos-flow-profiler-hardened.nix`), and Prometheus network flow alert rules (`flow-alerts.yaml`).
+- **Dedicated CLI Flow Runner & Briefing Modularization** (`cmd/sentinel/flow_runner.go`, `cmd/sentinel/briefing_runner.go`, `cmd/sentinel/flags.go`): Modular runner extraction maintaining `cmd/sentinel/main.go` under the 500-line soft ceiling (456 LOC). Added `--flow=<path>`, `--cilium-flow`, `--flow-telemetry=<path>`, `--flow-synth-out=<dir>`, and `--flow-strict` flags.
+- **Threat Feed Expansion** (`intel/cve-feed.json`): Ingested `CVE-2026-10392` (Cilium & Kubernetes Network Policy DNS Exfiltration & eBPF Tunneling Bypass, CVSS 9.3 Critical).
+- **Unified Exporter Integration**: Flow findings, summary metrics, and runtime telemetry exported to OASIS SARIF v2.1.0 (Section 26), structured JSON audit telemetry (`flow_violations`, `flow_summary`, `flow_telemetry`), and hourly Markdown threat briefings (Section 29).
+- **Production Fixtures & Policy Artifacts**: Added realistic fixtures (`fixtures/cilium-flow-hardened.yaml`, `fixtures/cilium-flow-vulnerable.yaml`, `fixtures/nixos-flow-profiler.nix`, `fixtures/flow-telemetry.json`) and synthesized templates in `policies/generated/flow/`.
+- **Comprehensive Unit Test Suites** (`pkg/flow/flow_test.go`, `pkg/report/flow_report_test.go`): 100% test coverage across canonical rules, parser, telemetry auditor, synthesizers, scanner, SARIF/JSON/Briefing serialization, and memory bounds checks.
+
+### Changed
+- Bumped engine release to `v0.30.0`.
+- Updated `SECURITY.md` establishing Cluster-Wide eBPF Network Flow & DNS Exfiltration Profiler security invariants (Invariant 32).
+- Updated `ROADMAP.md` marking Milestone M30 as completed and scheduling M31 (Multi-Tenant Cilium ClusterMesh & Global Service Discovery Auditor).
+- Updated `scripts/ARCHITECTURE_MAP.md` documenting new Flow modules, runners, and O(1) symbols.
+
+---
+
 ## [0.29.0] - 2026-10-19
 
 ### Added
