@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.29.0] - 2026-10-19
+
+### Added
+- **Linux Kernel Lockdown & UEFI Secure Boot DBX Revocation List Auditor** (`pkg/lockdown/scanner.go`): Autonomous security verification engine inspecting NixOS kernel lockdown modes (`integrity` vs `confidentiality` vs `none`), unsigned kernel module loading policies, raw physical memory access (`/dev/mem`), Lanzaboote UEFI Secure Boot declarations, and active bootloader authenticode SHA-256 digests against UEFI DBX forbidden signature revocation lists across bare-metal NixOS cluster nodes.
+- **Authoritative Canonical Lockdown Rules Catalog** (`pkg/lockdown/rules.go`): Suite of 12 canonical security rules (`LOCKDOWN-001` through `LOCKDOWN-012`) covering disabled kernel lockdown mode permitting arbitrary ring-0 compromise (`LOCKDOWN-001`, mapped to `CVE-2026-92814`), unsigned kernel module loading permitted (`LOCKDOWN-002`), writable physical memory access via `/dev/mem` (`LOCKDOWN-003`), unverified hibernation resuming from unauthenticated swap (`LOCKDOWN-004`), Lanzaboote Secure Boot disabled or unconfigured (`LOCKDOWN-005`), unverified custom kernel modules missing detached signature paths (`LOCKDOWN-006`), active bootloader binary digest matching UEFI DBX revocation list (`LOCKDOWN-007`, mapped to BootHole and Shim RCE `CVE-2023-40547`), legacy insecure x86 BIOS bootloader in production (`LOCKDOWN-008`), Lanzaboote PKI key directory world-readable (`LOCKDOWN-009`), runtime kernel lockdown mode downgraded from declared policy (`LOCKDOWN-010`), live unsigned module loading attempts detected (`LOCKDOWN-011`), and outdated UEFI DBX revocation list database (> 180 days stale) (`LOCKDOWN-012`).
+- **Streaming Kernel Parameter & Telemetry Parser** (`pkg/lockdown/parser.go`): Multi-format parser for NixOS expressions (supporting flat and nested `boot.lanzaboote.*`), Linux `/sys/kernel/security/lockdown` sysfs bracketed state strings, SHA-256 authenticode validation, and runtime JSON DBX/sysfs telemetry with 10MB memory safety bounds.
+- **Static Configuration Auditor & Runtime Telemetry Reconciler** (`pkg/lockdown/auditor.go`): Static configuration auditor, runtime telemetry reconciler, known-compromised DBX digest matcher, and deterministic compliance scoring engine (0.0% to 100.0%).
+- **Declarative Lockdown Policy Synthesizer** (`pkg/lockdown/synth.go`): Synthesizes production-hardened declarative NixOS configuration modules (`nixos-lockdown-hardened.nix`), systemd automated DBX updater services (`uefi-dbx-updater.nix`), and Prometheus alert rules (`lockdown-alerts.yaml`).
+- **Dedicated CLI Lockdown Runner & Flag Architecture** (`cmd/sentinel/lockdown_runner.go`, `cmd/sentinel/flags.go`): Extracted lockdown audit coordination into a dedicated modular runner maintaining `cmd/sentinel/main.go` under the 500-line soft ceiling (492 LOC). Added `--lockdown=<path>`, `--secure-boot`, `--lockdown-telemetry=<path>`, `--lockdown-synth-out=<dir>`, and `--lockdown-strict` flags.
+- **Threat Feed Expansion** (`intel/cve-feed.json`): Ingested `CVE-2026-92814` (Linux Kernel Lockdown Ring-0 Memory Corruption & Signature Bypass, CVSS 9.4 Critical).
+- **Unified Exporter Integration**: Lockdown findings, summary metrics, and runtime telemetry exported to OASIS SARIF v2.1.0 (Section 25), structured JSON audit telemetry (`lockdown_violations`, `lockdown_summary`, `lockdown_telemetry`), and hourly Markdown threat briefings (Section 28).
+- **Production Fixtures & Policy Artifacts**: Added realistic fixtures (`fixtures/nixos-lockdown-hardened.nix`, `fixtures/nixos-lockdown-vulnerable.nix`, `fixtures/lockdown-telemetry.json`) and synthesized templates in `policies/generated/lockdown/`.
+- **Comprehensive Unit Test Suites** (`pkg/lockdown/lockdown_test.go`, `pkg/report/lockdown_report_test.go`): 100% test coverage across canonical rules, parser, telemetry auditor, synthesizers, scanner, SARIF/JSON/Briefing serialization, and memory bounds checks.
+
+### Changed
+- Bumped engine release to `v0.29.0`.
+- Updated `SECURITY.md` establishing Linux Kernel Lockdown & UEFI Secure Boot DBX Revocation Gate security invariants (Invariant 31).
+- Updated `ROADMAP.md` marking Milestone M29 as completed and scheduling M30 (Cluster-Wide eBPF Network Flow & DNS Exfiltration Anomaly Profiler).
+- Updated `scripts/ARCHITECTURE_MAP.md` documenting new Lockdown modules, runners, and O(1) symbols.
+
+---
+
 ## [0.28.0] - 2026-10-19
 
 ### Added

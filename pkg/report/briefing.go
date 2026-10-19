@@ -18,6 +18,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/impermanence"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/intel"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/k8s"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/lockdown"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/lsm"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nix"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nixstore"
@@ -94,6 +95,9 @@ type BriefingOptions struct {
 	StoreViolations            []nixstore.StoreViolation
 	StoreSummary               *nixstore.StoreSummary
 	StoreTelemetry             *nixstore.NixStoreTelemetryReport
+	LockdownViolations         []lockdown.LockdownViolation
+	LockdownSummary            *lockdown.LockdownSummary
+	LockdownTelemetry          *lockdown.LockdownTelemetryReport
 	OutputDir                  string
 	CustomFilename             string
 }
@@ -126,7 +130,7 @@ func GenerateBriefing(opts BriefingOptions) (*BriefingReport, error) {
 		version = "0.28.0"
 	}
 
-	telemetry := ComputeTelemetryStore(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations, opts.GatewayViolations, opts.AttestViolations, opts.FleetViolations, opts.SPIFFEViolations, opts.SBOMViolations, opts.HSMViolations, opts.BPFViolations, opts.PQCViolations, opts.SandboxViolations, opts.RemediateFindings, opts.LSMViolations, opts.ReplicationViolations, opts.FastPathViolations, opts.EnclaveViolations, opts.WebhookViolations, opts.ImpermanenceViolations, opts.BGPViolations, opts.StoreViolations)
+	telemetry := ComputeTelemetryLockdown(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations, opts.GatewayViolations, opts.AttestViolations, opts.FleetViolations, opts.SPIFFEViolations, opts.SBOMViolations, opts.HSMViolations, opts.BPFViolations, opts.PQCViolations, opts.SandboxViolations, opts.RemediateFindings, opts.LSMViolations, opts.ReplicationViolations, opts.FastPathViolations, opts.EnclaveViolations, opts.WebhookViolations, opts.ImpermanenceViolations, opts.BGPViolations, opts.StoreViolations, opts.LockdownViolations)
 
 	var buf bytes.Buffer
 
@@ -985,7 +989,67 @@ func GenerateBriefing(opts BriefingOptions) (*BriefingReport, error) {
 		buf.WriteString("---\n\n")
 	}
 
-	// 28. Action Items Checklist
+	// 28. Linux Kernel Lockdown & UEFI Secure Boot DBX Revocation Radar
+	if len(opts.LockdownViolations) > 0 || opts.LockdownSummary != nil || opts.LockdownTelemetry != nil {
+		buf.WriteString("## 🔒 Linux Kernel Lockdown & UEFI Secure Boot DBX Radar\n\n")
+
+		if opts.LockdownSummary != nil {
+			buf.WriteString("### 📊 Kernel Lockdown & Secure Boot Compliance Posture\n\n")
+			buf.WriteString("| Metric | Value | Baseline Standard |\n")
+			buf.WriteString("| :--- | :---: | :--- |\n")
+			buf.WriteString(fmt.Sprintf("| **Compliance Score** | **%.1f%%** | >= 80.0%% (Target 100.0%%) |\n", opts.LockdownSummary.ComplianceScore))
+			buf.WriteString(fmt.Sprintf("| **Total Configs Scanned** | `%d` | Total audited NixOS host configurations |\n", opts.LockdownSummary.TotalScanned))
+			buf.WriteString(fmt.Sprintf("| **Total Violations** | `%d` | Critical: %d, High: %d, Med: %d |\n",
+				opts.LockdownSummary.ViolationCount,
+				opts.LockdownSummary.CriticalCount,
+				opts.LockdownSummary.HighCount,
+				opts.LockdownSummary.MediumCount,
+			))
+			buf.WriteString(fmt.Sprintf("| **Kernel Lockdown Posture** | **%s** | Zero Critical Ring 0 Tampering Findings |\n\n", func() string {
+				if opts.LockdownSummary.ComplianceScore >= 80.0 && opts.LockdownSummary.CriticalCount == 0 {
+					return "COMPLIANT [PASS]"
+				}
+				return "DEGRADED"
+			}()))
+		}
+
+		if len(opts.LockdownViolations) > 0 {
+			buf.WriteString("### 🚨 Detected Kernel Lockdown & Secure Boot Vulnerabilities\n\n")
+			buf.WriteString("| Rule ID | File Path | Severity | CVSS | Description | Matched CVE | Remediation Target |\n")
+			buf.WriteString("| :--- | :--- | :---: | :---: | :--- | :---: | :--- |\n")
+			for _, lv := range opts.LockdownViolations {
+				cveTag := "None"
+				if lv.MatchedCVE != "" {
+					cveTag = fmt.Sprintf("`%s`", lv.MatchedCVE)
+				}
+				buf.WriteString(fmt.Sprintf("| `%s` | `%s` | **%s** | %.1f | %s | %s | %s |\n",
+					lv.RuleID, lv.FilePath, lv.Severity, lv.CVSSScore, lv.Description, cveTag, lv.Remediation))
+			}
+			buf.WriteString("\n")
+		}
+
+		if opts.LockdownTelemetry != nil {
+			buf.WriteString("### 📡 Live Kernel Lockdown & UEFI DBX Revocation Telemetry\n\n")
+			buf.WriteString("| Host Name | Live Lockdown | Module Signatures | Secure Boot | Setup Mode | DBX Version (Age) | DBX Revocations | Bootloader Revoked | Module Load Denials |\n")
+			buf.WriteString("| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |\n")
+			buf.WriteString(fmt.Sprintf("| `%s` | **%s** | `%t` | `%s` | `%t` | `%s (%d d)` | `%d` | **%t** | `%d` |\n\n",
+				opts.LockdownTelemetry.HostName,
+				opts.LockdownTelemetry.LiveLockdownMode,
+				opts.LockdownTelemetry.ModuleSignatureEnforced,
+				opts.LockdownTelemetry.SecureBootStatus,
+				opts.LockdownTelemetry.SetupModeActive,
+				opts.LockdownTelemetry.DBXVersion,
+				opts.LockdownTelemetry.DBXAgeDays,
+				opts.LockdownTelemetry.DBXTotalRevocations,
+				opts.LockdownTelemetry.ActiveBootloaderRevoked,
+				opts.LockdownTelemetry.UnsignedModuleLoadDenials,
+			))
+		}
+
+		buf.WriteString("---\n\n")
+	}
+
+	// 29. Action Items Checklist
 	buf.WriteString("## 📋 SecOps & SRE Operational Checklist\n\n")
 	buf.WriteString("- [ ] Review high and critical severity advisories against production deployment manifests.\n")
 	buf.WriteString("- [ ] Verify that ingress controllers enforce URI path normalization and snippet guards.\n")
@@ -1012,6 +1076,7 @@ func GenerateBriefing(opts BriefingOptions) (*BriefingReport, error) {
 	buf.WriteString("- [ ] Audit NixOS impermanence configurations (environment.persistence), verify tmpfs/snapshot root ephemerality, and enforce encrypted swap (swapDevices.*.randomEncryption).\n")
 	buf.WriteString("- [ ] Mandate TCP MD5 / TCP-AO authentication for Cilium BGP peers, advertise dual-stack IPv6 routes, and enforce prefix-list filters to prevent prefix hijacks.\n")
 	buf.WriteString("- [ ] Enforce require-sigs = true in Nix daemon, declare explicit Ed25519 public keys, mandate namespace-scoped sandboxing, and verify NAR checksums on all binary cache substitutes.\n")
+	buf.WriteString("- [ ] Configure boot.kernelParams with lockdown=confidentiality, module.sig_enforce=1, enable Lanzaboote UKI, and synchronize UEFI DBX forbidden signature databases.\n")
 	buf.WriteString("- [ ] Archive this briefing record into security audit ledger.\n")
 
 	report := &BriefingReport{

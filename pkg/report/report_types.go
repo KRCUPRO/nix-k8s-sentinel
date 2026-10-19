@@ -14,6 +14,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/impermanence"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/intel"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/k8s"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/lockdown"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/lsm"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nix"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nixstore"
@@ -103,6 +104,9 @@ type ReportOptions struct {
 	StoreViolations            []nixstore.StoreViolation
 	StoreSummary               *nixstore.StoreSummary
 	StoreTelemetry             *nixstore.NixStoreTelemetryReport
+	LockdownViolations         []lockdown.LockdownViolation
+	LockdownSummary            *lockdown.LockdownSummary
+	LockdownTelemetry          *lockdown.LockdownTelemetryReport
 	FlakePath                  string
 	K8sPath                    string
 	StoragePath                string
@@ -152,6 +156,9 @@ type ReportOptions struct {
 	StorePath                  string
 	StoreTelemetryPath         string
 	StoreSynthOut              string
+	LockdownPath               string
+	LockdownTelemetryPath      string
+	LockdownSynthOut           string
 	TargetFilter               string
 	Pretty                     bool
 }

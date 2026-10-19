@@ -17,6 +17,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/impermanence"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/intel"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/k8s"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/lockdown"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/lsm"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nix"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nixstore"
@@ -99,6 +100,9 @@ type JSONAuditReport struct {
 	StoreViolations            []nixstore.StoreViolation               `json:"store_violations,omitempty"`
 	StoreSummary               *nixstore.StoreSummary                  `json:"store_summary,omitempty"`
 	StoreTelemetry             *nixstore.NixStoreTelemetryReport       `json:"store_telemetry,omitempty"`
+	LockdownViolations         []lockdown.LockdownViolation            `json:"lockdown_violations,omitempty"`
+	LockdownSummary            *lockdown.LockdownSummary               `json:"lockdown_summary,omitempty"`
+	LockdownTelemetry          *lockdown.LockdownTelemetryReport       `json:"lockdown_telemetry,omitempty"`
 }
 
 // BuildJSONReport compiles the consolidated JSON audit report from provided audit data.
@@ -256,8 +260,17 @@ func BuildJSONReport(opts ReportOptions) (*JSONAuditReport, error) {
 	if opts.StoreSynthOut != "" {
 		scanned = append(scanned, opts.StoreSynthOut)
 	}
+	if opts.LockdownPath != "" {
+		scanned = append(scanned, opts.LockdownPath)
+	}
+	if opts.LockdownTelemetryPath != "" {
+		scanned = append(scanned, opts.LockdownTelemetryPath)
+	}
+	if opts.LockdownSynthOut != "" {
+		scanned = append(scanned, opts.LockdownSynthOut)
+	}
 
-	telemetry := ComputeTelemetryStore(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations, opts.GatewayViolations, opts.AttestViolations, opts.FleetViolations, opts.SPIFFEViolations, opts.SBOMViolations, opts.HSMViolations, opts.BPFViolations, opts.PQCViolations, opts.SandboxViolations, opts.RemediateFindings, opts.LSMViolations, opts.ReplicationViolations, opts.FastPathViolations, opts.EnclaveViolations, opts.WebhookViolations, opts.ImpermanenceViolations, opts.BGPViolations, opts.StoreViolations)
+	telemetry := ComputeTelemetryLockdown(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations, opts.GatewayViolations, opts.AttestViolations, opts.FleetViolations, opts.SPIFFEViolations, opts.SBOMViolations, opts.HSMViolations, opts.BPFViolations, opts.PQCViolations, opts.SandboxViolations, opts.RemediateFindings, opts.LSMViolations, opts.ReplicationViolations, opts.FastPathViolations, opts.EnclaveViolations, opts.WebhookViolations, opts.ImpermanenceViolations, opts.BGPViolations, opts.StoreViolations, opts.LockdownViolations)
 
 	var advisories []intel.ThreatItem
 	if opts.Feed != nil {
@@ -332,6 +345,9 @@ func BuildJSONReport(opts ReportOptions) (*JSONAuditReport, error) {
 		StoreViolations:            opts.StoreViolations,
 		StoreSummary:               opts.StoreSummary,
 		StoreTelemetry:             opts.StoreTelemetry,
+		LockdownViolations:         opts.LockdownViolations,
+		LockdownSummary:            opts.LockdownSummary,
+		LockdownTelemetry:          opts.LockdownTelemetry,
 	}
 
 	return rep, nil

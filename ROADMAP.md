@@ -236,9 +236,17 @@ Automated generation of defense-in-depth rules:
 - [x] Full CLI integration (`--nixstore`, `--binary-cache`, `--nixstore-telemetry`, `--nixstore-synth-out`, `--nixstore-strict`) with unified SARIF v2.1.0 code scanning, JSON audit telemetry, and Markdown briefing exports (`cmd/sentinel/nixstore_runner.go`, `cmd/sentinel/flags.go`).
 - [x] Production sample fixtures (`fixtures/nixos-store-hardened.nix`, `fixtures/nixos-store-vulnerable.nix`, `fixtures/nixstore-telemetry.json`) and threat feed correlation with `CVE-2026-81930`.
 
-### Version 0.29.0 — Linux Kernel Lockdown & UEFI Secure Boot DBX Revocation List Auditor (Planned)
-- [ ] Audit NixOS kernel lockdown mode (`integrity` vs `confidentiality`) and unsigned kernel module loading policies.
-- [ ] Verify UEFI Secure Boot DBX forbidden signature databases against active bootloader revocations.
+### Version 0.29.0 — Linux Kernel Lockdown & UEFI Secure Boot DBX Revocation List Auditor (Completed)
+- [x] Multi-format streaming parser for NixOS kernel parameters (`boot.kernelParams`), Lanzaboote UEFI Secure Boot declarations (`boot.lanzaboote.*`), Linux `/sys/kernel/security/lockdown` sysfs bracketed state strings, and JSON DBX/sysfs telemetry (`pkg/lockdown/parser.go`).
+- [x] Canonical rule catalog `LOCKDOWN-001` through `LOCKDOWN-012` detecting disabled kernel lockdown mode (`CVE-2026-92814`), unsigned kernel module loading permitted (`module.sig_enforce`), writable `/dev/mem` physical memory access, unverified hibernation resuming from unauthenticated swap, Lanzaboote Secure Boot disabled or unconfigured, unverified custom kernel modules missing detached signature paths, active bootloader binary digest matching UEFI DBX revocation list (`CVE-2023-40547`), legacy insecure x86 BIOS bootloader in production, world-readable Lanzaboote PKI key directory, runtime lockdown mode downgraded from declared policy, live unsigned module loading attempts, and outdated UEFI DBX revocation list database (> 180 days stale) (`pkg/lockdown/rules.go`).
+- [x] Static configuration auditor and runtime telemetry reconciler evaluating kernel lockdown mode integrity, DBX revocation hashes, and deterministic compliance scoring (0.0% to 100.0%) (`pkg/lockdown/auditor.go`).
+- [x] Declarative policy synthesizer generating hardened NixOS lockdown modules (`nixos-lockdown-hardened.nix`), systemd automated DBX updater services (`uefi-dbx-updater.nix`), and Prometheus alert rules (`lockdown-alerts.yaml`) (`pkg/lockdown/synth.go`).
+- [x] Full CLI integration (`--lockdown`, `--secure-boot`, `--lockdown-telemetry`, `--lockdown-synth-out`, `--lockdown-strict`) with unified SARIF v2.1.0 code scanning, JSON audit telemetry, and Markdown briefing exports (`cmd/sentinel/lockdown_runner.go`, `cmd/sentinel/flags.go`).
+- [x] Production sample fixtures (`fixtures/nixos-lockdown-hardened.nix`, `fixtures/nixos-lockdown-vulnerable.nix`, `fixtures/lockdown-telemetry.json`) and threat feed correlation with `CVE-2026-92814`.
+
+### Version 0.30.0 — Cluster-Wide eBPF Network Flow & DNS Exfiltration Anomaly Profiler (Planned)
+- [ ] Profile kernel socket connect rates and correlate high-entropy DNS tunnel queries across cluster worker nodes.
+- [ ] Synthesize real-time Cilium Network Policies dynamically mitigating domain generation algorithm (DGA) exfiltration vectors.
 
 ### Version 1.0.0 — Enterprise Workload Identity & Ephemeral Detonation Pipeline (Planned)
 - [ ] Full end-to-end integration of SPIFFE/SPIRE workload attestation, In-Toto provenance, and HSM envelope encryption.

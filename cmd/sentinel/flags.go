@@ -83,6 +83,11 @@ type SentinelConfig struct {
 	StoreTelemetry        string
 	StoreSynthOut         string
 	StoreStrict           bool
+	LockdownPath          string
+	SecureBoot            bool
+	LockdownTelemetry     string
+	LockdownSynthOut      string
+	LockdownStrict        bool
 	Briefing              bool
 	BriefingDir       string
 	BriefingFile      string
@@ -195,6 +200,11 @@ func parseCLI() SentinelConfig {
 	storeTelemetry := flag.String("nixstore-telemetry", "", "Path to Nix daemon substitute verification telemetry JSON to inspect")
 	storeSynthOut := flag.String("nixstore-synth-out", "", "Output directory to write synthesized hardened NixOS store modules, nix.conf, and Prometheus alert rules")
 	storeStrict := flag.Bool("nixstore-strict", false, "Enforce strict zero-warning Nix store signature and binary cache compliance")
+	lockdownPath := flag.String("lockdown", "", "Path to NixOS kernel lockdown configuration file or directory to audit")
+	secureBootShort := flag.String("secure-boot", "", "Alias for --lockdown")
+	lockdownTelemetry := flag.String("lockdown-telemetry", "", "Path to runtime kernel lockdown and UEFI DBX telemetry JSON to inspect")
+	lockdownSynthOut := flag.String("lockdown-synth-out", "", "Output directory to write synthesized hardened NixOS lockdown modules, DBX sync service, and Prometheus alert rules")
+	lockdownStrict := flag.Bool("lockdown-strict", false, "Enforce strict zero-warning kernel lockdown and UEFI DBX compliance")
 	briefing := flag.Bool("briefing", false, "Generate automated Markdown threat intelligence briefing")
 	briefingDir := flag.String("briefing-dir", "intel/briefings", "Output directory for threat briefings")
 	briefingFile := flag.String("briefing-file", "", "Custom filename for threat briefing markdown")
@@ -285,6 +295,9 @@ func parseCLI() SentinelConfig {
 	if *storePath == "" && *binaryCacheShort != "" {
 		*storePath = *binaryCacheShort
 	}
+	if *lockdownPath == "" && *secureBootShort != "" {
+		*lockdownPath = *secureBootShort
+	}
 	if *outFile == "" && *outShort != "" {
 		*outFile = *outShort
 	}
@@ -370,6 +383,11 @@ func parseCLI() SentinelConfig {
 		StoreTelemetry:        *storeTelemetry,
 		StoreSynthOut:         *storeSynthOut,
 		StoreStrict:           *storeStrict,
+		LockdownPath:          *lockdownPath,
+		SecureBoot:            *secureBootShort != "" || *lockdownPath != "",
+		LockdownTelemetry:     *lockdownTelemetry,
+		LockdownSynthOut:      *lockdownSynthOut,
+		LockdownStrict:        *lockdownStrict,
 		Briefing:              *briefing,
 		BriefingDir:       *briefingDir,
 		BriefingFile:      *briefingFile,
@@ -401,6 +419,7 @@ func (c SentinelConfig) HasAuditTargets() bool {
 		c.WebhookPath != "" || c.WebhookTelemetry != "" || c.WebhookSynthOut != "" ||
 		c.ImpermanencePath != "" || c.ImpermanenceTelemetry != "" || c.ImpermanenceSynthOut != "" ||
 		c.BGPPath != "" || c.BGPTelemetry != "" || c.BGPSynthOut != "" ||
-		c.StorePath != "" || c.StoreTelemetry != "" || c.StoreSynthOut != ""
+		c.StorePath != "" || c.StoreTelemetry != "" || c.StoreSynthOut != "" ||
+		c.LockdownPath != "" || c.LockdownTelemetry != "" || c.LockdownSynthOut != ""
 }
 

@@ -1,0 +1,44 @@
+# Prometheus Alerting Rules: Linux Kernel Lockdown & UEFI Secure Boot DBX Radar
+# Generated automatically by nix-k8s-sentinel security synthesizer.
+groups:
+  - name: kernel-lockdown-radar
+    rules:
+      - alert: KernelLockdownDisabled
+        expr: node_kernel_lockdown_mode{mode="none"} == 1
+        for: 1m
+        labels:
+          severity: critical
+          cve: CVE-2026-92814
+        annotations:
+          summary: "Linux kernel lockdown is disabled on host {{ $labels.instance }}"
+          description: "Kernel lockdown is set to 'none', allowing ring 0 tampering and unprivileged memory inspection."
+
+      - alert: UnsignedKernelModuleLoadAttempt
+        expr: increase(node_kernel_module_load_denials_total[5m]) > 0
+        for: 0m
+        labels:
+          severity: high
+          cve: CVE-2026-92814
+        annotations:
+          summary: "Unauthorized unsigned kernel module load attempt on {{ $labels.instance }}"
+          description: "Kernel rejected attempts to load an unsigned module via init_module/finit_module."
+
+      - alert: UEFIDBXOutdated
+        expr: (time() - node_uefi_dbx_last_update_timestamp_seconds) > (60 * 86400)
+        for: 1h
+        labels:
+          severity: high
+          cve: CVE-2026-92814
+        annotations:
+          summary: "UEFI Secure Boot DBX database outdated on {{ $labels.instance }}"
+          description: "Platform DBX forbidden signatures have not been updated in over 60 days."
+
+      - alert: RevokedBootloaderBinaryDetected
+        expr: node_uefi_bootloader_revoked_in_dbx == 1
+        for: 0m
+        labels:
+          severity: critical
+          cve: CVE-2023-40547
+        annotations:
+          summary: "Revoked bootloader binary active on {{ $labels.instance }}"
+          description: "The running bootloader binary matches a forbidden SHA-256 authenticode in the UEFI DBX."
