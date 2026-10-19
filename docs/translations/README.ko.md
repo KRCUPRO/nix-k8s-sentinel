@@ -38,6 +38,7 @@
 ## 🏛️ 핵심 역량
 
 - **🔍 선언적 인프라 감사**: NixOS Flake 입력 락, Kubernetes 매니페스트 명세, CNI 네트워크 정책에 대한 패턴 매칭 및 의존성 추적.
+- **🛡️ 멀티 테넌트 Nix 스토어 전자서명 & 바이너리 캐시 격리 게이트**: Nix 데몬 설정(`nix.settings.*`, `/etc/nix/nix.conf`), Ed25519 바이너리 캐시 전자서명 강제 및 실시간 대체물(Substitute) 텔레메트리를 전수 감사하는 자율 보안 검증 엔진. 미서명 대체물 주입 공격(CVE-2026-81930), `trusted-public-keys` 내 Ed25519 공개키 누락 또는 형식 오류, 비암호화 평문 HTTP 대체물, 비인가 사용자의 대체물 주입을 허용하는 `trusted-users` 와일드카드(`*`), 빌드 샌드박스 비활성화 또는 폴백 허용, 비순수 평가(impure evaluation) 및 미검증 Flake 설정 수락, 불충분한 빌드 사용자 풀(< 10 nixbld UIDs), 세계 읽기 가능 `/nix/store` 경로 내 netrc 자격증명 선언, 런타임 전자서명 거부율 스파이크(> 5%), 캐시 변조를 나타내는 NAR 아카이브 SHA-256 체크섬 불일치, 과도한 대체물 다운로드 지연(P95 > 15,000ms), 스토리지 용량 소진(> 85%) 및 가비지 컬렉션 비활성화 정밀 탐지. 강화된 NixOS 모듈(`nixos-store-hardened.nix`), `/etc/nix/nix.conf`, Prometheus 경보 룰(`nixstore-alerts.yaml`) 선언적 자동 합성(`--nixstore`, `--binary-cache`, `--nixstore-telemetry`, `--nixstore-synth-out`, `--nixstore-strict`).
 - **🧹 NixOS 불변 루트 & 임퍼머넌스(Impermanence) 스토리지 휘발성 검증 엔진**: NixOS 임퍼머넌스 구성(`environment.persistence`), Kubernetes `hostPath` 클러스터 스토리지 마운트, 런타임 휘발성 스토리지 텔레메트리를 전수 감사하는 자율 보안 및 스토리지 휘발성 검증 엔진. 루트 파일시스템(`/`)에 대해 RAM 기반 `tmpfs` 또는 자동 초기화 스냅샷 롤백(`rollback-blank` / Btrfs 빈 서브볼륨) 강제, 휘발성 루트 슬라이스로 탈출하는 Kubernetes hostPath 마운트 정밀 탐지(`CVE-2026-61842`), 재부팅 시 메모리 시크릿을 유출하는 비암호화 스왑 장치 차단, 필수 상태 영속 경로(`/etc/machine-id`, `/etc/ssh/ssh_host_ed25519_key`, `/var/lib/nixos`, `/persist/var/lib/kubelet`) 검증, 런타임 휘발성 루트 스토리지 사용률(> 85%) 및 가용 용량(< 1GB) 모니터링, 강화된 NixOS 모듈(`impermanence-hardened.nix`), 재부팅 시 초기화 initrd 훅(`wipe-on-reboot-zfs.nix`), Prometheus 스토리지 소진 경보 룰(`impermanence-alerts.yaml`) 선언적 자동 합성(`--impermanence`, `--ephemeral-root`, `--impermanence-telemetry`, `--impermanence-synth-out`, `--impermanence-strict`).
 - **🎯 Kubernetes 동적 어드미션 웹훅 & CA 인증서 교체 레이더 엔진**: Kubernetes `ValidatingWebhookConfiguration` 및 `MutatingWebhookConfiguration` 매니페스트, X.509 CA 번들 인증서 유효기간 및 런타임 어드미션 텔레메트리를 전수 감사하는 자율 보안 엔진. 보안 민감 리소스에 대한 `failurePolicy: Ignore` 우회 취약점(`CVE-2026-52194`), 10초 초과 과도한 타임아웃, 클러스터 부팅 교착을 유발하는 `kube-system` 네임스페이스 면제 누락, 평문 HTTP 엔드포인트 노출, 만료되었거나 만료 임박(< 30일)한 CA 인증서, 취약한 RSA(< 2048)/SHA-1 알고리즘, 미검증 sideEffects 및 레거시 어드미션 버전(v1beta1), 런타임 P95/P99 지연 시간 저하 및 에러율 스파이크 정밀 탐지. 강화된 ValidatingWebhook 매니페스트(`webhook-hardened.yaml`), cert-manager CA 리소스(`cert-manager-ca.yaml`), Prometheus 어드미션 지연 경보 룰(`webhook-alerts.yaml`) 선언적 자동 합성(`--webhook`, `--admission-webhook`, `--webhook-telemetry`, `--webhook-synth-out`, `--webhook-strict`).
 - **🔐 기밀 VM & 보안 엔클레이브 WireGuard 피어 하드웨어 원격 증명 엔진**: AMD SEV-SNP 및 Intel TDX 기밀 가상 머신(Confidential VM) 전반의 WireGuard 메시 피어 구성을 전수 감사하는 자율 하드웨어 신뢰점(Root-of-Trust) 원격 증명 보안 엔진. WireGuard 에페메럴 세션 키와 엔클레이브 보고서 데이터(`REPORT_DATA`) 간 암호학적 바인딩 검증, AMD KDS VCEK 인증서 체인 및 Intel PCS Quote 유효성 검증, 런타임 측정 부트 PCR 다이제스트(PCR 0, 2, 4, 7) 및 TDX RTMR과 선언적 골든 레퍼런스 측정값 간 정합성 비교, 미검증 또는 변조된 피어 터널 차단(`CVE-2026-40291`), 하이퍼바이저 게스트 메모리 디버깅 비인가 허용 차단(`allowDebug = false`), 최소 TCB 보안 버전 번호(SVN >= 4) 강제, 3600초를 초과한 만료된 증명 보고서 거부 및 강화된 NixOS 엔클레이브 모듈(`wg-enclave-hardened.nix`), Kubernetes `EnclaveWireGuardPeer` 커스텀 리소스 정의(CRD), 핸드셰이크 이전 커널 증명 게이트키퍼 스크립트(`wg-enclave-gate.sh`) 선언적 자동 합성(`--wg-enclave`, `--enclave`, `--wg-enclave-telemetry`, `--wg-enclave-synth-out`, `--wg-enclave-strict`).
@@ -176,6 +177,18 @@ go run cmd/sentinel/main.go --impermanence=fixtures/nixos-impermanence-vulnerabl
 
 # 런타임 휘발성 스토리지 텔레메트리 조정 및 재부팅 초기화 훅 합성
 go run cmd/sentinel/main.go --impermanence=fixtures/nixos-impermanence-vulnerable.nix --impermanence-telemetry=fixtures/impermanence-telemetry.json --impermanence-synth-out=policies/generated/impermanence --format=sarif --output=impermanence-results.sarif
+
+# Cilium BGP 피어링 정책 및 NixOS FRR BGP 매니페스트 감사
+go run cmd/sentinel/main.go --bgp=fixtures/cilium-bgp-peering.yaml
+
+# 런타임 BGP 피어링 텔레메트리 조정 및 보안 강화 정책 자동 합성
+go run cmd/sentinel/main.go --bgp=fixtures/cilium-bgp-vulnerable.yaml --bgp-telemetry=fixtures/bgp-telemetry.json --bgp-synth-out=policies/generated/bgp --format=sarif --output=bgp-results.sarif
+
+# 멀티 테넌트 Nix 스토어 & 바이너리 캐시 격리 설정 감사
+go run cmd/sentinel/main.go --nixstore=fixtures/nixos-store-vulnerable.nix
+
+# 런타임 대체물 텔레메트리 조정 및 강화된 NixOS 모듈/nix.conf 정책 자동 합성
+go run cmd/sentinel/main.go --nixstore=fixtures/nixos-store-vulnerable.nix --nixstore-telemetry=fixtures/nixstore-telemetry.json --nixstore-synth-out=policies/generated/nixstore --format=sarif --output=nixstore-results.sarif
 
 
 # 베어메탈 eBPF 커널 텔레메트리 다중 노드 실시간 분석 실행

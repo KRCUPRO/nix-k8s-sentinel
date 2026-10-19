@@ -16,6 +16,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/k8s"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/lsm"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nix"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nixstore"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/pqc"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/probe"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/remediate"
@@ -32,7 +33,7 @@ import (
 )
 
 var (
-	version = "0.27.0"
+	version = "0.28.0"
 )
 
 func main() {
@@ -112,6 +113,9 @@ func main() {
 		bgpViolations           []bgp.BGPViolation
 		bgpSummary              *bgp.BGPSummary
 		bgpTelemetry            *bgp.BGPTelemetryReport
+		storeViolations         []nixstore.StoreViolation
+		storeSummary            *nixstore.StoreSummary
+		storeTelemetry          *nixstore.NixStoreTelemetryReport
 	)
 
 	// 1. Audit Nix Flake
@@ -242,7 +246,14 @@ func main() {
 		)
 	}
 
-	// 25. Generate Threat Briefing if --briefing is requested
+	// 25. Audit Multi-Tenant Nix Store Signature & Binary Cache Isolation Gate
+	if cfg.StorePath != "" || cfg.StoreTelemetry != "" || cfg.StoreSynthOut != "" {
+		storeViolations, storeSummary, storeTelemetry = runNixStoreAudit(
+			cfg.StorePath, cfg.StoreTelemetry, cfg.StoreSynthOut, cfg.StoreStrict, feed, logInfo, logErr,
+		)
+	}
+
+	// 26. Generate Threat Briefing if --briefing is requested
 	if cfg.Briefing {
 		logInfo("[+] Synthesizing Threat Intelligence Briefing...\n")
 		briefingOpts := report.BriefingOptions{
@@ -298,6 +309,9 @@ func main() {
 			BGPViolations:           bgpViolations,
 			BGPSummary:              bgpSummary,
 			BGPTelemetry:            bgpTelemetry,
+			StoreViolations:         storeViolations,
+			StoreSummary:            storeSummary,
+			StoreTelemetry:          storeTelemetry,
 			OutputDir:               cfg.BriefingDir,
 			CustomFilename:          cfg.BriefingFile,
 		}
@@ -425,57 +439,18 @@ func main() {
 			BGPPath:                   cfg.BGPPath,
 			BGPTelemetryPath:          cfg.BGPTelemetry,
 			BGPSynthOut:               cfg.BGPSynthOut,
+			StoreViolations:           storeViolations,
+			StoreSummary:              storeSummary,
+			StoreTelemetry:            storeTelemetry,
+			StorePath:                 cfg.StorePath,
+			StoreTelemetryPath:        cfg.StoreTelemetry,
+			StoreSynthOut:             cfg.StoreSynthOut,
 			TargetFilter:              cfg.TargetFilter,
 			Pretty:                    true,
 		}
 
-		if cfg.Format == "sarif" {
-			sarifLog, err := report.BuildSARIFReport(reportOpts)
-			if err != nil {
-				logErr("[-] Failed to build SARIF report: %v\n", err)
-				os.Exit(1)
-			}
-
-			if cfg.OutFile != "" {
-				if err := report.WriteSARIFToFile(sarifLog, cfg.OutFile, true); err != nil {
-					logErr("[-] Failed to write SARIF report to %s: %v\n", cfg.OutFile, err)
-					os.Exit(1)
-				}
-				fmt.Printf("[+] SARIF v2.1.0 security report written to: %s (Total Findings: %d)\n", cfg.OutFile, len(sarifLog.Runs[0].Results))
-			} else {
-				data, err := report.FormatSARIF(sarifLog, true)
-				if err != nil {
-					logErr("[-] Failed to format SARIF report: %v\n", err)
-					os.Exit(1)
-				}
-				fmt.Println(string(data))
-			}
-			return
-		}
-
-		if cfg.Format == "json" {
-			jsonReport, err := report.BuildJSONReport(reportOpts)
-			if err != nil {
-				logErr("[-] Failed to build JSON report: %v\n", err)
-				os.Exit(1)
-			}
-
-			if cfg.OutFile != "" {
-				if err := report.WriteJSONToFile(jsonReport, cfg.OutFile, true); err != nil {
-					logErr("[-] Failed to write JSON report to %s: %v\n", cfg.OutFile, err)
-					os.Exit(1)
-				}
-				fmt.Printf("[+] JSON security report written to: %s\n", cfg.OutFile)
-			} else {
-				data, err := report.FormatJSON(jsonReport, true)
-				if err != nil {
-					logErr("[-] Failed to format JSON report: %v\n", err)
-					os.Exit(1)
-				}
-				fmt.Println(string(data))
-			}
-			return
-		}
+		runReportExport(cfg, reportOpts, logErr)
+		return
 	}
 
 	// 26. Default feed summary (when no specific audit target was requested)

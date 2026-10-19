@@ -78,6 +78,11 @@ type SentinelConfig struct {
 	BGPTelemetry          string
 	BGPSynthOut           string
 	BGPStrict             bool
+	StorePath             string
+	BinaryCache           bool
+	StoreTelemetry        string
+	StoreSynthOut         string
+	StoreStrict           bool
 	Briefing              bool
 	BriefingDir       string
 	BriefingFile      string
@@ -185,6 +190,11 @@ func parseCLI() SentinelConfig {
 	bgpTelemetry := flag.String("bgp-telemetry", "", "Path to runtime BGP session and IPAM telemetry JSON to inspect")
 	bgpSynthOut := flag.String("bgp-synth-out", "", "Output directory to write synthesized hardened Cilium BGP and NixOS modules")
 	bgpStrict := flag.Bool("bgp-strict", false, "Enforce strict zero-warning BGP peering and dual-stack routing compliance")
+	storePath := flag.String("nixstore", "", "Path to NixOS store configuration file or directory to audit")
+	binaryCacheShort := flag.String("binary-cache", "", "Alias for --nixstore")
+	storeTelemetry := flag.String("nixstore-telemetry", "", "Path to Nix daemon substitute verification telemetry JSON to inspect")
+	storeSynthOut := flag.String("nixstore-synth-out", "", "Output directory to write synthesized hardened NixOS store modules, nix.conf, and Prometheus alert rules")
+	storeStrict := flag.Bool("nixstore-strict", false, "Enforce strict zero-warning Nix store signature and binary cache compliance")
 	briefing := flag.Bool("briefing", false, "Generate automated Markdown threat intelligence briefing")
 	briefingDir := flag.String("briefing-dir", "intel/briefings", "Output directory for threat briefings")
 	briefingFile := flag.String("briefing-file", "", "Custom filename for threat briefing markdown")
@@ -272,6 +282,9 @@ func parseCLI() SentinelConfig {
 	if *bgpPath == "" && *ciliumBGPShort != "" {
 		*bgpPath = *ciliumBGPShort
 	}
+	if *storePath == "" && *binaryCacheShort != "" {
+		*storePath = *binaryCacheShort
+	}
 	if *outFile == "" && *outShort != "" {
 		*outFile = *outShort
 	}
@@ -352,6 +365,11 @@ func parseCLI() SentinelConfig {
 		BGPTelemetry:          *bgpTelemetry,
 		BGPSynthOut:           *bgpSynthOut,
 		BGPStrict:             *bgpStrict,
+		StorePath:             *storePath,
+		BinaryCache:           *binaryCacheShort != "" || *storePath != "",
+		StoreTelemetry:        *storeTelemetry,
+		StoreSynthOut:         *storeSynthOut,
+		StoreStrict:           *storeStrict,
 		Briefing:              *briefing,
 		BriefingDir:       *briefingDir,
 		BriefingFile:      *briefingFile,
@@ -382,6 +400,7 @@ func (c SentinelConfig) HasAuditTargets() bool {
 		c.EnclaveManifests != "" || c.EnclaveTelemetry != "" || c.EnclaveSynthOut != "" ||
 		c.WebhookPath != "" || c.WebhookTelemetry != "" || c.WebhookSynthOut != "" ||
 		c.ImpermanencePath != "" || c.ImpermanenceTelemetry != "" || c.ImpermanenceSynthOut != "" ||
-		c.BGPPath != "" || c.BGPTelemetry != "" || c.BGPSynthOut != ""
+		c.BGPPath != "" || c.BGPTelemetry != "" || c.BGPSynthOut != "" ||
+		c.StorePath != "" || c.StoreTelemetry != "" || c.StoreSynthOut != ""
 }
 

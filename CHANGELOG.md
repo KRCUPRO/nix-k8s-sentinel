@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.28.0] - 2026-10-19
+
+### Added
+- **Multi-Tenant Nix Store Signature & Binary Cache Isolation Gate** (`pkg/nixstore/scanner.go`): Autonomous security verification engine inspecting Nix daemon configurations (`nix.settings.*` and `/etc/nix/nix.conf`), Ed25519 binary cache signature enforcement, and live runtime substitute telemetry across bare-metal NixOS and multi-tenant Kubernetes builder nodes.
+- **Authoritative Canonical Nix Store Rules Catalog** (`pkg/nixstore/rules.go`): Suite of 12 canonical security rules (`NIX-STORE-001` through `NIX-STORE-012`) covering unsigned binary cache substitution permitted (`NIX-STORE-001`, mapped to `CVE-2026-81930`), missing or malformed Ed25519 public keys in `trusted-public-keys` (`NIX-STORE-002`), insecure plaintext HTTP binary cache substituters (`NIX-STORE-003`), overly permissive `trusted-users` with wildcards (`*`) allowing non-privileged users to inject substituters (`NIX-STORE-004`), build sandboxing disabled or fallback permitted (`NIX-STORE-005`), impure evaluation or untrusted flake config accepted (`NIX-STORE-006`), missing or insufficient build-user pools (< 10 nixbld UIDs) (`NIX-STORE-007`), unprotected private binary cache credentials declared in world-readable `/nix/store` paths (`NIX-STORE-008`), high runtime substitute signature rejection rate (> 5%) (`NIX-STORE-009`), NAR archive SHA-256 checksum mismatches indicating cache tampering (`NIX-STORE-010`), excessive substitute download latency (P95 > 15,000ms) (`NIX-STORE-011`), and store capacity exhaustion (> 85%) or disabled automated garbage collection (`NIX-STORE-012`).
+- **Streaming Nix Configuration & Telemetry Parser** (`pkg/nixstore/parser.go`): Multi-format parser for NixOS expressions and `/etc/nix/nix.conf` directives, supporting multi-line list accumulation, Ed25519 32-byte public key cryptographic validation (`ValidateEd25519PublicKey`), and live JSON substitute telemetry with 10MB memory safety bounds.
+- **Nix Store Security Auditor & Deterministic Compliance Engine** (`pkg/nixstore/auditor.go`): Correlates static daemon configurations and runtime substitute events, monitors signature rejection rates and NAR checksum failures, and calculates deterministic compliance scores (0.0% to 100.0%).
+- **Declarative Nix Store Policy Synthesizer** (`pkg/nixstore/synth.go`): Synthesizes production-hardened declarative NixOS configuration modules (`nixos-store-hardened.nix`), `/etc/nix/nix.conf`, and Prometheus alert rules (`nixstore-alerts.yaml`).
+- **Dedicated CLI Nix Store Runner & Flag Architecture** (`cmd/sentinel/nixstore_runner.go`, `cmd/sentinel/report_runner.go`, `cmd/sentinel/flags.go`): Extracted Nix store audit coordination into a dedicated modular runner and extracted SARIF/JSON report export into `report_runner.go`, maintaining `cmd/sentinel/main.go` under the 500-line soft ceiling (473 LOC). Added `--nixstore=<path>`, `--binary-cache`, `--nixstore-telemetry=<path>`, `--nixstore-synth-out=<dir>`, and `--nixstore-strict` flags.
+- **Threat Feed Expansion** (`intel/cve-feed.json`): Ingested `CVE-2026-81930` (Nix Binary Cache Unsigned Substitute Injection & Multi-Tenant Store Poisoning, CVSS 9.4 Critical).
+- **Unified Exporter Integration**: Nix store findings, summary metrics, and runtime substitute telemetry exported to OASIS SARIF v2.1.0 (Section 24), structured JSON audit telemetry (`store_violations`, `store_summary`, `store_telemetry`), and hourly Markdown threat briefings (Section 27).
+- **Production Fixtures & Policy Artifacts**: Added realistic fixtures (`fixtures/nixos-store-hardened.nix`, `fixtures/nixos-store-vulnerable.nix`, `fixtures/nixstore-telemetry.json`) and synthesized templates in `policies/generated/nixstore/`.
+- **Comprehensive Unit Test Suites** (`pkg/nixstore/nixstore_test.go`, `pkg/report/nixstore_report_test.go`): 100% test coverage across canonical rules, manifest parsing, Ed25519 key verification, telemetry auditing, policy synthesizers, scanner, SARIF/JSON/Briefing serialization, and memory bounds checks.
+
+### Changed
+- Bumped engine release to `v0.28.0`.
+- Updated `SECURITY.md` establishing Multi-Tenant Nix Store Signature & Binary Cache Isolation Gate security invariants (Invariant 30).
+- Updated `ROADMAP.md` marking Milestone M28 as completed and scheduling M29 (Linux Kernel Lockdown & UEFI Secure Boot DBX Revocation List Auditor).
+- Updated `scripts/ARCHITECTURE_MAP.md` documenting new Nix store modules, runners, and O(1) symbols.
+
+---
+
 ## [0.27.0] - 2026-10-18
 
 ### Added

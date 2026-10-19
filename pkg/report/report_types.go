@@ -16,6 +16,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/k8s"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/lsm"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nix"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/nixstore"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/pqc"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/probe"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/remediate"
@@ -99,6 +100,9 @@ type ReportOptions struct {
 	BGPViolations              []bgp.BGPViolation
 	BGPSummary                 *bgp.BGPSummary
 	BGPTelemetry               *bgp.BGPTelemetryReport
+	StoreViolations            []nixstore.StoreViolation
+	StoreSummary               *nixstore.StoreSummary
+	StoreTelemetry             *nixstore.NixStoreTelemetryReport
 	FlakePath                  string
 	K8sPath                    string
 	StoragePath                string
@@ -145,6 +149,9 @@ type ReportOptions struct {
 	BGPPath                    string
 	BGPTelemetryPath           string
 	BGPSynthOut                string
+	StorePath                  string
+	StoreTelemetryPath         string
+	StoreSynthOut              string
 	TargetFilter               string
 	Pretty                     bool
 }

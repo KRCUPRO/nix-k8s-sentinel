@@ -228,9 +228,17 @@ Automated generation of defense-in-depth rules:
 - [x] Full CLI integration (`--bgp`, `--cilium-bgp`, `--bgp-telemetry`, `--bgp-synth-out`, `--bgp-strict`) with unified SARIF v2.1.0 code scanning, JSON audit telemetry, and Markdown briefing exports (`cmd/sentinel/bgp_runner.go`, `cmd/sentinel/flags.go`).
 - [x] Production sample fixtures (`fixtures/cilium-bgp-peering.yaml`, `fixtures/cilium-bgp-vulnerable.yaml`, `fixtures/bgp-telemetry.json`, `fixtures/nixos-bgp.nix`) and threat feed correlation with `CVE-2026-70192`.
 
-### Version 0.28.0 — Multi-Tenant Nix Store Signature & Binary Cache Isolation Gate (Planned)
-- [ ] Verify ed25519 cryptographic public key signatures on binary cache substitutes prior to cluster deployment.
-- [ ] Enforce namespace-scoped sandboxing and pure evaluation for non-privileged developer builds.
+### Version 0.28.0 — Multi-Tenant Nix Store Signature & Binary Cache Isolation Gate (Completed)
+- [x] Multi-format streaming parser for NixOS expressions (`nix.settings.*`), `/etc/nix/nix.conf`, Ed25519 32-byte public key cryptographic validation (`ValidateEd25519PublicKey`), and live JSON runtime telemetry (`pkg/nixstore/parser.go`).
+- [x] Canonical rule catalog `NIX-STORE-001` through `NIX-STORE-012` detecting unsigned binary cache substitution (`CVE-2026-81930`), missing/malformed Ed25519 trusted keys, insecure plaintext HTTP substituters, wildcard trusted-users authority, disabled or fallback sandboxing, impure evaluation, insufficient build-user pools (< 10 UIDs), world-readable store netrc credentials, runtime signature rejection spikes (> 5%), NAR SHA-256 checksum mismatches, download latency stalls (P95 > 15,000ms), and store capacity exhaustion (> 85%) (`pkg/nixstore/rules.go`).
+- [x] Nix store security auditor and deterministic compliance scoring engine (0.0% to 100.0%) correlating static configurations with live runtime daemon telemetry (`pkg/nixstore/auditor.go`).
+- [x] Declarative policy synthesizer generating production-hardened NixOS modules (`nixos-store-hardened.nix`), `/etc/nix/nix.conf`, and Prometheus alert rules (`nixstore-alerts.yaml`) (`pkg/nixstore/synth.go`).
+- [x] Full CLI integration (`--nixstore`, `--binary-cache`, `--nixstore-telemetry`, `--nixstore-synth-out`, `--nixstore-strict`) with unified SARIF v2.1.0 code scanning, JSON audit telemetry, and Markdown briefing exports (`cmd/sentinel/nixstore_runner.go`, `cmd/sentinel/flags.go`).
+- [x] Production sample fixtures (`fixtures/nixos-store-hardened.nix`, `fixtures/nixos-store-vulnerable.nix`, `fixtures/nixstore-telemetry.json`) and threat feed correlation with `CVE-2026-81930`.
+
+### Version 0.29.0 — Linux Kernel Lockdown & UEFI Secure Boot DBX Revocation List Auditor (Planned)
+- [ ] Audit NixOS kernel lockdown mode (`integrity` vs `confidentiality`) and unsigned kernel module loading policies.
+- [ ] Verify UEFI Secure Boot DBX forbidden signature databases against active bootloader revocations.
 
 ### Version 1.0.0 — Enterprise Workload Identity & Ephemeral Detonation Pipeline (Planned)
 - [ ] Full end-to-end integration of SPIFFE/SPIRE workload attestation, In-Toto provenance, and HSM envelope encryption.

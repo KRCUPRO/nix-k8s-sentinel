@@ -1551,8 +1551,67 @@ func BuildSARIFReport(opts ReportOptions) (*SARIFLog, error) {
 		}
 	}
 
-	// 24. Process Standalone Feed Advisories (if no specific audit targets yielded findings)
-	if (opts.K8sReport == nil || len(opts.K8sReport.Violations) == 0) && len(opts.FlakeMatches) == 0 && len(opts.ProbeEvents) == 0 && len(opts.StorageViolations) == 0 && len(opts.WireGuardViolations) == 0 && len(opts.CISViolations) == 0 && len(opts.GatewayViolations) == 0 && len(opts.AttestViolations) == 0 && len(opts.FleetViolations) == 0 && len(opts.SPIFFEViolations) == 0 && len(opts.SBOMViolations) == 0 && len(opts.HSMViolations) == 0 && len(opts.BPFViolations) == 0 && len(opts.PQCViolations) == 0 && len(opts.SandboxViolations) == 0 && len(opts.RemediateFindings) == 0 && len(opts.LSMViolations) == 0 && len(opts.ReplicationViolations) == 0 && len(opts.FastPathViolations) == 0 && len(opts.EnclaveViolations) == 0 && len(opts.WebhookViolations) == 0 && len(opts.ImpermanenceViolations) == 0 && len(opts.BGPViolations) == 0 && opts.Feed != nil {
+	// 24. Process Nix Store & Binary Cache Isolation Gate Findings
+	if len(opts.StoreViolations) > 0 {
+		for _, sv := range opts.StoreViolations {
+			tags := []string{"security", "nixos", "nix-store", "binary-cache", "isolation"}
+			if sv.MatchedCVE != "" {
+				tags = append(tags, sv.MatchedCVE)
+			}
+			ruleIdx := getOrCreateRule(sv.RuleID, sv.Title, sv.Description, sv.Remediation, sv.Severity, sv.CVSSScore, tags)
+			level := SeverityToSARIFLevel(string(sv.Severity), sv.CVSSScore)
+
+			locURI := sv.FilePath
+			if locURI == "" {
+				locURI = opts.StorePath
+			}
+			if locURI == "" {
+				locURI = opts.StoreTelemetryPath
+			}
+			if locURI == "" {
+				locURI = "nixos-store-hardened.nix"
+			}
+			locURI = filepath.ToSlash(locURI)
+
+			line := sv.StartLine
+			if line <= 0 {
+				line = 1
+			}
+
+			resMsg := fmt.Sprintf("[%s] %s: %s (Remediation: %s)", sv.ConfigTarget, sv.Title, sv.Description, sv.Remediation)
+
+			results = append(results, SARIFResult{
+				RuleID:    sv.RuleID,
+				RuleIndex: ruleIdx,
+				Level:     level,
+				Message:   SARIFMessage{Text: resMsg},
+				Locations: []SARIFLocation{
+					{
+						PhysicalLocation: &PhysicalLocation{
+							ArtifactLocation: ArtifactLocation{
+								URI:       locURI,
+								URIBaseID: "%SRCROOT%",
+							},
+							Region: &Region{
+								StartLine:   line,
+								StartColumn: 1,
+							},
+						},
+						LogicalLocations: []LogicalLocation{
+							{
+								Name:               sv.RuleID,
+								Kind:               "StoreRule",
+								FullyQualifiedName: fmt.Sprintf("nixstore/%s", sv.RuleID),
+							},
+						},
+					},
+				},
+			})
+		}
+	}
+
+	// 25. Process Standalone Feed Advisories (if no specific audit targets yielded findings)
+	if (opts.K8sReport == nil || len(opts.K8sReport.Violations) == 0) && len(opts.FlakeMatches) == 0 && len(opts.ProbeEvents) == 0 && len(opts.StorageViolations) == 0 && len(opts.WireGuardViolations) == 0 && len(opts.CISViolations) == 0 && len(opts.GatewayViolations) == 0 && len(opts.AttestViolations) == 0 && len(opts.FleetViolations) == 0 && len(opts.SPIFFEViolations) == 0 && len(opts.SBOMViolations) == 0 && len(opts.HSMViolations) == 0 && len(opts.BPFViolations) == 0 && len(opts.PQCViolations) == 0 && len(opts.SandboxViolations) == 0 && len(opts.RemediateFindings) == 0 && len(opts.LSMViolations) == 0 && len(opts.ReplicationViolations) == 0 && len(opts.FastPathViolations) == 0 && len(opts.EnclaveViolations) == 0 && len(opts.WebhookViolations) == 0 && len(opts.ImpermanenceViolations) == 0 && len(opts.BGPViolations) == 0 && len(opts.StoreViolations) == 0 && opts.Feed != nil {
 		feedItems := opts.Feed.Items
 		if opts.TargetFilter != "" {
 			feedItems = opts.Feed.FilterByTarget(opts.TargetFilter)
