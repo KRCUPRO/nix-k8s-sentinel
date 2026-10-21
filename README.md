@@ -19,7 +19,7 @@
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](./LICENSE)
 [![Go Report Card](https://goreportcard.com/badge/github.com/KRCUPRO/nix-k8s-sentinel)](https://goreportcard.com/report/github.com/KRCUPRO/nix-k8s-sentinel)
-[![Version](https://img.shields.io/badge/Release-v0.30.0-emerald.svg)](https://github.com/KRCUPRO/nix-k8s-sentinel/releases)
+[![Version](https://img.shields.io/badge/Release-v0.31.0-emerald.svg)](https://github.com/KRCUPRO/nix-k8s-sentinel/releases)
 [![Architecture](https://img.shields.io/badge/Architecture-Bare--Metal_NixOS_+_K8s-8b5cf6.svg)](#-architecture-overview)
 [![Security](https://img.shields.io/badge/Security-Declarative_Audit-38bdf8.svg)](./SECURITY.md)
 
@@ -65,6 +65,10 @@ Unlike traditional runtime scanners that passively inspect ephemeral container l
 
 ### 2. 🌐 Cluster Networking & Service Mesh Defense
 
+- **Multi-Tenant Cilium ClusterMesh & Global Service Discovery Auditor (`MESH-RADAR-001..012`)**
+  - *Audits*: Cilium ClusterMesh Helm values, ConfigMaps, Global Services (`io.cilium/global-service`), `ServiceExport`/`ServiceImport` CRDs, and live etcd peering telemetry.
+  - *Mitigations*: Prevents unencrypted cross-cluster tunnels (`CVE-2026-11483`), cluster-id collisions/0, etcd TLS disablement, ServiceExport collisions, and multi-tenant routing leaks.
+  - *Synthesis*: Hardened Cilium Helm values (WireGuard transit encryption, strict heartbeat timers), tenant boundary `CiliumClusterwideNetworkPolicy`, and Prometheus alert rules (`--clustermesh`).
 - **Cluster-Wide eBPF Network Flow & DNS Exfiltration Profiler (`FLOW-RADAR-001..012`)**
   - *Audits*: Kubernetes `CiliumNetworkPolicy` manifests, NixOS host flow profilers, and live eBPF kernel socket/DNS telemetry.
   - *Mitigations*: Intercepts unrestricted port 53 egress (`CVE-2026-10392`), high Shannon entropy DNS tunnels ($H > 4.2$), DGA bursts (> 15 q/min), and socket connect spikes (> 500 conn/s).
@@ -157,6 +161,9 @@ go run cmd/sentinel/main.go --k8s=fixtures/k8s-ingress-vulnerable.yaml
 
 # Audit Kubernetes CiliumNetworkPolicy & NixOS eBPF flow profiler manifests
 go run cmd/sentinel/main.go --flow=fixtures/cilium-flow-vulnerable.yaml
+
+# Audit Cilium ClusterMesh Helm values, Global Services & cross-cluster policies
+go run cmd/sentinel/main.go --clustermesh=fixtures/cilium-clustermesh-vulnerable.yaml --clustermesh-telemetry=fixtures/clustermesh-telemetry.json --clustermesh-synth-out=policies/generated/clustermesh
 
 # Reconcile runtime eBPF socket connect flows & synthesize hardened policies
 go run cmd/sentinel/main.go --flow=fixtures/cilium-flow-vulnerable.yaml --flow-telemetry=fixtures/flow-telemetry.json --flow-synth-out=policies/generated/flow --format=sarif --output=flow-results.sarif

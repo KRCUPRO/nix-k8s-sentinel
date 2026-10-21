@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.31.0] - 2026-10-21
+
+### Added
+- **Multi-Tenant Cilium ClusterMesh & Global Service Discovery Auditor** (`pkg/clustermesh/scanner.go`): Autonomous security verification engine inspecting Cilium ClusterMesh control plane Helm configurations, Kubernetes Global Services (`io.cilium/global-service`), multi-cluster `ServiceExport`/`ServiceImport` CRDs, `CiliumClusterwideNetworkPolicy`, and live runtime ClusterMesh etcd peering telemetry across interconnected Kubernetes clusters.
+- **Authoritative Canonical ClusterMesh Rules Catalog** (`pkg/clustermesh/rules.go`): Suite of 12 canonical security rules (`MESH-RADAR-001` through `MESH-RADAR-012`) covering unencrypted inter-cluster tunnel transit (`MESH-RADAR-001`, mapped to `CVE-2026-11483`), cluster-id collision and unconfigured/zero cluster-id (`MESH-RADAR-002`), disabled or unverified etcd TLS (`MESH-RADAR-003`), cross-cluster ServiceExport namespace collisions (`MESH-RADAR-004`), unrestricted global service multi-tenant exposures (`MESH-RADAR-005`), missing cross-cluster egress/ingress network policies (`MESH-RADAR-006`), overly permissive wildcard cluster selectors (`MESH-RADAR-007`), etcd peering heartbeat degradation (> 30s) and sync latency spikes (`MESH-RADAR-008`), global service endpoint saturation exceeding 1024 backends (`MESH-RADAR-009`), unverified or expiring ClusterMesh CA certificates (`MESH-RADAR-010`), non-shared global service routing leaks (`MESH-RADAR-011`), and disconnected cluster daemons (`MESH-RADAR-012`).
+- **Streaming Manifest & Peering Telemetry Parser** (`pkg/clustermesh/parser.go`): Multi-format parser for Cilium Helm values, ConfigMaps, Services, CRDs, and runtime JSON peering telemetry with defensive 10MB manifest and 5MB telemetry payload bounds limits.
+- **Static Configuration Auditor & Runtime Mesh Reconciler** (`pkg/clustermesh/auditor.go`): Static configuration auditor, live etcd peering reconciler, endpoint scaling evaluator, and deterministic compliance scoring engine (0.0% to 100.0%).
+- **Declarative ClusterMesh Policy Synthesizer** (`pkg/clustermesh/synth.go`): Synthesizes production-hardened Cilium Helm values (WireGuard tunnel encryption, TLS auto-cert injection, strict heartbeat timers), tenant boundary `CiliumClusterwideNetworkPolicy` manifests, and Prometheus alert rules (`clustermesh-alerts.yaml`).
+- **Dedicated CLI ClusterMesh Runner & Flag Architecture** (`cmd/sentinel/clustermesh_runner.go`, `cmd/sentinel/flags.go`): Modular runner extraction keeping `cmd/sentinel/main.go` under the 500-line soft ceiling (448 LOC). Added `--clustermesh=<path>`, `--global-services`, `--clustermesh-telemetry=<path>`, `--clustermesh-synth-out=<dir>`, and `--clustermesh-strict` flags.
+- **Refactored Briefing Runner** (`cmd/sentinel/briefing_runner.go`): Consolidated `BriefingOptions` construction from `ReportOptions`, eliminating redundant struct initializations in `cmd/sentinel/main.go`.
+- **Threat Feed Expansion** (`intel/cve-feed.json`): Ingested `CVE-2026-11483` (Cilium ClusterMesh Cross-Cluster Tunnel Hijacking & Global Service Poisoning, CVSS 9.4 Critical).
+- **Unified Exporter Integration**: ClusterMesh findings, summary metrics, and runtime telemetry exported to OASIS SARIF v2.1.0 (Section 27), structured JSON audit telemetry (`clustermesh_violations`, `clustermesh_summary`, `clustermesh_telemetry`), and hourly Markdown threat briefings (Section 30).
+- **Production Fixtures & Policy Artifacts**: Added realistic fixtures (`fixtures/cilium-clustermesh-hardened.yaml`, `fixtures/cilium-clustermesh-vulnerable.yaml`, `fixtures/clustermesh-telemetry.json`) and synthesized templates in `policies/generated/clustermesh/`.
+- **Comprehensive Unit Test Suites** (`pkg/clustermesh/clustermesh_test.go`, `pkg/report/clustermesh_report_test.go`): 100% test coverage across canonical rules, parser, telemetry auditor, synthesizers, scanner, SARIF/JSON/Briefing serialization, and memory bounds checks.
+
+### Changed
+- Bumped engine release to `v0.31.0`.
+- Updated `SECURITY.md` establishing Multi-Tenant Cilium ClusterMesh & Global Service Discovery Defense security invariants (Invariant 33).
+- Updated `ROADMAP.md` marking Milestone M31 as completed and scheduling M32 (Autonomous eBPF XDP Fast-Path & Bare-Metal DDoS Mitigation Engine).
+- Updated `scripts/ARCHITECTURE_MAP.md` documenting new ClusterMesh modules, runners, and O(1) symbols.
+
+---
+
 ## [0.30.0] - 2026-10-19
 
 ### Added

@@ -1725,8 +1725,71 @@ func BuildSARIFReport(opts ReportOptions) (*SARIFLog, error) {
 		}
 	}
 
-	// 27. Process Standalone Feed Advisories (if no specific audit targets yielded findings)
-	if (opts.K8sReport == nil || len(opts.K8sReport.Violations) == 0) && len(opts.FlakeMatches) == 0 && len(opts.ProbeEvents) == 0 && len(opts.StorageViolations) == 0 && len(opts.WireGuardViolations) == 0 && len(opts.CISViolations) == 0 && len(opts.GatewayViolations) == 0 && len(opts.AttestViolations) == 0 && len(opts.FleetViolations) == 0 && len(opts.SPIFFEViolations) == 0 && len(opts.SBOMViolations) == 0 && len(opts.HSMViolations) == 0 && len(opts.BPFViolations) == 0 && len(opts.PQCViolations) == 0 && len(opts.SandboxViolations) == 0 && len(opts.RemediateFindings) == 0 && len(opts.LSMViolations) == 0 && len(opts.ReplicationViolations) == 0 && len(opts.FastPathViolations) == 0 && len(opts.EnclaveViolations) == 0 && len(opts.WebhookViolations) == 0 && len(opts.ImpermanenceViolations) == 0 && len(opts.BGPViolations) == 0 && len(opts.StoreViolations) == 0 && len(opts.LockdownViolations) == 0 && len(opts.FlowViolations) == 0 && opts.Feed != nil {
+	// 27. Process Multi-Tenant Cilium ClusterMesh & Global Service Discovery Violations
+	if len(opts.MeshViolations) > 0 {
+		for _, mv := range opts.MeshViolations {
+			tags := []string{"security", "kubernetes", "cilium", "clustermesh", "multi-cluster", "service-discovery"}
+			if mv.MatchedCVE != "" {
+				tags = append(tags, mv.MatchedCVE)
+			}
+			ruleIdx := getOrCreateRule(mv.RuleID, mv.Name, mv.Message, mv.Remediation, mv.Severity, mv.CVSSScore, tags)
+			level := SeverityToSARIFLevel(string(mv.Severity), mv.CVSSScore)
+
+			locURI := mv.FilePath
+			if locURI == "" {
+				locURI = opts.ClusterMeshPath
+			}
+			if locURI == "" {
+				locURI = opts.ClusterMeshTelemetryPath
+			}
+			if locURI == "" {
+				locURI = "clustermesh/cilium-clustermesh.yaml"
+			}
+			locURI = filepath.ToSlash(locURI)
+
+			line := mv.LineNumber
+			if line <= 0 {
+				line = 1
+			}
+
+			cveTag := ""
+			if mv.MatchedCVE != "" {
+				cveTag = fmt.Sprintf(" [%s]", mv.MatchedCVE)
+			}
+			resMsg := fmt.Sprintf("[%s] %s%s: %s (Remediation: %s)", mv.RuleID, mv.Name, cveTag, mv.Message, mv.Remediation)
+
+			results = append(results, SARIFResult{
+				RuleID:    mv.RuleID,
+				RuleIndex: ruleIdx,
+				Level:     level,
+				Message:   SARIFMessage{Text: resMsg},
+				Locations: []SARIFLocation{
+					{
+						PhysicalLocation: &PhysicalLocation{
+							ArtifactLocation: ArtifactLocation{
+								URI:       locURI,
+								URIBaseID: "%SRCROOT%",
+							},
+							Region: &Region{
+								StartLine:   line,
+								StartColumn: 1,
+							},
+						},
+						LogicalLocations: []LogicalLocation{
+							{
+								Name:               mv.RuleID,
+								Kind:               "MeshRule",
+								FullyQualifiedName: fmt.Sprintf("clustermesh/%s", mv.RuleID),
+							},
+						},
+					},
+				},
+			})
+		}
+	}
+
+	// 28. Process Standalone Feed Advisories (if no specific audit targets yielded findings)
+	if (opts.K8sReport == nil || len(opts.K8sReport.Violations) == 0) && len(opts.FlakeMatches) == 0 && len(opts.ProbeEvents) == 0 && len(opts.StorageViolations) == 0 && len(opts.WireGuardViolations) == 0 && len(opts.CISViolations) == 0 && len(opts.GatewayViolations) == 0 && len(opts.AttestViolations) == 0 && len(opts.FleetViolations) == 0 && len(opts.SPIFFEViolations) == 0 && len(opts.SBOMViolations) == 0 && len(opts.HSMViolations) == 0 && len(opts.BPFViolations) == 0 && len(opts.PQCViolations) == 0 && len(opts.SandboxViolations) == 0 && len(opts.RemediateFindings) == 0 && len(opts.LSMViolations) == 0 && len(opts.ReplicationViolations) == 0 && len(opts.FastPathViolations) == 0 && len(opts.EnclaveViolations) == 0 && len(opts.WebhookViolations) == 0 && len(opts.ImpermanenceViolations) == 0 && len(opts.BGPViolations) == 0 && len(opts.StoreViolations) == 0 && len(opts.LockdownViolations) == 0 && len(opts.FlowViolations) == 0 && len(opts.MeshViolations) == 0 && opts.Feed != nil {
 		feedItems := opts.Feed.Items
 		if opts.TargetFilter != "" {
 			feedItems = opts.Feed.FilterByTarget(opts.TargetFilter)

@@ -93,6 +93,11 @@ type SentinelConfig struct {
 	FlowTelemetry         string
 	FlowSynthOut          string
 	FlowStrict            bool
+	ClusterMeshPath          string
+	GlobalServices           bool
+	ClusterMeshTelemetryPath string
+	ClusterMeshSynthOut      string
+	ClusterMeshStrict        bool
 	Briefing              bool
 	BriefingDir       string
 	BriefingFile      string
@@ -215,6 +220,11 @@ func parseCLI() SentinelConfig {
 	flowTelemetry := flag.String("flow-telemetry", "", "Path to runtime eBPF network flow and DNS telemetry JSON to inspect")
 	flowSynthOut := flag.String("flow-synth-out", "", "Output directory to write synthesized hardened Cilium policies, NixOS flow modules, and Prometheus alert rules")
 	flowStrict := flag.Bool("flow-strict", false, "Enforce strict zero-warning network flow and DNS exfiltration compliance")
+	clusterMeshPath := flag.String("clustermesh", "", "Path to Cilium ClusterMesh manifest file or directory to audit")
+	globalServicesShort := flag.String("global-services", "", "Alias for --clustermesh")
+	clusterMeshTelemetry := flag.String("clustermesh-telemetry", "", "Path to runtime ClusterMesh peering telemetry JSON to inspect")
+	clusterMeshSynthOut := flag.String("clustermesh-synth-out", "", "Output directory to write synthesized hardened ClusterMesh Helm values, policies, and alert rules")
+	clusterMeshStrict := flag.Bool("clustermesh-strict", false, "Enforce strict zero-warning ClusterMesh and global service discovery compliance")
 	briefing := flag.Bool("briefing", false, "Generate automated Markdown threat intelligence briefing")
 	briefingDir := flag.String("briefing-dir", "intel/briefings", "Output directory for threat briefings")
 	briefingFile := flag.String("briefing-file", "", "Custom filename for threat briefing markdown")
@@ -311,6 +321,9 @@ func parseCLI() SentinelConfig {
 	if *flowPath == "" && *ciliumFlowShort != "" {
 		*flowPath = *ciliumFlowShort
 	}
+	if *clusterMeshPath == "" && *globalServicesShort != "" {
+		*clusterMeshPath = *globalServicesShort
+	}
 	if *outFile == "" && *outShort != "" {
 		*outFile = *outShort
 	}
@@ -406,6 +419,11 @@ func parseCLI() SentinelConfig {
 		FlowTelemetry:         *flowTelemetry,
 		FlowSynthOut:          *flowSynthOut,
 		FlowStrict:            *flowStrict,
+		ClusterMeshPath:          *clusterMeshPath,
+		GlobalServices:           *globalServicesShort != "" || *clusterMeshPath != "",
+		ClusterMeshTelemetryPath: *clusterMeshTelemetry,
+		ClusterMeshSynthOut:      *clusterMeshSynthOut,
+		ClusterMeshStrict:        *clusterMeshStrict,
 		Briefing:              *briefing,
 		BriefingDir:       *briefingDir,
 		BriefingFile:      *briefingFile,
@@ -439,6 +457,7 @@ func (c SentinelConfig) HasAuditTargets() bool {
 		c.BGPPath != "" || c.BGPTelemetry != "" || c.BGPSynthOut != "" ||
 		c.StorePath != "" || c.StoreTelemetry != "" || c.StoreSynthOut != "" ||
 		c.LockdownPath != "" || c.LockdownTelemetry != "" || c.LockdownSynthOut != "" ||
-		c.FlowPath != "" || c.FlowTelemetry != "" || c.FlowSynthOut != ""
+		c.FlowPath != "" || c.FlowTelemetry != "" || c.FlowSynthOut != "" ||
+		c.ClusterMeshPath != "" || c.ClusterMeshTelemetryPath != "" || c.ClusterMeshSynthOut != ""
 }
 

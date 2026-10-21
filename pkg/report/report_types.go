@@ -8,6 +8,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/bench"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/bgp"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/bpf"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/clustermesh"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/fleet"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/flow"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/gateway"
@@ -111,6 +112,9 @@ type ReportOptions struct {
 	FlowViolations             []flow.FlowViolation
 	FlowSummary                *flow.FlowSummary
 	FlowTelemetry              *flow.FlowTelemetryReport
+	MeshViolations             []clustermesh.MeshViolation
+	MeshSummary                *clustermesh.MeshSummary
+	MeshTelemetry              *clustermesh.ClusterMeshTelemetryReport
 	FlakePath                  string
 	K8sPath                    string
 	StoragePath                string
@@ -166,6 +170,9 @@ type ReportOptions struct {
 	FlowPath                   string
 	FlowTelemetryPath          string
 	FlowSynthOut               string
+	ClusterMeshPath            string
+	ClusterMeshTelemetryPath   string
+	ClusterMeshSynthOut        string
 	TargetFilter               string
 	Pretty                     bool
 }

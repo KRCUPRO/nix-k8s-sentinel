@@ -8,6 +8,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/bench"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/bgp"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/bpf"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/clustermesh"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/fleet"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/flow"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/gateway"
@@ -35,7 +36,7 @@ import (
 )
 
 var (
-	version = "0.30.0"
+	version = "0.31.0"
 )
 
 func main() {
@@ -124,6 +125,9 @@ func main() {
 		flowViolations          []flow.FlowViolation
 		flowSummary             *flow.FlowSummary
 		flowTelemetry           *flow.FlowTelemetryReport
+		meshViolations          []clustermesh.MeshViolation
+		meshSummary             *clustermesh.MeshSummary
+		meshTelemetry           *clustermesh.ClusterMeshTelemetryReport
 	)
 
 	// 1. Audit Nix Flake
@@ -275,82 +279,17 @@ func main() {
 		)
 	}
 
-	// 28. Generate Threat Briefing if --briefing is requested
-	if cfg.Briefing {
-		logInfo("[+] Synthesizing Threat Intelligence Briefing...\n")
-		briefingOpts := report.BriefingOptions{
-			Version:                 version,
-			Feed:                    feed,
-			K8sReport:               k8sReport,
-			FlakeMatches:            flakeMatches,
-			ProbeEvents:             probeSnapshots,
-			StorageViolations:       storageViolations,
-			StorageHealth:           storageHealth,
-			WireGuardViolations:     wireguardViolations,
-			WireGuardReconciliation: wireguardReconciliation,
-			CISViolations:           cisViolations,
-			CISSummary:              cisSummary,
-			GatewayViolations:       gatewayViolations,
-			GatewaySummary:          gatewaySummary,
-			AttestViolations:        attestViolations,
-			AttestSummary:           attestSummary,
-			FleetViolations:         fleetViolations,
-			FleetSummary:            fleetSummary,
-			SPIFFEViolations:        spiffeViolations,
-			SPIFFESummary:           spiffeSummary,
-			SBOMViolations:          sbomViolations,
-			SBOMSummary:             sbomSummary,
-			SBOMDelta:               sbomDelta,
-			HSMViolations:           hsmViolations,
-			HSMSummary:              hsmSummary,
-			BPFViolations:           bpfViolations,
-			BPFSummary:              bpfSummary,
-			PQCViolations:           pqcViolations,
-			PQCSummary:              pqcSummary,
-			SandboxViolations:       sandboxViolations,
-			SandboxSummary:          sandboxSummary,
-			RemediateFindings:       remediateFindings,
-			RemediatePullRequests:   remediatePRs,
-			RemediateSummary:        remediateSummary,
-			LSMViolations:           lsmViolations,
-			LSMSummary:              lsmSummary,
-			ReplicationViolations:   drViolations,
-			ReplicationSummary:      drSummary,
-			FastPathViolations:      fastpathViolations,
-			FastPathSummary:         fastpathSummary,
-			FastPathTelemetry:       fastpathTelemetry,
-			EnclaveViolations:       enclaveViolations,
-			EnclaveSummary:          enclaveSummary,
-			EnclaveReports:          enclaveReports,
-			WebhookViolations:       webhookViolations,
-			WebhookSummary:          webhookSummary,
-			WebhookTelemetry:        webhookTelemetry,
-			ImpermanenceViolations:  impermanenceViolations,
-			ImpermanenceSummary:     impermanenceSummary,
-			ImpermanenceTelemetry:   impermanenceTelemetry,
-			BGPViolations:           bgpViolations,
-			BGPSummary:              bgpSummary,
-			BGPTelemetry:            bgpTelemetry,
-			StoreViolations:         storeViolations,
-			StoreSummary:            storeSummary,
-			StoreTelemetry:          storeTelemetry,
-			LockdownViolations:      lockdownViolations,
-			LockdownSummary:         lockdownSummary,
-			LockdownTelemetry:       lockdownTelemetry,
-			FlowViolations:          flowViolations,
-			FlowSummary:             flowSummary,
-			FlowTelemetry:           flowTelemetry,
-			OutputDir:               cfg.BriefingDir,
-			CustomFilename:          cfg.BriefingFile,
-		}
-
-		runBriefingExport(cfg, briefingOpts, logInfo, logErr)
-		return
+	// 28. Audit Multi-Tenant Cilium ClusterMesh & Global Service Discovery Radar
+	if cfg.ClusterMeshPath != "" || cfg.ClusterMeshTelemetryPath != "" || cfg.ClusterMeshSynthOut != "" {
+		meshViolations, meshSummary, meshTelemetry = runClusterMeshAudit(
+			cfg.ClusterMeshPath, cfg.ClusterMeshTelemetryPath, cfg.ClusterMeshSynthOut, cfg.ClusterMeshStrict, feed, logInfo, logErr,
+		)
 	}
 
-	// 19. Handle Structured Formats (SARIF / JSON)
-	if cfg.Format == "sarif" || cfg.Format == "json" {
-		reportOpts := report.ReportOptions{
+
+
+	// 29. Consolidated Report & Briefing Generation
+	reportOpts := report.ReportOptions{
 			Version:                 version,
 			Feed:                    feed,
 			K8sReport:               k8sReport,
@@ -470,10 +409,22 @@ func main() {
 			FlowPath:                  cfg.FlowPath,
 			FlowTelemetryPath:         cfg.FlowTelemetry,
 			FlowSynthOut:              cfg.FlowSynthOut,
+			MeshViolations:            meshViolations,
+			MeshSummary:               meshSummary,
+			MeshTelemetry:             meshTelemetry,
+			ClusterMeshPath:           cfg.ClusterMeshPath,
+			ClusterMeshTelemetryPath:  cfg.ClusterMeshTelemetryPath,
+			ClusterMeshSynthOut:       cfg.ClusterMeshSynthOut,
 			TargetFilter:              cfg.TargetFilter,
 			Pretty:                    true,
-		}
+	}
 
+	if cfg.Briefing {
+		runBriefingExport(cfg, reportOpts, logInfo, logErr)
+		return
+	}
+
+	if cfg.Format == "sarif" || cfg.Format == "json" || cfg.OutFile != "" {
 		runReportExport(cfg, reportOpts, logErr)
 		return
 	}

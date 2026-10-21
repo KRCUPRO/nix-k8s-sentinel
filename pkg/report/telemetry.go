@@ -9,6 +9,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/bench"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/bgp"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/bpf"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/clustermesh"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/fleet"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/flow"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/gateway"
@@ -69,6 +70,7 @@ type TelemetrySummary struct {
 	TotalStoreViolations       int            `json:"total_store_violations"`
 	TotalLockdownViolations    int            `json:"total_lockdown_violations"`
 	TotalFlowViolations        int            `json:"total_flow_violations"`
+	TotalMeshViolations        int            `json:"total_mesh_violations"`
 }
 
 // ComputeTelemetry aggregates CVSS metrics from the threat feed, K8s violations, and Nix flake matches.
@@ -501,6 +503,35 @@ func ComputeTelemetryFlow(feed *intel.Feed, k8sReport *k8s.ManifestAuditReport, 
 				summary.MaxCVSS = fv.CVSSScore
 			}
 			switch fv.Severity {
+			case intel.SeverityCritical:
+				summary.CriticalCount++
+			case intel.SeverityHigh:
+				summary.HighCount++
+			case intel.SeverityMedium:
+				summary.MediumCount++
+			default:
+				summary.LowCount++
+			}
+		}
+	}
+
+	return summary
+}
+
+// ComputeTelemetryClusterMesh aggregates CVSS metrics across all domains including Multi-Tenant Cilium ClusterMesh findings.
+func ComputeTelemetryClusterMesh(feed *intel.Feed, k8sReport *k8s.ManifestAuditReport, flakeMatches []nix.FlakeVulnerabilityMatch, storageViolations []storage.StorageViolation, wireguardViolations []wireguard.WireGuardViolation, cisViolations []bench.CISViolation, gatewayViolations []gateway.GatewayViolation, attestViolations []attest.AttestationViolation, fleetViolations []fleet.FleetViolation, spiffeViolations []spiffe.SPIFFEViolation, sbomViolations []sbom.SBOMViolation, hsmViolations []hsm.HSMViolation, bpfViolations []bpf.BPFViolation, pqcViolations []pqc.PQCViolation, sandboxViolations []sandbox.SandboxViolation, remediateFindings []remediate.RemediationFinding, lsmViolations []lsm.LSMViolation, replicationViolations []replication.ReplicationViolation, fastPathViolations []wgfastpath.WGFastPathViolation, enclaveViolations []wgenclave.WGEnclaveViolation, webhookViolations []webhook.WebhookViolation, impermanenceViolations []impermanence.ImpermanenceViolation, bgpViolations []bgp.BGPViolation, storeViolations []nixstore.StoreViolation, lockdownViolations []lockdown.LockdownViolation, flowViolations []flow.FlowViolation, meshViolations []clustermesh.MeshViolation) TelemetrySummary {
+	summary := ComputeTelemetryFlow(feed, k8sReport, flakeMatches, storageViolations, wireguardViolations, cisViolations, gatewayViolations, attestViolations, fleetViolations, spiffeViolations, sbomViolations, hsmViolations, bpfViolations, pqcViolations, sandboxViolations, remediateFindings, lsmViolations, replicationViolations, fastPathViolations, enclaveViolations, webhookViolations, impermanenceViolations, bgpViolations, storeViolations, lockdownViolations, flowViolations)
+
+	if len(meshViolations) > 0 {
+		summary.TotalMeshViolations = len(meshViolations)
+		for _, mv := range meshViolations {
+			summary.TotalViolations++
+			summary.TargetDistribution["kubernetes"]++
+			summary.ComponentDistribution["cilium-clustermesh"]++
+			if mv.CVSSScore > summary.MaxCVSS {
+				summary.MaxCVSS = mv.CVSSScore
+			}
+			switch mv.Severity {
 			case intel.SeverityCritical:
 				summary.CriticalCount++
 			case intel.SeverityHigh:

@@ -1,0 +1,32 @@
+groups:
+- name: cilium-clustermesh-security.rules
+  rules:
+  - alert: CiliumClusterMeshSyncLatencyDegraded
+    expr: clustermesh_sync_duration_seconds > 5
+    for: 2m
+    labels:
+      severity: warning
+      domain: clustermesh
+    annotations:
+      summary: "Cilium ClusterMesh etcd sync latency exceeds 5 seconds"
+      description: "ClusterMesh synchronization latency is {{ $value }}s, indicating network degradation or etcd contention."
+
+  - alert: CiliumClusterMeshRemoteClusterDisconnected
+    expr: clustermesh_remote_cluster_connected == 0
+    for: 1m
+    labels:
+      severity: critical
+      domain: clustermesh
+    annotations:
+      summary: "Cilium ClusterMesh lost connection to remote cluster"
+      description: "One or more remote federated clusters have been disconnected, risking split-brain service discovery."
+
+  - alert: CiliumClusterMeshUnencryptedTraffic
+    expr: rate(cilium_drop_count_total{reason="unencrypted_cross_cluster"}[5m]) > 0
+    for: 1m
+    labels:
+      severity: critical
+      domain: clustermesh
+    annotations:
+      summary: "Unencrypted cross-cluster tunnel traffic intercepted"
+      description: "Packets were transmitted across clusters without WireGuard/IPsec encryption."

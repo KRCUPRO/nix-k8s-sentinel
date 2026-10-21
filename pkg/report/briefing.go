@@ -6,12 +6,14 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/attest"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/bench"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/bgp"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/bpf"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/clustermesh"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/fleet"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/flow"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/gateway"
@@ -102,6 +104,9 @@ type BriefingOptions struct {
 	FlowViolations             []flow.FlowViolation
 	FlowSummary                *flow.FlowSummary
 	FlowTelemetry              *flow.FlowTelemetryReport
+	MeshViolations             []clustermesh.MeshViolation
+	MeshSummary                *clustermesh.MeshSummary
+	MeshTelemetry              *clustermesh.ClusterMeshTelemetryReport
 	OutputDir                  string
 	CustomFilename             string
 }
@@ -134,7 +139,7 @@ func GenerateBriefing(opts BriefingOptions) (*BriefingReport, error) {
 		version = "0.28.0"
 	}
 
-	telemetry := ComputeTelemetryFlow(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations, opts.GatewayViolations, opts.AttestViolations, opts.FleetViolations, opts.SPIFFEViolations, opts.SBOMViolations, opts.HSMViolations, opts.BPFViolations, opts.PQCViolations, opts.SandboxViolations, opts.RemediateFindings, opts.LSMViolations, opts.ReplicationViolations, opts.FastPathViolations, opts.EnclaveViolations, opts.WebhookViolations, opts.ImpermanenceViolations, opts.BGPViolations, opts.StoreViolations, opts.LockdownViolations, opts.FlowViolations)
+	telemetry := ComputeTelemetryClusterMesh(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations, opts.GatewayViolations, opts.AttestViolations, opts.FleetViolations, opts.SPIFFEViolations, opts.SBOMViolations, opts.HSMViolations, opts.BPFViolations, opts.PQCViolations, opts.SandboxViolations, opts.RemediateFindings, opts.LSMViolations, opts.ReplicationViolations, opts.FastPathViolations, opts.EnclaveViolations, opts.WebhookViolations, opts.ImpermanenceViolations, opts.BGPViolations, opts.StoreViolations, opts.LockdownViolations, opts.FlowViolations, opts.MeshViolations)
 
 	var buf bytes.Buffer
 
@@ -1112,7 +1117,65 @@ func GenerateBriefing(opts BriefingOptions) (*BriefingReport, error) {
 		buf.WriteString("---\n\n")
 	}
 
-	// 30. Action Items Checklist
+	// 30. Multi-Tenant Cilium ClusterMesh & Global Service Discovery Radar
+	if len(opts.MeshViolations) > 0 || opts.MeshSummary != nil || opts.MeshTelemetry != nil {
+		buf.WriteString("## 🕸️ 30. Multi-Tenant Cilium ClusterMesh & Global Service Discovery Radar\n\n")
+
+		if opts.MeshSummary != nil {
+			statusIcon := "🟢 COMPLIANT"
+			if !opts.MeshSummary.MeshHealthy {
+				statusIcon = "🔴 NON_COMPLIANT / AT_RISK"
+			}
+			buf.WriteString(fmt.Sprintf("**ClusterMesh Health Posture**: %s | **Compliance Score**: `%.1f%%` | **Total Audited**: `%d`\n\n",
+				statusIcon, opts.MeshSummary.ComplianceScore, opts.MeshSummary.TotalAudited))
+			buf.WriteString(fmt.Sprintf("- **Critical Vulnerabilities**: `%d`\n", opts.MeshSummary.CriticalCount))
+			buf.WriteString(fmt.Sprintf("- **High Vulnerabilities**: `%d`\n", opts.MeshSummary.HighCount))
+			buf.WriteString(fmt.Sprintf("- **Medium/Low Vulnerabilities**: `%d`\n\n", opts.MeshSummary.MediumCount+opts.MeshSummary.LowCount))
+		}
+
+		if len(opts.MeshViolations) > 0 {
+			buf.WriteString("### ⚠️ Active ClusterMesh & Global Service Security Findings\n\n")
+			buf.WriteString("| Rule ID | Severity | Resource | CVSS | Finding & Remediation |\n")
+			buf.WriteString("| :--- | :--- | :--- | :---: | :--- |\n")
+			for _, mv := range opts.MeshViolations {
+				cveRef := ""
+				if mv.MatchedCVE != "" {
+					cveRef = fmt.Sprintf(" (`%s`)", mv.MatchedCVE)
+				}
+				buf.WriteString(fmt.Sprintf("| `%s` | **%s** | `%s` | `%.1f` | **%s**%s<br/>*Remediation*: %s |\n",
+					mv.RuleID, mv.Severity, mv.Resource, mv.CVSSScore, mv.Message, cveRef, mv.Remediation))
+			}
+			buf.WriteString("\n")
+		}
+
+		if opts.MeshTelemetry != nil {
+			buf.WriteString("### 📡 Runtime ClusterMesh Telemetry & Peering Health\n\n")
+			buf.WriteString("| Local Cluster | Cluster ID | Sync State | Sync Latency | Connected | Disconnected | Global Services | Endpoints |\n")
+			buf.WriteString("| :--- | :---: | :---: | :---: | :--- | :--- | :---: | :---: |\n")
+			connectedStr := strings.Join(opts.MeshTelemetry.ConnectedClusters, ", ")
+			if connectedStr == "" {
+				connectedStr = "none"
+			}
+			disconnStr := strings.Join(opts.MeshTelemetry.DisconnectedClusters, ", ")
+			if disconnStr == "" {
+				disconnStr = "none"
+			}
+			buf.WriteString(fmt.Sprintf("| `%s` | `%d` | **%s** | `%.1f ms` | `%s` | `%s` | `%d` | `%d` |\n\n",
+				opts.MeshTelemetry.LocalClusterName,
+				opts.MeshTelemetry.LocalClusterID,
+				opts.MeshTelemetry.SyncState,
+				opts.MeshTelemetry.SyncLatencyMs,
+				connectedStr,
+				disconnStr,
+				opts.MeshTelemetry.TotalGlobalServices,
+				opts.MeshTelemetry.TotalMeshEndpoints,
+			))
+		}
+
+		buf.WriteString("---\n\n")
+	}
+
+	// 31. Action Items Checklist
 	buf.WriteString("## 📋 SecOps & SRE Operational Checklist\n\n")
 	buf.WriteString("- [ ] Review high and critical severity advisories against production deployment manifests.\n")
 	buf.WriteString("- [ ] Verify that ingress controllers enforce URI path normalization and snippet guards.\n")
@@ -1141,6 +1204,7 @@ func GenerateBriefing(opts BriefingOptions) (*BriefingReport, error) {
 	buf.WriteString("- [ ] Enforce require-sigs = true in Nix daemon, declare explicit Ed25519 public keys, mandate namespace-scoped sandboxing, and verify NAR checksums on all binary cache substitutes.\n")
 	buf.WriteString("- [ ] Configure boot.kernelParams with lockdown=confidentiality, module.sig_enforce=1, enable Lanzaboote UKI, and synchronize UEFI DBX forbidden signature databases.\n")
 	buf.WriteString("- [ ] Deploy CiliumNetworkPolicies restricting DNS egress to kube-system CoreDNS with L7 toFQDNs rules, intercept high-entropy DNS tunneling, and throttle anomalous socket connect storms.\n")
+	buf.WriteString("- [ ] Enforce mutual TLS on Cilium ClusterMesh etcd channels, mandate WireGuard/IPsec cross-cluster tunnel encryption, and audit global service exports against namespace collisions.\n")
 	buf.WriteString("- [ ] Archive this briefing record into security audit ledger.\n")
 
 	report := &BriefingReport{
