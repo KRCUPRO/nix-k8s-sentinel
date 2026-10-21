@@ -11,6 +11,7 @@ import (
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/bench"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/bgp"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/bpf"
+	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/clustermesh"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/fleet"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/flow"
 	"github.com/KRCUPRO/nix-k8s-sentinel/pkg/gateway"
@@ -107,6 +108,9 @@ type JSONAuditReport struct {
 	FlowViolations             []flow.FlowViolation                    `json:"flow_violations,omitempty"`
 	FlowSummary                *flow.FlowSummary                       `json:"flow_summary,omitempty"`
 	FlowTelemetry              *flow.FlowTelemetryReport               `json:"flow_telemetry,omitempty"`
+	MeshViolations             []clustermesh.MeshViolation             `json:"mesh_violations,omitempty"`
+	MeshSummary                *clustermesh.MeshSummary                `json:"mesh_summary,omitempty"`
+	MeshTelemetry              *clustermesh.ClusterMeshTelemetryReport `json:"mesh_telemetry,omitempty"`
 }
 
 // BuildJSONReport compiles the consolidated JSON audit report from provided audit data.
@@ -282,8 +286,17 @@ func BuildJSONReport(opts ReportOptions) (*JSONAuditReport, error) {
 	if opts.FlowSynthOut != "" {
 		scanned = append(scanned, opts.FlowSynthOut)
 	}
+	if opts.ClusterMeshPath != "" {
+		scanned = append(scanned, opts.ClusterMeshPath)
+	}
+	if opts.ClusterMeshTelemetryPath != "" {
+		scanned = append(scanned, opts.ClusterMeshTelemetryPath)
+	}
+	if opts.ClusterMeshSynthOut != "" {
+		scanned = append(scanned, opts.ClusterMeshSynthOut)
+	}
 
-	telemetry := ComputeTelemetryFlow(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations, opts.GatewayViolations, opts.AttestViolations, opts.FleetViolations, opts.SPIFFEViolations, opts.SBOMViolations, opts.HSMViolations, opts.BPFViolations, opts.PQCViolations, opts.SandboxViolations, opts.RemediateFindings, opts.LSMViolations, opts.ReplicationViolations, opts.FastPathViolations, opts.EnclaveViolations, opts.WebhookViolations, opts.ImpermanenceViolations, opts.BGPViolations, opts.StoreViolations, opts.LockdownViolations, opts.FlowViolations)
+	telemetry := ComputeTelemetryClusterMesh(opts.Feed, opts.K8sReport, opts.FlakeMatches, opts.StorageViolations, opts.WireGuardViolations, opts.CISViolations, opts.GatewayViolations, opts.AttestViolations, opts.FleetViolations, opts.SPIFFEViolations, opts.SBOMViolations, opts.HSMViolations, opts.BPFViolations, opts.PQCViolations, opts.SandboxViolations, opts.RemediateFindings, opts.LSMViolations, opts.ReplicationViolations, opts.FastPathViolations, opts.EnclaveViolations, opts.WebhookViolations, opts.ImpermanenceViolations, opts.BGPViolations, opts.StoreViolations, opts.LockdownViolations, opts.FlowViolations, opts.MeshViolations)
 
 	var advisories []intel.ThreatItem
 	if opts.Feed != nil {
@@ -364,6 +377,9 @@ func BuildJSONReport(opts ReportOptions) (*JSONAuditReport, error) {
 		FlowViolations:             opts.FlowViolations,
 		FlowSummary:                opts.FlowSummary,
 		FlowTelemetry:              opts.FlowTelemetry,
+		MeshViolations:             opts.MeshViolations,
+		MeshSummary:                opts.MeshSummary,
+		MeshTelemetry:              opts.MeshTelemetry,
 	}
 
 	return rep, nil

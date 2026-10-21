@@ -1,0 +1,45 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cilium-config
+  namespace: kube-system
+data:
+  cluster-name: "prod-east-1"
+  cluster-id: "1"
+  encryption.type: "wireguard"
+  tunnel-protocol: "vxlan"
+  etcd-tls: "true"
+  ca-cert: "/etc/clustermesh/ca.crt"
+  client-cert: "/etc/clustermesh/tls.crt"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: checkout-frontend
+  namespace: tenant-shop
+  annotations:
+    io.cilium/global-service: "true"
+    io.cilium/shared-service: "true"
+spec:
+  ports:
+  - name: https
+    port: 443
+    targetPort: 8443
+---
+apiVersion: cilium.io/v2
+kind: CiliumClusterwideNetworkPolicy
+metadata:
+  name: tenant-shop-mesh-isolation
+spec:
+  endpointSelector:
+    matchLabels:
+      k8s:io.kubernetes.pod.namespace: tenant-shop
+  ingress:
+  - fromEndpoints:
+    - matchLabels:
+        io.cilium.k8s.policy.cluster: "prod-west-2"
+        k8s:io.kubernetes.pod.namespace: tenant-shop
+    toPorts:
+    - ports:
+      - port: "8443"
+        protocol: TCP

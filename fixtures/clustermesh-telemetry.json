@@ -1,0 +1,15 @@
+{
+  "local_cluster_name": "prod-east-1",
+  "local_cluster_id": 1,
+  "sync_state": "HEALTHY",
+  "sync_latency_ms": 38.5,
+  "connected_clusters": [
+    "prod-west-2",
+    "prod-eu-1"
+  ],
+  "disconnected_clusters": [],
+  "total_global_services": 8,
+  "total_mesh_endpoints": 96,
+  "etcd_sync_errors": 0,
+  "timestamp": "2026-10-21T10:00:00Z"
+}

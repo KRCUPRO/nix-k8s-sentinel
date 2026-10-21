@@ -1,0 +1,17 @@
+apiVersion: cilium.io/v2
+kind: CiliumClusterwideNetworkPolicy
+metadata:
+  name: hardened-clustermesh-tenant-isolation-tenant-prod
+spec:
+  endpointSelector:
+    matchLabels:
+      k8s:io.kubernetes.pod.namespace: tenant-prod
+  ingress:
+  - fromEndpoints:
+    - matchLabels:
+        io.cilium.k8s.policy.cluster: prod-mesh-remote
+        k8s:io.kubernetes.pod.namespace: tenant-prod
+    toPorts:
+    - ports:
+      - port: "8443"
+        protocol: TCP

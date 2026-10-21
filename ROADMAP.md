@@ -254,9 +254,18 @@ Automated generation of defense-in-depth rules:
 - [x] Production sample fixtures (`fixtures/cilium-flow-hardened.yaml`, `fixtures/cilium-flow-vulnerable.yaml`, `fixtures/nixos-flow-profiler.nix`, `fixtures/flow-telemetry.json`) and threat feed correlation with `CVE-2026-10392`.
 - [x] Unified exporter integration into OASIS SARIF v2.1.0 (Section 26), structured JSON audit telemetry (`flow_violations`, `flow_summary`, `flow_telemetry`), and hourly Markdown threat briefings (Section 29).
 
-### Version 0.31.0 — Multi-Tenant Cilium ClusterMesh & Global Service Discovery Auditor (Planned)
-- [ ] Audit Cilium ClusterMesh control plane interconnects, etcd synchronization endpoints, and cross-cluster service routing policies.
-- [ ] Detect global ServiceExport/ServiceImport namespace collisions and unencrypted cross-cloud VXLAN encapsulation tunnels.
+### Version 0.31.0 — Multi-Tenant Cilium ClusterMesh & Global Service Discovery Auditor (Completed)
+- [x] Multi-format streaming YAML and line parser for Cilium ClusterMesh Helm values/ConfigMap, Kubernetes Global Services (`io.cilium/global-service`), `ServiceExport`/`ServiceImport` CRDs, `CiliumClusterwideNetworkPolicy`, and live JSON telemetry (`pkg/clustermesh/parser.go`).
+- [x] Authoritative canonical rule catalog `MESH-RADAR-001` through `MESH-RADAR-012` detecting unencrypted cross-cluster tunnel transit (`CVE-2026-11483`), cluster-id collision/0, etcd TLS disablement, ServiceExport collisions, unrestricted global service exposures, missing cross-cluster policies, wildcard cluster selectors, etcd heartbeat degradation, endpoint saturation, unverified CA certs, non-shared routing leaks, and disconnected cluster daemons (`pkg/clustermesh/rules.go`).
+- [x] Static configuration auditor and runtime peering telemetry reconciler calculating deterministic compliance scores (0.0% to 100.0%) (`pkg/clustermesh/auditor.go`).
+- [x] Declarative policy synthesizer generating hardened Cilium Helm values, tenant boundary `CiliumClusterwideNetworkPolicy` manifests, and Prometheus alert rules (`clustermesh-alerts.yaml`) (`pkg/clustermesh/synth.go`).
+- [x] Dedicated CLI runner (`cmd/sentinel/clustermesh_runner.go`) and flag integration (`--clustermesh`, `--global-services`, `--clustermesh-telemetry`, `--clustermesh-synth-out`, `--clustermesh-strict`), refactoring `briefingOpts` in `cmd/sentinel/briefing_runner.go` and preserving `cmd/sentinel/main.go` safely under the 500-line soft ceiling.
+- [x] Production sample fixtures (`fixtures/cilium-clustermesh-hardened.yaml`, `fixtures/cilium-clustermesh-vulnerable.yaml`, `fixtures/clustermesh-telemetry.json`) and threat feed correlation with `CVE-2026-11483`.
+- [x] Unified exporter integration into OASIS SARIF v2.1.0 (Section 27), structured JSON audit telemetry (`clustermesh_violations`, `clustermesh_summary`, `clustermesh_telemetry`), and hourly Markdown threat briefings (Section 30).
+
+### Version 0.32.0 — Autonomous eBPF XDP Fast-Path & Bare-Metal DDoS Mitigation Engine (Planned)
+- [ ] Audit bare-metal eBPF XDP driver mode bindings, packet filter drop tables, and kernel fast-path bypass configurations.
+- [ ] Detect volumetric SYN/UDP reflection flood anomalies, offloaded rate-limiter degradation, and unshielded ingress interfaces.
 
 ### Version 1.0.0 — Enterprise Workload Identity & Ephemeral Detonation Pipeline (Planned)
 - [ ] Full end-to-end integration of SPIFFE/SPIRE workload attestation, In-Toto provenance, and HSM envelope encryption.
